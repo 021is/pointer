@@ -3,10 +3,10 @@
 // Pointer lines printed under it (strip.ts). The PNG comes from a canvas: no metadata at all.
 
 import { FRAME_TAB, type Scene, renderSvg } from "../marks/svg";
-import { type Size, toImagePixels } from "../shared/geometry";
+import { type Rect, type Size, toImagePixels } from "../shared/geometry";
 import type { CaptureReply, CaptureRequest } from "../shared/messages";
 import { type Region, stackRegions } from "./layout";
-import { STRIP, stripHeight, wrapLines } from "./strip";
+import { STRIP, wrapLines } from "./strip";
 
 const nextFrame = () => new Promise<void>((r) => requestAnimationFrame(() => r()));
 
@@ -32,6 +32,23 @@ export async function screenshot(host: HTMLElement): Promise<HTMLImageElement> {
   }
 }
 
+/** A pasted image as it lies on screen now: viewport box and see-through. */
+export type Laid = { img: HTMLImageElement; rect: Rect; opacity: number };
+
+/** Pasted images (hidden with Pointer's layer during the screenshot) drawn back where they lay. */
+function drawPasted(ctx: CanvasRenderingContext2D, pasted: readonly Laid[], region: Rect, out: Rect) {
+  const s = out.w / Math.max(1, region.w);
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(out.x, out.y, out.w, out.h);
+  ctx.clip();
+  for (const p of pasted) {
+    ctx.globalAlpha = p.opacity;
+    ctx.drawImage(p.img, out.x + (p.rect.x - region.x) * s, out.y + (p.rect.y - region.y) * s, p.rect.w * s, p.rect.h * s);
+  }
+  ctx.restore();
+}
+
 /**
  * The picture: each region (the crop frames A, B …, or the one auto crop) stacked, its marks on
  * it, a letter tab above each frame, and `strip` (the bundle's text) printed under it all.
@@ -41,19 +58,21 @@ export async function picture(
   regions: readonly Region[],
   scene: Scene,
   strip: string | null,
+  pasted: readonly Laid[] = [],
 ): Promise<{ blob: Blob; size: Size }> {
   const ratio = shot.naturalWidth / window.innerWidth;
   const image = { w: shot.naturalWidth, h: shot.naturalHeight };
-  const stack = stackRegions(regions, strip !== null);
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("no 2D canvas in this tab");
 
   ctx.font = STRIP.font;
-  const perLine = Math.floor((stack.width - 2 * STRIP.pad) / ctx.measureText("M").width);
-  const lines = strip ? wrapLines(strip, perLine) : [];
+  const charWidth = ctx.measureText("M").width;
+  const wrap = (width: number) => (strip ? wrapLines(strip, Math.floor((width - 2 * STRIP.pad) / charWidth)) : []);
+  const stack = stackRegions(regions, strip === null ? null : (width) => wrap(width).length);
+  const lines = wrap(stack.width);
   canvas.width = stack.width;
-  canvas.height = stack.bottom + stripHeight(lines.length);
+  canvas.height = stack.height;
   ctx.fillStyle = STRIP.paper;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -61,6 +80,7 @@ export async function picture(
   for (const { region, size, top, tab } of stack.placed) {
     const src = toImagePixels(region.rect, ratio, image);
     ctx.drawImage(shot, src.x, src.y, src.w, src.h, 0, top, size.w, size.h);
+    drawPasted(ctx, pasted, region.rect, { x: 0, y: top, ...size });
     // One renderer: the marks and, for a frame, its outline and letter tab come from svg.ts,
     // the view reaching FRAME_TAB above the region so the tab lands in its band.
     const r = region.rect;

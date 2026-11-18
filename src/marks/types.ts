@@ -30,7 +30,13 @@ export type Pin = {
  */
 export type Crop = { kind: "crop"; el: Element | null; rect: Rect };
 
-export type Mark = Shape | Pin | Crop;
+/**
+ * An image Edvard pasted onto the page (a reference, a mockup): page coordinates, so it scrolls
+ * with the page; `opacity` lets a mockup lie see-through over the real thing. Lives until reload.
+ */
+export type Pasted = { kind: "image"; img: HTMLImageElement; rect: Rect; opacity: number };
+
+export type Mark = Shape | Pin | Crop | Pasted;
 
 export function isPin(m: Mark): m is Pin {
   return m.kind === "pick" || m.kind === "comment";
@@ -40,8 +46,12 @@ export function isCrop(m: Mark): m is Crop {
   return m.kind === "crop";
 }
 
+export function isPasted(m: Mark): m is Pasted {
+  return m.kind === "image";
+}
+
 export function isShape(m: Mark): m is Shape {
-  return !isPin(m) && !isCrop(m);
+  return !isPin(m) && !isCrop(m) && !isPasted(m);
 }
 
 /** A, B, … Z, then AA, AB: never confused with the pins' numbers. */

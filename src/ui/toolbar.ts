@@ -8,6 +8,7 @@ export type BarActions = {
   tool: (t: Tool) => void;
   color: (c: Color) => void;
   image: () => void;
+  styles: () => void;
   undo: () => void;
   clear: () => void;
   copy: () => void;
@@ -101,6 +102,7 @@ export function createToolbar(act: BarActions): Toolbar {
   const image = button("📷", "Always add the picture · I (it is added anyway when something is drawn)", act.image);
   bar.append(
     image,
+    button("🎨", "Styles of the last pick · S (or click a pick's number)", act.styles),
     button("↶", "Undo · Ctrl+Z", act.undo),
     button("⌫", "Clear everything", act.clear),
     button("⧉ Copy", "Copy for the agent · Ctrl+C", act.copy),

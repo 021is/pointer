@@ -33,6 +33,7 @@ export function formatDrawings(d: DrawingSummary): string | null {
     d.ellipses ? plural(d.ellipses, "ellipse") : "",
     d.pens ? plural(d.pens, "pen stroke") : "",
     ...d.texts.map((t) => `text "${clip(t, TEXT_MAX)}"`),
+    d.pasted ? `${plural(d.pasted, "pasted image")} (a reference laid on the page, not the page)` : "",
   ].filter(Boolean);
   return parts.length ? `drawn: ${parts.join(", ")}` : null;
 }
@@ -51,7 +52,8 @@ function formatPin(p: PinInfo): string[] {
   const text = p.el.text ? ` "${clip(p.el.text, TEXT_MAX)}"` : "";
   lines.push(`   el: ${p.el.selector}${text} · ${p.el.size.w}×${p.el.size.h}`);
   if (w.kind !== "found" && p.el.className) lines.push(`   class: "${clip(p.el.className, CLASS_MAX)}"`);
-  if (p.el.style) lines.push(`   style: ${p.el.style}`);
+  // A comment is about its note; the look is a pick's business.
+  if (p.el.style && p.kind === "pick") lines.push(`   style: ${p.el.style}`);
   if (p.changes.length) {
     lines.push(`   changed: ${p.changes[0]}`);
     for (const change of p.changes.slice(1)) lines.push(`            ${change}`);
@@ -71,11 +73,43 @@ export function formatCrop(c: CropInfo): string {
   return `crop ${c.label} · ${who}${file}${size}${off}`;
 }
 
-export function formatBundle(b: Bundle): string {
+function headLine(b: Bundle): string {
   const components = [...b.pins.map((p) => p.component), ...b.crops.flatMap((c) => (c.component ? [c.component] : []))];
   const frameworks = [...new Set(components.map((c) => c.framework))].filter((f) => f !== "none");
-  const head = [`Pointer · ${b.url} · viewport ${b.viewport.w}×${b.viewport.h}`, ...frameworks];
-  const lines = [head.join(" · ")];
+  return [`Pointer · ${b.url} · viewport ${b.viewport.w}×${b.viewport.h}`, ...frameworks].join(" · ");
+}
+
+const fileOnly = (s: Source): string => formatSource({ ...s, file: s.file.split("/").pop() ?? s.file });
+
+/** A pin in the strip: who and where on one line, then only its changes and its note. */
+function stripPin(p: PinInfo): string[] {
+  const w = p.component.where;
+  const who = p.component.chain[0] ?? p.el.tag;
+  const text = p.el.text ? ` "${clip(p.el.text, 40)}"` : "";
+  const where =
+    w.kind === "found"
+      ? `${formatSource(w.source)}${w.usedAt ? ` (in ${fileOnly(w.usedAt)})` : ""}`
+      : `${p.el.selector}${text}`;
+  const lines = [`[${p.n}] ${p.kind} · ${who} · ${where}`];
+  if (p.changes.length) lines.push(`   changed: ${p.changes.join("; ")}`);
+  if (p.note.trim()) lines.push(`   note: ${p.note.trim()}`);
+  return lines;
+}
+
+/**
+ * The strip printed under the picture: what an agent needs to act (where, what changed, what
+ * Edvard said), nothing it can read in the file itself. The copied text keeps every detail.
+ */
+export function formatStrip(b: Bundle): string {
+  const lines = [headLine(b), ...b.crops.map(formatCrop)];
+  const drawn = formatDrawings(b.drawings);
+  if (drawn) lines.push(drawn);
+  for (const pin of b.pins) lines.push(...stripPin(pin));
+  return lines.join("\n");
+}
+
+export function formatBundle(b: Bundle): string {
+  const lines = [headLine(b)];
   if (b.image) {
     lines.push(
       `image: ${b.image.w}×${b.image.h} (≈${imageTokens(b.image)} tokens), numbers on it match [n] below`,
