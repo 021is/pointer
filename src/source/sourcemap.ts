@@ -117,6 +117,20 @@ export function mapUrlOf(code: string, codeUrl: string): string | null {
   return last.startsWith("data:") ? last : new URL(last, codeUrl).href;
 }
 
+/**
+ * A map's source as a full address. The spec resolves a plain relative source against the code's
+ * URL (Vite: "EventCard.jsx" next to http://…/src/EventCard.jsx → …/src/EventCard.jsx). Sources
+ * with a scheme, an absolute path or a bundler marker ("[project]/…") are kept as they are.
+ */
+export function sourceAgainst(source: string, codeUrl: string): string {
+  if (/^[a-z][\w+.-]*:/i.test(source) || source.startsWith("/") || source.startsWith("[")) return source;
+  try {
+    return new URL(source, codeUrl).href;
+  } catch {
+    return source; // a code URL that is not a URL (a server frame's path): the source as given
+  }
+}
+
 /** A `data:application/json;base64,…` map, decoded; other data URLs as their raw text. */
 export function decodeDataUrl(url: string): string {
   const comma = url.indexOf(",");

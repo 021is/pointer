@@ -5,7 +5,7 @@
 
 import type { Source } from "../bundle/types";
 import { type Frame, cleanSourcePath } from "./stack";
-import { type RawMap, decodeDataUrl, mapUrlOf, originalPosition, readMap } from "./sourcemap";
+import { type RawMap, decodeDataUrl, mapUrlOf, originalPosition, readMap, sourceAgainst } from "./sourcemap";
 
 /** A frame's original file, or why there is none. */
 export type Found = { kind: "source"; source: Source } | { kind: "note"; note: string };
@@ -74,5 +74,6 @@ export async function resolveFrame(frame: Frame): Promise<Found> {
   }
   const original = originalPosition(loaded.map, frame.line - 1, frame.column - 1);
   if (!original) return { kind: "note", note: "source map has no entry for the element" };
-  return { kind: "source", source: { file: cleanSourcePath(original.source), line: original.line } };
+  const file = cleanSourcePath(sourceAgainst(original.source, url));
+  return { kind: "source", source: { file, line: original.line } };
 }

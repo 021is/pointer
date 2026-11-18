@@ -2,7 +2,22 @@
 import { describe, expect, it } from "vitest";
 import { safeUrl } from "../src/bundle/format";
 import { byteHex } from "../src/bundle/color";
-import { readMap } from "../src/source/sourcemap";
+import { readMap, sourceAgainst } from "../src/source/sourcemap";
+import { cleanSourcePath } from "../src/source/stack";
+
+describe("sourceAgainst: a map's relative source resolved like the spec says", () => {
+  it("puts Vite's file-relative source back in its folder", () => {
+    const src = sourceAgainst("EventCard.jsx", "http://localhost:5173/src/EventCard.jsx?t=1");
+    expect(cleanSourcePath(src)).toBe("src/EventCard.jsx");
+  });
+
+  it("keeps sources with a scheme, an absolute path or a bundler marker", () => {
+    expect(sourceAgainst("webpack://_N_E/./src/a.tsx", "http://x/a.js")).toBe("webpack://_N_E/./src/a.tsx");
+    expect(sourceAgainst("/abs/src/a.tsx", "http://x/a.js")).toBe("/abs/src/a.tsx");
+    expect(sourceAgainst("[project]/src/a.tsx", "http://x/_next/a.js")).toBe("[project]/src/a.tsx");
+    expect(sourceAgainst("a.tsx", "/not/a/url.js")).toBe("a.tsx");
+  });
+});
 import { appFrames, isDependency } from "../src/source/stack";
 
 describe("safeUrl", () => {

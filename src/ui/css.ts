@@ -86,19 +86,25 @@ export const CSS = `
   border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
 }
 
+/* The note box: the bar's glass. all: unset also resets box-sizing, so it is set again: without
+   it the field's padding pushed it past the box's right edge. */
 .bubble {
-  position: fixed; width: 280px; padding: 8px; pointer-events: auto;
-  background: rgba(22, 20, 32, 0.96); border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 10px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
-  font: 13px/1.4 system-ui, sans-serif; color: #f4f2ff;
+  position: fixed; width: 300px; padding: 10px; pointer-events: auto;
+  background: linear-gradient(180deg, rgba(34, 30, 50, 0.92), rgba(18, 16, 28, 0.95));
+  -webkit-backdrop-filter: blur(16px) saturate(1.5); backdrop-filter: blur(16px) saturate(1.5);
+  border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 14px;
+  box-shadow: 0 18px 44px rgba(5, 3, 15, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  font: 13px/1.4 ui-sans-serif, system-ui, -apple-system, sans-serif; color: #ece9fb;
 }
 .bubble textarea {
-  all: unset; display: block; width: 100%; min-height: 38px; max-height: 160px; overflow: auto;
-  white-space: pre-wrap; padding: 6px 8px; border-radius: 6px; background: rgba(255, 255, 255, 0.08);
-  font: 14px/1.4 system-ui, sans-serif; color: #fff;
+  all: unset; box-sizing: border-box; display: block; width: 100%; min-height: 44px; max-height: 160px;
+  overflow: auto; white-space: pre-wrap; padding: 9px 11px; border-radius: 10px;
+  background: rgba(0, 0, 0, 0.28); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  font: 14px/1.45 ui-sans-serif, system-ui, -apple-system, sans-serif; color: #fff; caret-color: #9d85ff;
 }
-.bubble textarea:focus { outline: 2px solid #7c5cff; }
-.bubble .hint { margin-top: 6px; font-size: 11px; opacity: 0.65; }
+.bubble textarea::placeholder { color: rgba(236, 233, 251, 0.45); }
+.bubble textarea:focus { box-shadow: inset 0 0 0 1.5px #8a6dff, 0 0 0 3px rgba(124, 92, 255, 0.22); }
+.bubble .hint { margin: 8px 2px 0; font-size: 11.5px; color: rgba(236, 233, 251, 0.55); }
 
 .toast {
   position: fixed; left: 50%; bottom: 72px; transform: translateX(-50%); max-width: 90vw;
