@@ -1,7 +1,6 @@
 // Pointer on a page: the shadow-rooted layer, the bar, the tools' gestures. State lives in
 // state.ts, keys in keyboard.ts, pasted images in paste/; this file is the edge that meets the DOM.
 
-import { copyBundle } from "../capture/copy";
 import { type DrawTool, extendShape, isMeaningful, startShape } from "../draw/shapes";
 import { renderSvg } from "../marks/svg";
 import type { Pin } from "../marks/types";
@@ -12,6 +11,7 @@ import { type Point, near } from "../shared/geometry";
 import { editPlaceholder, placeholderAt } from "../shared/placeholder";
 import { componentOf } from "../source/client";
 import { isBubbleOpen, openBubble } from "./bubble";
+import { copyFlow } from "./copy-flow";
 import { cropGestures } from "./crop-gesture";
 import { CSS } from "./css";
 import { drag as dragOn } from "./drag";
@@ -19,6 +19,7 @@ import type { Extension, ExtensionHost } from "./extension";
 import { keyHandler } from "./keyboard";
 import { notes } from "./notes";
 import { handles, textAt } from "./handles";
+import { markAt, shifted } from "./move";
 import {
   type Output,
   type State,
@@ -64,14 +65,18 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
   const bar = createToolbar({
     tool: setTool,
     color: (c) => update(() => (state.color = c)),
-    output: setOutput,
     upload: () => pasted.upload(),
     styles: () => hooks.togglePanel(lastPick()),
     undo,
     clear,
-    copy,
+    copy: () => flow.copy(),
+    copyAs: (o) => flow.copyAs(o),
+    preview: () => void flow.preview(),
+    clearAfterCopy: (on) => update(() => (state.clearAfterCopy = on)),
+    estimate: () => flow.estimate(),
     close,
   });
+  const flow = copyFlow({ state, host, hooks: () => hooks, say, flash: bar.flash, update, setOutput });
   root.append(bar.el, toast.el);
   const drag = (down: PointerEvent, move: (p: Point, shift: boolean) => void, end: () => void) =>
     dragOn(layer, down, move, end);
@@ -146,6 +151,7 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
     e.preventDefault();
     if (pin) return grabPin(e, pin, view, page);
     if (pasted.onDown(e)) return;
+    if (tool === "move") return grabMark(e, page);
     // Drawing tools draw over everything; the others grab a drawn text first.
     const text = DRAW.has(tool) ? undefined : textAt(state.marks, page);
     if (text) return grabText(e, text, view, page);
@@ -179,10 +185,25 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
     }
   }
 
+  /** Move tool: drag the mark under the pointer (a drawing, a text, a free crop frame). */
+  function grabMark(e: PointerEvent, page: Point) {
+    const mark = markAt(state.marks, page);
+    if (!mark) return;
+    const start = mark;
+    let index = state.marks.indexOf(mark);
+    drag(e, (p) => {
+      index = state.marks.indexOf(state.marks[index] ?? mark);
+      update(() => (state.marks[index] = shifted(start, p.x - page.x, p.y - page.y)));
+    }, render);
+  }
+
+  let mouse: Point = { x: 0, y: 0 };
   function onHoverMove(e: PointerEvent) {
+    mouse = { x: e.clientX + scrollX, y: e.clientY + scrollY };
     if (e.buttons !== 0 || state.draft) return;
     const onNumber = pinAt({ x: e.clientX, y: e.clientY }) !== undefined;
-    layer.style.cursor = onNumber ? "pointer" : "";
+    const onMark = state.tool === "move" && markAt(state.marks, mouse) !== undefined;
+    layer.style.cursor = onNumber ? "pointer" : onMark ? "move" : "";
     if (targetsElements(state.tool)) setHover(onNumber ? null : elementAt(e.clientX, e.clientY, host));
   }
 
@@ -192,7 +213,7 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
     color: (c) => update(() => (state.color = c)),
     image: () => setOutput(otherOutput(state.output)),
     undo,
-    copy,
+    copy: () => flow.copy(),
     escape: () => (state.tool === "page" ? close() : setTool("page")),
     walk: (key) => {
       if (!state.hover) return;
@@ -210,13 +231,14 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
     panel: () => hooks.togglePanel(lastPick()),
     beforePaste: () => pasted.catchPaste(),
     overPasted: () => pasted.hovered() !== undefined,
+    canRemove: () => pasted.hovered() !== undefined || (state.tool === "move" && markAt(state.marks, mouse) !== undefined),
     see: (direction) => {
       const p = pasted.hovered();
       if (p) pasted.see(p, direction);
     },
     remove: () => {
-      const p = pasted.hovered();
-      if (p) update(() => (state.marks = state.marks.filter((m) => m !== p)));
+      const gone = pasted.hovered() ?? (state.tool === "move" ? markAt(state.marks, mouse) : undefined);
+      if (gone) update(() => (state.marks = state.marks.filter((m) => m !== gone)));
     },
   });
 
@@ -230,18 +252,6 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
   function clear() {
     for (const pin of pinsOf(state.marks)) hooks.onRemove(pin);
     update(() => (state.marks = []));
-  }
-
-  function copy() {
-    copyBundle({ state, host, changesOf: hooks.changesOf }).then(
-      ({ image, text }) =>
-        say(
-          image
-            ? `Copied: picture ${image.w}×${image.h} with its text. Paste it in the agent's chat.`
-            : `Copied: text only, ${text.split("\n").length} lines. Paste it in the agent's chat.`,
-        ),
-      (err: unknown) => say(`Copy failed: ${err instanceof Error ? err.message : String(err)}`, "error"),
-    );
   }
 
   const listeners: [EventTarget, string, EventListener, AddEventListenerOptions?][] = [

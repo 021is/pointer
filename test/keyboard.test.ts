@@ -14,6 +14,7 @@ const actions = (overPasted: boolean): KeyActions => ({
   panel: vi.fn(),
   beforePaste: vi.fn(),
   overPasted: () => overPasted,
+  canRemove: () => overPasted,
   see: vi.fn(),
   remove: vi.fn(),
 });

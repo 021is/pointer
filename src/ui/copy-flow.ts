@@ -1,0 +1,84 @@
+// What happens around Copy: nothing marked says so, a copy confirms on the button with what it
+// cost, "clear after copy" starts fresh with an Undo, and the preview opens the very result in a
+// tab of Pointer's own (nothing touches the clipboard then).
+
+import { buildBundle, copyBundle, estimateCosts } from "../capture/copy";
+import { textTokens } from "../capture/estimate";
+import type { Mark } from "../marks/types";
+import { imageTokens } from "../shared/geometry";
+import type { PreviewRequest } from "../shared/messages";
+import type { Extension } from "./extension";
+import { type Output, type State, isEmpty, pinsOf } from "./state";
+import type { Toast } from "./toast";
+
+export type CopyHost = {
+  state: State;
+  host: HTMLElement;
+  hooks: () => Extension;
+  say: Toast["say"];
+  flash: (message: string) => void;
+  update: (change: () => void) => void;
+  setOutput: (o: Output) => void;
+};
+
+const errorText = (err: unknown) => (err instanceof Error ? err.message : String(err));
+
+/** "3 marks · ≈140 tok": what the button says after a copy. */
+export function copiedLabel(marks: number, tokens: number): string {
+  return `Copied · ${marks} ${marks === 1 ? "mark" : "marks"} · ≈${tokens} tok`;
+}
+
+export function copyFlow(h: CopyHost) {
+  const ctx = () => ({ state: h.state, host: h.host, changesOf: h.hooks().changesOf });
+
+  function clearForNextRound() {
+    const before: Mark[] = h.state.marks.slice();
+    for (const pin of pinsOf(h.state.marks)) h.hooks().onRemove(pin);
+    h.update(() => (h.state.marks = []));
+    h.say("Cleared for the next round.", "ok", { label: "Undo", run: () => h.update(() => (h.state.marks = before)) });
+  }
+
+  function copy() {
+    if (isEmpty(h.state.marks) && h.state.output === "text") {
+      return h.say("Nothing marked yet: comment, pick or crop something first.");
+    }
+    const marks = h.state.marks.length;
+    copyBundle(ctx()).then(
+      ({ text, image }) => {
+        h.flash(copiedLabel(marks, image ? imageTokens(image) : textTokens(text)));
+        if (h.state.clearAfterCopy) clearForNextRound();
+      },
+      (err: unknown) => h.say(`Copy failed: ${errorText(err)}`, "error"),
+    );
+  }
+
+  function copyAs(o: Output) {
+    h.setOutput(o);
+    copy();
+  }
+
+  async function preview() {
+    try {
+      const { text, image } = buildBundle(ctx());
+      const pic = await image;
+      const png = pic ? await blobToDataUrl(pic.blob) : null;
+      const body = (await text) ?? null;
+      const tokens = pic ? imageTokens(pic.size) : textTokens(body ?? "");
+      const ask: PreviewRequest = { type: "preview", png, text: body, tokens, output: h.state.output };
+      await chrome.runtime.sendMessage(ask);
+    } catch (err) {
+      h.say(`Preview failed: ${errorText(err)}`, "error");
+    }
+  }
+
+  return { copy, copyAs, preview, estimate: () => estimateCosts(ctx()) };
+}
+
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error ?? new Error("the picture could not be read"));
+    reader.readAsDataURL(blob);
+  });
+}

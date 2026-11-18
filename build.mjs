@@ -1,5 +1,5 @@
-// Bundles the three scripts Chrome loads and copies the manifest and the icons into dist/, the
-// folder that is loaded unpacked. `--watch` rebuilds on every save.
+// Bundles the scripts Chrome loads and copies the manifest, the pages, the icons and 021's logo
+// into dist/, the folder that is loaded unpacked. `--watch` rebuilds on every save.
 import { copyFile, mkdir, readdir } from "node:fs/promises";
 import * as esbuild from "esbuild";
 
@@ -11,6 +11,7 @@ const options = {
     background: "src/background.ts",
     content: "src/ui/main.ts",
     probe: "src/source/probe.ts",
+    preview: "src/preview.ts",
   },
   outdir: "dist",
   bundle: true,
@@ -21,11 +22,12 @@ const options = {
 };
 
 await mkdir("dist/icons", { recursive: true });
-await copyFile("manifest.json", "dist/manifest.json");
-await copyFile("welcome.html", "dist/welcome.html");
+await mkdir("dist/brand", { recursive: true });
+for (const file of ["manifest.json", "welcome.html", "preview.html", "pages.css"]) await copyFile(file, `dist/${file}`);
 for (const name of await readdir("icons")) {
   if (name.endsWith(".png")) await copyFile(`icons/${name}`, `dist/icons/${name}`);
 }
+for (const name of await readdir("brand")) await copyFile(`brand/${name}`, `dist/brand/${name}`);
 
 if (watch) {
   const ctx = await esbuild.context(options);

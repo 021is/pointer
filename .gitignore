@@ -1,4 +1,4 @@
-/node_modules
+node_modules
 /dist
 # the icon directions shown to the owner for a choice; the chosen one lives in icons/
 /icon-options

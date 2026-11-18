@@ -1,8 +1,29 @@
 // The service worker: the icon or Alt+Shift+P turns Pointer on or off in the current tab (that
 // click is what grants activeTab: no access to any site before it), and it takes the screenshot
-// the picture is cropped from (only the extension may call captureVisibleTab).
+// the picture is cropped from (only the extension may call captureVisibleTab). It also opens the
+// preview of what Copy would give in a tab of Pointer's own, and hands that page the result.
 
-import { type CaptureReply, isCaptureRequest } from "./shared/messages";
+import { type CaptureReply, type Preview, isCaptureRequest, isPreviewAsk, isPreviewRequest } from "./shared/messages";
+
+/** The last preview, held only until its page has taken it (in memory, never stored). */
+let preview: Preview | null = null;
+
+chrome.runtime.onMessage.addListener((message: unknown, _sender, reply: (r: Preview | null) => void) => {
+  if (isPreviewRequest(message)) {
+    const { type: _type, ...rest } = message;
+    preview = rest;
+    chrome.tabs
+      .create({ url: chrome.runtime.getURL("preview.html") })
+      .catch((err: unknown) => console.error("Pointer: the preview did not open:", err));
+    return false;
+  }
+  if (isPreviewAsk(message)) {
+    reply(preview);
+    preview = null;
+    return false;
+  }
+  return false;
+});
 
 async function toggle(tab: chrome.tabs.Tab): Promise<void> {
   const tabId = tab.id;

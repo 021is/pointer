@@ -20,6 +20,7 @@ import {
   summarize,
   wantsImage,
 } from "../ui/state";
+import { type Costs, costsOf } from "./estimate";
 import { type Region, shownFrames } from "./layout";
 import { picture, screenshot } from "./picture";
 
@@ -74,56 +75,77 @@ function framesNow(ctx: CopyContext) {
 }
 
 /**
- * The screenshot, taken at once (the page as it is at the click), and the regions to cut: the
- * frames on screen, or else one crop around every mark.
+ * What the picture would show, without taking it: the regions to cut (the frames on screen, or
+ * one crop around every mark), the scene and the pasted images. An Error when every frame is
+ * scrolled out of view.
  */
-async function shoot(ctx: CopyContext) {
+function regionsNow(ctx: CopyContext) {
   const { viewport, frames, split } = framesNow(ctx);
-  if (split instanceof Error) throw split;
+  if (split instanceof Error) return split;
   const scene = pictureScene(ctx.state, liveLayout());
   const laid = laidOf(ctx.state.marks, liveLayout());
   const boxes = [...pictureBoxes(scene), ...laid.map((p) => p.rect)];
   const regions: Region[] = frames.length ? split.shown : [{ label: null, rect: cropFor(boxes, viewport) ?? viewport }];
-  return { shot: await screenshot(ctx.host), regions, scene, laid };
+  return { regions, scene, laid };
+}
+
+/** The screenshot, taken at once (the page as it is at the click), with what to cut and draw. */
+async function shoot(ctx: CopyContext) {
+  const now = regionsNow(ctx);
+  if (now instanceof Error) throw now;
+  return { shot: await screenshot(ctx.host), ...now };
+}
+
+/** The bundle's data once every pin and crop is read, as a function of the picture's size. */
+async function dataNow(ctx: CopyContext) {
+  const { frames, split } = framesNow(ctx);
+  const off = split instanceof Error ? frames.map((f) => f.label) : split.off;
+  const [pins, crops] = await Promise.all([pinInfos(ctx), cropInfos(cropsOf(ctx.state.marks), frames, off, componentOf)]);
+  const drawings = summarize(ctx.state.marks);
+  const viewport = { w: innerWidth, h: innerHeight };
+  return (image: CopyResult["image"]): Bundle => ({ url: safeUrl(location.href), viewport, crops, pins, drawings, image });
+}
+
+/** What each output would cost now, for Copy's menu. */
+export async function estimateCosts(ctx: CopyContext): Promise<Costs> {
+  const data = await dataNow(ctx);
+  const now = regionsNow(ctx);
+  return costsOf(now instanceof Error ? null : now.regions, formatStrip(data(null), true), formatStrip(data(null), false));
 }
 
 /**
  * Writes the bundle to the clipboard; resolves with what was copied, rejects with the cause.
- * With a picture, the Pointer lines are printed under it too: chats keep only the image of a
- * text + image paste, so one paste still carries everything.
+ * Picture + text: the Pointer lines are printed under the picture too (chats keep only the image of
+ * a text + image paste) and the full text goes beside it. Text only: the compact lines. Picture
+ * only: the picture alone, no strip, no text.
  */
 export async function copyBundle(ctx: CopyContext): Promise<CopyResult> {
-  const shot = wantsImage(ctx.state) ? shoot(ctx) : null;
-  const { frames, split } = framesNow(ctx);
-  const off = split instanceof Error ? frames.map((f) => f.label) : split.off;
-  const crops = cropInfos(cropsOf(ctx.state.marks), frames, off, componentOf);
-  const infos = Promise.all([pinInfos(ctx), crops]);
-  const drawings = summarize(ctx.state.marks);
-  const viewport = { w: innerWidth, h: innerHeight };
-  const data = ([pins, crops]: [PinInfo[], CropInfo[]], image: CopyResult["image"]): Bundle => ({
-    url: safeUrl(location.href),
-    viewport,
-    crops,
-    pins,
-    drawings,
-    image,
-  });
-  const bundle = (i: [PinInfo[], CropInfo[]], image: CopyResult["image"]) => formatBundle(data(i, image));
-  const image = shot
-    ? (async () => {
-        const [s, i] = await Promise.all([shot, infos]);
-        return picture(s.shot, s.regions, s.scene, formatStrip(data(i, null), true), s.laid);
-      })()
-    : null;
-  // With the picture: the full text beside it. Text only (the bar's switch): the compact lines.
-  const text = (async () => {
-    const [i, pic] = await Promise.all([infos, image]);
-    return image ? bundle(i, pic?.size ?? null) : formatStrip(data(i, null), false);
-  })();
-  const textBlob = text.then((t) => new Blob([t], { type: "text/plain" }));
-  const parts: Record<string, Promise<Blob>> = { "text/plain": textBlob };
+  const { text, image } = buildBundle(ctx);
+  const parts: Record<string, Promise<Blob>> = {};
+  if (text) parts["text/plain"] = text.then((t) => new Blob([t], { type: "text/plain" }));
   if (image) parts["image/png"] = image.then((p) => p.blob);
   await navigator.clipboard.write([new ClipboardItem(parts)]);
   const pic = await image;
-  return { text: await text, image: pic?.size ?? null };
+  return { text: (await text) ?? "", image: pic?.size ?? null };
+}
+
+/** What Copy would give, built but not written anywhere (Copy and the preview share it). */
+export function buildBundle(ctx: CopyContext) {
+  const output = ctx.state.output;
+  const shot = wantsImage(ctx.state) ? shoot(ctx) : null;
+  const data = dataNow(ctx);
+  const image = shot
+    ? (async () => {
+        const [s, d] = await Promise.all([shot, data]);
+        return picture(s.shot, s.regions, s.scene, output === "image" ? null : formatStrip(d(null), true), s.laid);
+      })()
+    : null;
+  const text =
+    output === "image"
+      ? null
+      : (async () => {
+          const [d, pic] = await Promise.all([data, image]);
+          return image ? formatBundle(d(pic?.size ?? null)) : formatStrip(d(null), false);
+        })();
+  return { text, image };
 }

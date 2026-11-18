@@ -1,20 +1,25 @@
 // The floating bar. The 021 mark drags it; every button shows its name and key on hover. Its
-// groups follow the Picture | Text switch: drawing, crops, colours and image upload only matter
-// for a picture, so Text hides them (Edvard, 2026-11-18).
+// groups follow what Copy gives: drawing, crops, colours and image upload only matter for a
+// picture, so Text only hides them. Copy is a split button (copy-menu.ts).
 
 import { COLORS, type Color } from "../marks/types";
+import { type CopyMenu, createCopyMenu } from "./copy-menu";
 import { type IconName, icon } from "./icons";
-import type { Output, State, Tool } from "./state";
+import type { Costs } from "../capture/estimate";
+import { type Output, type State, type Tool, pictureOnly } from "./state";
 
 export type BarActions = {
   tool: (t: Tool) => void;
   color: (c: Color) => void;
-  output: (o: Output) => void;
   upload: () => void;
   styles: () => void;
   undo: () => void;
   clear: () => void;
   copy: () => void;
+  copyAs: (o: Output) => void;
+  preview: () => void;
+  clearAfterCopy: (on: boolean) => void;
+  estimate: () => Promise<Costs>;
   close: () => void;
 };
 
@@ -22,6 +27,7 @@ type Entry = { tool: Tool; key: string; icon: IconName; title: string };
 
 export const TOOLS: readonly Entry[] = [
   { tool: "page", key: "V", icon: "page", title: "Use the page" },
+  { tool: "move", key: "M", icon: "move", title: "Move marks and images · Delete removes" },
   { tool: "pick", key: "P", icon: "pick", title: "Pick an element" },
   { tool: "comment", key: "C", icon: "comment", title: "Comment" },
   { tool: "crop", key: "X", icon: "crop", title: "Crop a component or a frame" },
@@ -82,7 +88,7 @@ function grip(bar: HTMLElement): HTMLElement {
   return g;
 }
 
-export type Toolbar = { el: HTMLElement; update: (s: State) => void };
+export type Toolbar = { el: HTMLElement; update: (s: State) => void; flash: (message: string) => void };
 
 export function createToolbar(act: BarActions): Toolbar {
   const bar = document.createElement("div");
@@ -98,9 +104,10 @@ export function createToolbar(act: BarActions): Toolbar {
     return b;
   };
   const marking = group();
-  marking.append(...TOOLS.slice(0, 3).map(toolButton));
+  const markingTools = TOOLS.filter((t) => !pictureOnly(t.tool));
+  marking.append(...markingTools.map(toolButton));
   const drawing = group("picture");
-  drawing.append(...TOOLS.slice(3).map(toolButton));
+  drawing.append(...TOOLS.filter((t) => pictureOnly(t.tool)).map(toolButton));
 
   const colors = new Map<Color, HTMLButtonElement>();
   const swatches = group("picture");
@@ -121,26 +128,27 @@ export function createToolbar(act: BarActions): Toolbar {
     button("clear", "Clear everything", "", act.clear),
   );
 
-  const outputs = new Map<Output, HTMLButtonElement>([
-    ["picture", button("picture", "Copy gives the picture + its text", "I", () => act.output("picture"), "Picture")],
-    ["text", button("textOnly", "Copy gives the text only, ~3× cheaper", "I", () => act.output("text"), "Text")],
-  ]);
-  const toggle = Object.assign(document.createElement("span"), { className: "switch" });
-  toggle.append(...outputs.values());
-  const copy = button("copy", "Copy for the agent", `${MOD}C`, act.copy, "Copy");
-  copy.classList.add("copy");
+  const menu: CopyMenu = createCopyMenu({
+    copy: button("copy", "Copy for the agent", `${MOD}C`, act.copy, "Copy"),
+    caret: button(null, "Choose what Copy gives, see its cost, preview it", "", () => menu.toggle(), "▾"),
+    copyAs: act.copyAs,
+    preview: act.preview,
+    clearAfterCopy: act.clearAfterCopy,
+    estimate: act.estimate,
+  });
   const close = button("close", "Close", "Esc Esc", act.close);
   close.classList.add("close");
 
-  bar.append(grip(bar), marking, drawing, swatches, upload, edit, toggle, copy, close);
+  bar.append(grip(bar), marking, drawing, swatches, upload, edit, menu.el, close);
 
   return {
     el: bar,
+    flash: menu.flash,
     update(s) {
       bar.dataset.output = s.output;
       for (const [t, b] of tools) b.setAttribute("aria-pressed", String(t === s.tool));
       for (const [c, b] of colors) b.setAttribute("aria-pressed", String(c === s.color));
-      for (const [o, b] of outputs) b.setAttribute("aria-pressed", String(o === s.output));
+      menu.update(s);
     },
   };
 }

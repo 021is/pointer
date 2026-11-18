@@ -2,6 +2,7 @@
 
 const ICON_PATHS = {
   page: '<path d="M6 3.5l12.5 6.2-5.6 1.9-2 5.9z"/><path d="M13 13l5 5"/>',
+  move: '<path d="M12 3v18M3 12h18"/><path d="M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"/>',
   pick: '<circle cx="12" cy="12" r="6.5"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3"/>',
   comment: '<path d="M5 5.5h14a1.5 1.5 0 011.5 1.5v8a1.5 1.5 0 01-1.5 1.5H10l-4.5 3.5V16.5H5A1.5 1.5 0 013.5 15V7A1.5 1.5 0 015 5.5z"/>',
   crop: '<path d="M7 2.5V17h14.5"/><path d="M2.5 7H17v14.5"/>',
