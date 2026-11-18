@@ -1,12 +1,25 @@
 import { describe, expect, it } from "vitest";
-import { changeLines, groupProps, noEdits, nudge, parseDeclaration, withProp } from "../src/panel/edits";
+import {
+  type Change,
+  changeLines,
+  groupProps,
+  noEdits,
+  nudge,
+  parseDeclaration,
+  removedProps,
+  withProp,
+  withoutProp,
+} from "../src/panel/edits";
 import { isUniversal } from "../src/panel/rules";
+
+const set = (value: string): Change => ({ kind: "set", value });
 
 describe("changeLines: the diff the agent reads", () => {
   it("writes set, removed, classes and inserts, and skips a value set back to what it was", () => {
-    let e = withProp(noEdits(), "font-size", "15px", "17px");
-    e = withProp(e, "box-shadow", "0 1px 3px #000", null);
-    e = withProp(e, "color", "#1a1a2e", "#1a1a2e");
+    let e = withProp(noEdits(), "font-size", "15px", set("17px"));
+    e = withProp(e, "box-shadow", "0 1px 3px #000", { kind: "off" });
+    e = withProp(e, "outline", "none", { kind: "removed" });
+    e = withProp(e, "color", "#1a1a2e", set("#1a1a2e"));
     e = {
       ...e,
       removedClasses: ["shadow-sm", "p-4"],
@@ -14,11 +27,12 @@ describe("changeLines: the diff the agent reads", () => {
         { name: "gap-6", built: true },
         { name: "gap-[13px]", built: false },
       ],
-      inserted: [{ position: "after", label: "Map", size: { w: 240, h: 48 } }],
     };
-    expect(changeLines(e)).toEqual([
+    const inserted = [{ position: "after" as const, label: "Map", size: { w: 240, h: 48 } }];
+    expect(changeLines(e, inserted)).toEqual([
       "font-size 15px → 17px",
       "removed box-shadow (was 0 1px 3px #000)",
+      "removed outline (was none)",
       "removed class: shadow-sm p-4",
       "added class: gap-6",
       "added class: gap-[13px] (not built yet)",
@@ -27,9 +41,29 @@ describe("changeLines: the diff the agent reads", () => {
   });
 
   it("keeps the first before across edits of the same property", () => {
-    let e = withProp(noEdits(), "gap", "8px", "12px");
-    e = withProp(e, "gap", "12px", "16px");
-    expect(e.props).toEqual([{ prop: "gap", before: "8px", after: "16px" }]);
+    let e = withProp(noEdits(), "gap", "8px", set("12px"));
+    e = withProp(e, "gap", "12px", set("16px"));
+    expect(e.props).toEqual([{ prop: "gap", before: "8px", change: set("16px") }]);
+  });
+
+  it("knows which rows × removed, and drops an edit when it is turned back on", () => {
+    let e = withProp(noEdits(), "outline", "none", { kind: "removed" });
+    e = withProp(e, "gap", "8px", { kind: "off" });
+    expect([...removedProps(e)]).toEqual(["outline"]);
+    expect(withoutProp(e, "gap").props.map((p) => p.prop)).toEqual(["outline"]);
+  });
+});
+
+describe("nudge never touches a colour", () => {
+  it("returns null for a value that is only a colour", () => {
+    expect(nudge("#1a1a2e", 1)).toBeNull();
+    expect(nudge("rgba(0, 0, 0, .5)", 1)).toBeNull();
+    expect(nudge("oklch(0.6 0.2 280)", 1)).toBeNull();
+  });
+
+  it("nudges the size next to a colour, not the colour", () => {
+    expect(nudge("rgb(0 0 0 / 0.2) 0 1px 3px", 1)).toBe("rgb(0 0 0 / 0.2) 1 1px 3px");
+    expect(nudge("1px solid #333", 1)).toBe("2px solid #333");
   });
 });
 
