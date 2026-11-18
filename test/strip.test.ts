@@ -20,6 +20,13 @@ describe("wrapLines (the text strip under the picture)", () => {
     expect(lines.join("").replace(/\s+/g, "")).toBe("file:src/feature/dance/shell/desktop/map/ui/EventMap.tsx:197");
   });
 
+  it("never stalls on a deep indent in a narrow strip", () => {
+    const lines = wrapLines(`${" ".repeat(30)}${"x".repeat(50)}`, 10);
+    expect(lines.length).toBeGreaterThan(1);
+    expect(lines.every((l) => l.length <= 10)).toBe(true);
+    expect(lines.join("").replace(/\s+/g, "")).toBe("x".repeat(50));
+  });
+
   it("sizes the strip: nothing for no lines", () => {
     expect(stripHeight(0)).toBe(0);
     expect(stripHeight(3)).toBe(74);

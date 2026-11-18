@@ -100,7 +100,7 @@ describe("cleanSourcePath", () => {
     ["http://localhost:5173/src/App.vue?t=123", "src/App.vue"],
     ["file:///home/me/web/src/page.tsx", "src/page.tsx"],
     ["/home/me/projects/web/.wt/live/src/feature/a/src/b.tsx", "src/feature/a/src/b.tsx"],
-    ["/home/me/no-src-here/page.tsx", "/home/me/no-src-here/page.tsx"],
+    ["/home/me/repos/web/app/page.tsx", "web/app/page.tsx"],
   ])("%s → %s", (input, out) => {
     expect(cleanSourcePath(input)).toBe(out);
   });
