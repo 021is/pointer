@@ -56,7 +56,6 @@ describe("groupProps", () => {
         "border-top-left-radius",
         "border-start-end-radius",
         "border-bottom-width",
-        "border-image-slice",
         "row-gap",
         "column-gap",
         "font-size",

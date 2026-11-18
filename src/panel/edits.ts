@@ -57,7 +57,6 @@ const FOLD: [RegExp, string][] = [
   [/^padding(-.+)?$/, "padding"],
   [/^margin(-.+)?$/, "margin"],
   [/^border(-.+)?-radius$/, "border-radius"],
-  [/^border-image(-.+)?$/, "border"],
   [/^border(-(top|right|bottom|left|block|inline)(-(start|end))?)?(-(width|style|color))?$/, "border"],
   [/^(row|column)-gap$/, "gap"],
   [/^overflow-[xy]$/, "overflow"],

@@ -43,6 +43,7 @@ export function createPanel(root: ShadowRoot, host: ExtensionHost): Extension {
     panel.removeAttribute("data-collapsed");
     panel.setAttribute("aria-label", "Styles of the picked element");
     paint(null);
+    // componentOf never rejects: every failure resolves as unknown(why), which the panel shows.
     void componentOf(pin.el).then((info) => {
       if (showing === pin) paint(info);
     });

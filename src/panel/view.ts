@@ -1,5 +1,5 @@
 // The style panel's DOM for one picked element: header, file, class chips, the CSS that reaches
-// it (editable), + add, Insert, Reset. It floats over the page and never moves its layout.
+// it (editable), + add, ⊕ before/after, Reset. It floats over the page and never moves its layout.
 
 import { formatSource } from "../bundle/format";
 import type { ComponentInfo } from "../bundle/types";
@@ -62,6 +62,7 @@ export function renderPanel(panel: HTMLElement, n: number, edited: Edited, info:
   const file = info?.where.kind === "found" ? formatSource(info.where.source) : null;
   // The left-to-right marks keep ":30" and slashes in place while the start is cut with "…".
   if (file) body.append(h("div", { className: "file", textContent: `‎${file}‎`, title: file }));
+  else if (info?.where.kind === "unknown") body.append(h("div", { className: "note", textContent: `File unknown: ${info.where.why}` }));
 
   const chips = h("div", { className: "chips" });
   const paintChips = () => {
@@ -123,14 +124,15 @@ export function renderPanel(panel: HTMLElement, n: number, edited: Edited, info:
             value.value = computed.getPropertyValue(prop).trim();
             return value.blur();
           } else if (e.key !== "Enter") return;
-          edited.set(prop, value.value.trim());
-          box.checked = true;
-          changed();
+          apply();
         });
-        value.addEventListener("change", () => {
-          edited.set(prop, value.value.trim());
+        const apply = () => {
+          const refused = edited.set(prop, value.value.trim());
+          tell(refused);
+          if (!refused) box.checked = true;
           changed();
-        });
+        };
+        value.addEventListener("change", apply);
         x.addEventListener("click", () => {
           edited.off(prop);
           hidden.add(prop);
@@ -140,8 +142,11 @@ export function renderPanel(panel: HTMLElement, n: number, edited: Edited, info:
         return row;
       }),
     );
-    note.textContent = unreadable ? `${unreadable} stylesheet(s) from another origin can't be read.` : "";
+    sheets.textContent = unreadable ? `${unreadable} stylesheet(s) from another origin can't be read.` : "";
     paintDots();
+  };
+  const tell = (message: string | null) => {
+    warning.textContent = message ?? "";
   };
 
   const add = h("input", { className: "add-prop", placeholder: "+ add   gap: 12px" });
@@ -150,9 +155,11 @@ export function renderPanel(panel: HTMLElement, n: number, edited: Edited, info:
   add.addEventListener("keydown", (e) => {
     if (e.key !== "Enter") return;
     const decl = parseDeclaration(add.value);
-    if (!decl) return;
+    if (!decl) return tell("write it as  property: value");
+    const refused = edited.set(decl[0], decl[1]);
+    tell(refused);
+    if (refused) return;
     hidden.delete(decl[0]);
-    edited.set(decl[0], decl[1]);
     add.value = "";
     paintRows();
     changed();
@@ -180,9 +187,11 @@ export function renderPanel(panel: HTMLElement, n: number, edited: Edited, info:
     paintRows();
     changed();
   });
-  const note = h("div", { className: "note" });
+  const warning = h("div", { className: "warning" });
+  warning.setAttribute("role", "alert");
+  const sheets = h("div", { className: "note" });
 
-  body.append(chips, rows, add, list, h("div", { className: "foot" }, before, after, reset), note);
+  body.append(chips, rows, add, warning, list, h("div", { className: "foot" }, before, after, reset), sheets);
   panel.replaceChildren(head, body);
   paintChips();
   paintRows();

@@ -46,5 +46,6 @@ export const PANEL_CSS = `
 .panel .foot { display: flex; gap: 4px; flex-wrap: wrap; }
 .panel .foot button { background: rgba(255, 255, 255, 0.07); }
 .panel .note { font-size: 11px; opacity: 0.6; }
-.panel .note:empty { display: none; }
+.panel .note:empty, .panel .warning:empty { display: none; }
+.panel .warning { font-size: 12px; color: #ff8fa8; }
 `;
