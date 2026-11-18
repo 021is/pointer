@@ -43,7 +43,7 @@ describe("React: who rendered the element", () => {
     const info = await describeComponent(
       node({ type: "div", _debugSource: { fileName: "/app/src/Card.tsx", lineNumber: 7 } }),
     );
-    expect(info.where).toEqual({ kind: "found", source: { file: "/app/src/Card.tsx", line: 7 } });
+    expect(info.where).toEqual({ kind: "found", source: { file: "src/Card.tsx", line: 7 } });
   });
 
   it("says where the element's component is used: its owner's JSX, in another file", async () => {
@@ -53,8 +53,8 @@ describe("React: who rendered the element", () => {
     );
     expect(info.where).toEqual({
       kind: "found",
-      source: { file: "/app/src/button.tsx", line: 52 },
-      usedAt: { file: "/app/src/Menu.tsx", line: 3 },
+      source: { file: "src/button.tsx", line: 52 },
+      usedAt: { file: "src/Menu.tsx", line: 3 },
     });
   });
 
@@ -68,12 +68,12 @@ describe("Vue and Svelte", () => {
   it("reads Vue 3's component and __file", async () => {
     const el = {
       parentElement: null,
-      __vueParentComponent: { type: { __name: "EventCard", __file: "/app/src/EventCard.vue" }, parent: null },
+      __vueParentComponent: { type: { __name: "EventCard", __file: "src/EventCard.vue" }, parent: null },
     } as unknown as Element;
     expect(await describeComponent(el)).toEqual({
       framework: "vue",
       chain: ["EventCard"],
-      where: { kind: "found", source: { file: "/app/src/EventCard.vue" } },
+      where: { kind: "found", source: { file: "src/EventCard.vue" } },
     });
   });
 

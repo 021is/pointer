@@ -40,7 +40,8 @@ export function appFrames(frames: readonly Frame[]): Frame[] {
 
 /**
  * A source path as a repo-relative file: bundler prefixes stripped
- * ("turbopack:///[project]/src/a.tsx" → "src/a.tsx", "webpack://_N_E/./src/a.tsx" → "src/a.tsx").
+ * ("turbopack:///[project]/src/a.tsx" → "src/a.tsx", "webpack://_N_E/./src/a.tsx" → "src/a.tsx"),
+ * and an absolute path cut to its `src/` (fewer tokens, and no home folder in a chat).
  */
 export function cleanSourcePath(path: string): string {
   let p = path.replace(/[?#].*$/, "");
@@ -49,5 +50,6 @@ export function cleanSourcePath(path: string): string {
   p = p.replace(/^file:\/\/\/?/, "/");
   p = p.replace(/^https?:\/\/[^/]+\//, "");
   p = p.replace(/^(\.\/)+/, "");
-  return p;
+  const src = p.startsWith("/") ? p.indexOf("/src/") : -1;
+  return src >= 0 ? p.slice(src + 1) : p;
 }

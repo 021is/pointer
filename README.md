@@ -35,7 +35,7 @@ After a rebuild, press reload on the extension's card and reload the page.
 |---|---|
 | Alt+Shift+P | on / off for this tab (the toolbar icon does the same) |
 | P | pick: hover an element (the rest dims), ↑ parent, ↓ back down, ← → siblings, click or Enter picks, then a note |
-| C | comment: click anywhere, type, Enter. Drag a pin to move it, double-click a pin to edit its note |
+| C | comment: click anywhere, type, Enter. Click any number to edit its note (a pick's also reopens its panel); drag a comment's number to move it |
 | D A B E T | pen, arrow, box, ellipse, text. **Shift**: straight line, 45° arrow, square, circle |
 | 1 2 3 | red, blue, yellow |
 | V | use the page (clicks go through, marks stay) |
@@ -69,6 +69,9 @@ Undoing or clearing a pick undoes its edits. A reload of the page drops them too
 when nothing is marked (a plain screenshot). A pick with a note is text only, about 80 tokens.
 The picture is cropped to the marks and kept at one pixel per CSS pixel, long edge ≤ 1000 px
 (Claude prices an image at about w×h/750 tokens; a full Retina screenshot costs ~5,000).
+With a picture, the same lines are also printed in a dark strip under it: Claude Code's chat
+keeps only the image of a text + image paste, so one paste still carries the file:line, notes
+and changes. A strip line costs about what the text would (~24 tokens).
 
 ## Where the file comes from
 

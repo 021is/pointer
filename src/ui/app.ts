@@ -157,10 +157,24 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
     const page = { x: view.x + scrollX, y: view.y + scrollY };
     const tool = state.tool;
     const pin = pinAt(view);
-    if (tool === "comment" && pin?.kind === "comment") {
-      return drag(e, (p) => update(() => (pin.at = p)), () => {});
+    if (pin) {
+      // A number is a handle, whatever the tool: a click edits its note (a pick's also opens its
+      // panel); a comment's number drags once the pointer moves 4px.
+      let moved = false;
+      return drag(
+        e,
+        (p) => {
+          if (pin.kind !== "comment" || (!moved && near(p, page, 4))) return;
+          moved = true;
+          update(() => (pin.at = p));
+        },
+        () => {
+          if (moved) return;
+          if (pin.kind === "pick") hooks.onPick(pin);
+          void editNote(pin, view);
+        },
+      );
     }
-    if (tool === "pick" && pin?.kind === "pick") return hooks.onPick(pin);
     if (tool === "pick") {
       const el = state.hover?.el ?? elementAt(view.x, view.y, host);
       if (el) void addPin("pick", el, page);
@@ -189,13 +203,10 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
   }
 
   function onHoverMove(e: PointerEvent) {
-    if (state.tool === "pick" && !state.draft && e.buttons === 0) setHover(elementAt(e.clientX, e.clientY, host));
-  }
-
-  function onDoubleClick(e: MouseEvent) {
-    const view = { x: e.clientX, y: e.clientY };
-    const pin = pinAt(view);
-    if (pin) void editNote(pin, view);
+    if (e.buttons !== 0 || state.draft) return;
+    const onNumber = pinAt({ x: e.clientX, y: e.clientY }) !== undefined;
+    layer.style.cursor = onNumber ? "pointer" : "";
+    if (state.tool === "pick") setHover(onNumber ? null : elementAt(e.clientX, e.clientY, host));
   }
 
   const trail: Element[] = [];
@@ -261,7 +272,6 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
   const listeners: [EventTarget, string, EventListener, AddEventListenerOptions?][] = [
     [layer, "pointerdown", onDown as EventListener],
     [layer, "pointermove", onHoverMove as EventListener],
-    [layer, "dblclick", onDoubleClick as EventListener],
     [window, "keydown", onKey as EventListener, { capture: true }],
     [window, "scroll", render, { passive: true, capture: true }],
     [window, "resize", render],
