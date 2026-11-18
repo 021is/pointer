@@ -24,8 +24,28 @@ export type Pin = {
   note: string;
 };
 
-export type Mark = Shape | Pin;
+/**
+ * A frame for the picture: a component (its box, followed live) or a dragged rectangle (page
+ * coordinates). With frames, the picture is exactly the frames, stacked, labelled A, B, C.
+ */
+export type Crop = { kind: "crop"; el: Element | null; rect: Rect };
+
+export type Mark = Shape | Pin | Crop;
 
 export function isPin(m: Mark): m is Pin {
   return m.kind === "pick" || m.kind === "comment";
+}
+
+export function isCrop(m: Mark): m is Crop {
+  return m.kind === "crop";
+}
+
+export function isShape(m: Mark): m is Shape {
+  return !isPin(m) && !isCrop(m);
+}
+
+/** A, B, … Z, then AA, AB: never confused with the pins' numbers. */
+export function cropLabel(i: number): string {
+  const letter = String.fromCharCode(65 + (i % 26));
+  return i < 26 ? letter : cropLabel(Math.floor(i / 26) - 1) + letter;
 }

@@ -57,9 +57,13 @@ export type DrawingSummary = {
   texts: string[];
 };
 
+/** A crop frame: a component (with its component info) or a dragged rectangle. */
+export type CropInfo = { label: string; component: ComponentInfo | null; size: { w: number; h: number } };
+
 export type Bundle = {
   url: string;
   viewport: { w: number; h: number };
+  crops: CropInfo[];
   pins: PinInfo[];
   drawings: DrawingSummary;
   /** The picture's size in pixels, or null when the bundle is text only. */

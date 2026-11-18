@@ -101,8 +101,16 @@ describe("cleanSourcePath", () => {
     ["file:///home/me/web/src/page.tsx", "src/page.tsx"],
     ["/home/me/projects/web/.wt/live/src/feature/a/src/b.tsx", "src/feature/a/src/b.tsx"],
     ["/home/me/repos/web/app/page.tsx", "web/app/page.tsx"],
+    [
+      "/home/me/web/node_modules/next/dist/compiled/react-server-dom-turbopack/cjs/client.js",
+      "node_modules/next/dist/compiled/react-server-dom-turbopack/cjs/client.js",
+    ],
   ])("%s → %s", (input, out) => {
     expect(cleanSourcePath(input)).toBe(out);
+  });
+
+  it("still knows a dependency after cleaning an absolute path", () => {
+    expect(isDependency(cleanSourcePath("/home/me/web/node_modules/react-dom/cjs/x.js"))).toBe(true);
   });
 
   it("knows a dependency from the app", () => {

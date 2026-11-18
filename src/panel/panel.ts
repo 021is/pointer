@@ -61,8 +61,11 @@ export function createPanel(root: ShadowRoot, host: ExtensionHost): Extension {
       }
       if (showing === pin) hide();
     },
-    togglePanel() {
-      if (!panel.hidden) panel.toggleAttribute("data-collapsed");
+    // A pick opens only its note (Edvard, 2026-11-18): S brings the panel for the last pick,
+    // and takes it away again.
+    togglePanel(lastPick) {
+      if (!panel.hidden) return hide();
+      if (lastPick) show(lastPick);
     },
   };
 }

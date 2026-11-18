@@ -52,6 +52,9 @@ export function cleanSourcePath(path: string): string {
   p = p.replace(/^https?:\/\/[^/]+\//, "");
   p = p.replace(/^(\.\/)+/, "");
   if (!p.startsWith("/")) return p;
+  // A package keeps its node_modules/ marker: isDependency reads the cleaned path.
+  const pkg = p.indexOf("/node_modules/");
+  if (pkg >= 0) return p.slice(pkg + 1);
   const src = p.indexOf("/src/");
   return src >= 0 ? p.slice(src + 1) : p.split("/").slice(-3).join("/");
 }
