@@ -56,7 +56,7 @@ Made by Edvard Grei at 021.
   statements: not sold, not used for unrelated purposes, not used for creditworthiness.)
 - **Privacy policy:** https://021.is/plugins/pointer/privacy
 
-## The facts the privacy page must say (021is/021-site, flight TF148)
+## The facts the privacy page must say (021.is/plugins/pointer/privacy)
 
 1. Pointer collects, stores and transmits no personal or usage data. No analytics, no accounts,
    no servers of its own.
