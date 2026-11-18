@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 type Listener = (details: { reason: string }) => void;
 
-function mockChrome(create: (props: { url: string }) => Promise<unknown>, shortcut = "Alt+Shift+P") {
+function mockChrome(create: (props: { url: string }) => Promise<unknown>, shortcut = "Alt+P") {
   const installed: Listener[] = [];
   const noop = { addListener: () => {} };
   const setTitle = vi.fn(async () => {});
@@ -65,9 +65,9 @@ describe("install opens the welcome page", () => {
 
 describe("the icon's tooltip names the shortcut Chrome has now", () => {
   it("as Chrome writes it on a Mac", async () => {
-    const { setTitle } = mockChrome(async () => ({}), "⌥⇧P");
+    const { setTitle } = mockChrome(async () => ({}), "⌥P");
     await loadWorker();
-    await vi.waitFor(() => expect(setTitle).toHaveBeenCalledWith({ title: "Pointer (⌥⇧P)" }));
+    await vi.waitFor(() => expect(setTitle).toHaveBeenCalledWith({ title: "Pointer (⌥P)" }));
   });
 
   it("says where to set one when none is set", async () => {
