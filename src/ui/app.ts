@@ -3,7 +3,7 @@
 
 import { type DrawTool, extendShape, isMeaningful, startShape } from "../draw/shapes";
 import { renderSvg } from "../marks/svg";
-import type { Pin } from "../marks/types";
+import type { Mark, Pin } from "../marks/types";
 import { createPastedLayer } from "../paste/pasted";
 import { liveLayout, shortName, viewRect } from "../pick/describe";
 import { elementAt, walk } from "../pick/walk";
@@ -187,13 +187,16 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
 
   /** Move tool: drag the mark under the pointer (a drawing, a text, a free crop frame). */
   function grabMark(e: PointerEvent, page: Point) {
-    const mark = markAt(state.marks, page);
-    if (!mark) return;
-    const start = mark;
-    let index = state.marks.indexOf(mark);
+    const start = markAt(state.marks, page);
+    if (!start) return;
+    // Followed by identity: an Undo or Delete during the drag can never make it move another mark.
+    let current: Mark = start;
     drag(e, (p) => {
-      index = state.marks.indexOf(state.marks[index] ?? mark);
-      update(() => (state.marks[index] = shifted(start, p.x - page.x, p.y - page.y)));
+      const index = state.marks.indexOf(current);
+      if (index < 0) return;
+      const next = shifted(start, p.x - page.x, p.y - page.y);
+      update(() => (state.marks[index] = next));
+      current = next;
     }, render);
   }
 

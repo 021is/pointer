@@ -1,14 +1,18 @@
 // The messages between the content script, the service worker and the preview page: take the
 // screenshot; show a preview of what Copy would give; hand that preview to the page that asks.
 
+import type { Output } from "../ui/state";
+
 export type CaptureRequest = { type: "capture" };
 export type CaptureReply = { ok: true; dataUrl: string } | { ok: false; error: string };
 
-/** What Copy would give: the picture (a data URL) and/or the text, and its cost. */
-export type Preview = { png: string | null; text: string | null; tokens: number; output: string };
+/** What Copy would give: the picture (a data URL) and/or the text, its cost, and which output. */
+export type Preview = { png: string | null; text: string | null; tokens: number; output: Output };
 export type PreviewRequest = { type: "preview" } & Preview;
+export type PreviewReply = { ok: true } | { ok: false; error: string };
 export type PreviewAsk = { type: "preview:get" };
 
+const OUTPUTS: readonly Output[] = ["picture", "text", "image"];
 const typeOf = (message: unknown) => (message as { type?: unknown } | null)?.type;
 
 export function isCaptureRequest(message: unknown): message is CaptureRequest {
@@ -23,7 +27,7 @@ export function isPreviewRequest(message: unknown): message is PreviewRequest {
     (m?.png === null || (typeof m?.png === "string" && m.png.startsWith("data:image/png;base64,"))) &&
     (m?.text === null || typeof m?.text === "string") &&
     typeof m?.tokens === "number" &&
-    typeof m?.output === "string"
+    OUTPUTS.includes(m?.output as Output)
   );
 }
 

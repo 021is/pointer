@@ -74,7 +74,11 @@ export const CSS = `
   background: linear-gradient(180deg, #ffffff, #e4ddff); box-shadow: inset 0 -1px 0 rgba(106, 76, 240, 0.25); }
 .bar .copygroup button.copy { padding: 0 12px 0 11px; border-radius: 10px 0 0 10px; }
 .bar .copygroup button.caret { min-width: 28px; border-radius: 0 10px 10px 0; border-left: 1px solid rgba(106, 76, 240, 0.25); }
-.bar .copygroup button:hover { color: #160f33; background: linear-gradient(180deg, #ffffff, #d6cbff); }
+/* Only Copy and ▾ themselves: the menu's items are buttons too and keep their light text. */
+.bar .copygroup > button:hover { color: #160f33; background: linear-gradient(180deg, #ffffff, #d6cbff); }
+.bar .menu .item:hover { color: #fff; }
+.bar .menu .why { margin: 4px 10px; color: #ff8fa8; font: 500 11.5px/1.4 ui-sans-serif, system-ui, sans-serif; white-space: normal; }
+.bar .menu .why[hidden] { display: none; }
 .bar .copy .mode { font-weight: 600; color: #5b4fa0; }
 .bar .copy.flash { background: linear-gradient(180deg, #e9fff3, #c9f5dc); color: #0b3d22; }
 .bar .copygroup .menu {

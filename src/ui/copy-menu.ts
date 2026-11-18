@@ -58,7 +58,9 @@ export function createCopyMenu(parts: CopyMenuParts): CopyMenu {
     close();
     parts.preview();
   });
-  menu.append(el("div", "rule"), clear, preview);
+  const why = el("p", "why");
+  why.hidden = true;
+  menu.append(why, el("div", "rule"), clear, preview);
   menu.addEventListener("pointerdown", (e) => e.stopPropagation());
   wrap.append(copy, caret, menu);
 
@@ -75,12 +77,15 @@ export function createCopyMenu(parts: CopyMenuParts): CopyMenu {
     caret.setAttribute("aria-expanded", "true");
     window.addEventListener("pointerdown", outside, true);
     for (const { cost } of items.values()) cost.textContent = "…";
+    why.hidden = true;
     parts.estimate().then(
       (costs) => {
         for (const [o, { cost }] of items) cost.textContent = costs[o] ? `≈ ${costs[o]} tok` : "—";
       },
-      () => {
-        for (const { cost } of items.values()) cost.textContent = "";
+      (err: unknown) => {
+        for (const { cost } of items.values()) cost.textContent = "?";
+        why.textContent = `No cost estimate: ${err instanceof Error ? err.message : String(err)}`;
+        why.hidden = false;
       },
     );
   }
