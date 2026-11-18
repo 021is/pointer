@@ -81,29 +81,33 @@ function headLine(b: Bundle): string {
 
 const fileOnly = (s: Source): string => formatSource({ ...s, file: s.file.split("/").pop() ?? s.file });
 
-/** A pin in the strip: who and where on one line, then only its changes and its note. */
+/**
+ * A pin in the compact form: who (with the words it shows, so the agent knows which of many
+ * buttons was meant even without a picture) and where on one line, then its changes and note.
+ */
 function stripPin(p: PinInfo): string[] {
   const w = p.component.where;
   const who = p.component.chain[0] ?? p.el.tag;
-  const text = p.el.text ? ` "${clip(p.el.text, 40)}"` : "";
+  const text = p.el.text ? ` "${clip(p.el.text, 30)}"` : "";
   const where =
     w.kind === "found"
       ? `${formatSource(w.source)}${w.usedAt ? ` (in ${fileOnly(w.usedAt)})` : ""}`
-      : `${p.el.selector}${text}`;
-  const lines = [`[${p.n}] ${p.kind} · ${who} · ${where}`];
+      : p.el.selector;
+  const lines = [`[${p.n}] ${p.kind} · ${who}${text} · ${where}`];
   if (p.changes.length) lines.push(`   changed: ${p.changes.join("; ")}`);
   if (p.note.trim()) lines.push(`   note: ${p.note.trim()}`);
   return lines;
 }
 
 /**
- * One line that tells any agent how to read the rest, so a paste never leaves it guessing
- * (Edvard, 2026-11-18: "I just don't want the agent to be lost"). Only when something is marked.
+ * The paste is a task, not just data: one line that tells any agent what the lines are and what
+ * to do with them (Edvard, 2026-11-18: "how to make it easy for any agents to understand so they
+ * dont get confused"). Only when something is marked.
  */
-export function legend(b: Bundle, onPicture: boolean): string | null {
+export function task(b: Bundle, onPicture: boolean): string | null {
   if (!b.pins.length && !b.crops.length) return null;
-  const numbers = onPicture ? " (same number on the picture)" : "";
-  return `How to read: [n] = an element the user marked${numbers}; file:line = where its JSX is written, (in X) = where that component is used; changed = live CSS edits the user made, to apply in the code; note = what the user wants.`;
+  const numbers = onPicture ? " (its number is on the picture)" : "";
+  return `Task: the user marked these elements on this page. For each [n]${numbers}: open the file at that line ((in X) = where that component is used), do what its note says, and turn "changed" (the user's live CSS edits) into code. Then answer per [n] what you did.`;
 }
 
 /**
@@ -113,7 +117,7 @@ export function legend(b: Bundle, onPicture: boolean): string | null {
  */
 export function formatStrip(b: Bundle, onPicture: boolean): string {
   const lines = [headLine(b)];
-  const how = legend(b, onPicture);
+  const how = task(b, onPicture);
   if (how) lines.push(how);
   lines.push(...b.crops.map(formatCrop));
   // Without the picture, shapes mean nothing; words typed on the page still do.
@@ -126,7 +130,7 @@ export function formatStrip(b: Bundle, onPicture: boolean): string {
 
 export function formatBundle(b: Bundle): string {
   const lines = [headLine(b)];
-  const how = legend(b, b.image !== null);
+  const how = task(b, b.image !== null);
   if (how) lines.push(how);
   if (b.image) {
     lines.push(

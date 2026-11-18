@@ -136,7 +136,7 @@ describe("crops in the bundle", () => {
       image: null,
     });
     const lines = text.split("\n");
-    expect(lines[1]).toMatch(/^How to read:/);
+    expect(lines[1]).toMatch(/^Task: /);
     expect(lines.slice(2)).toEqual(["crop A · frame 10×10", "drawn: 1 arrow"]);
   });
 });
