@@ -59,7 +59,7 @@ describe("stackRegions: several frames in one picture", () => {
     // Edvard's paste: three tall frames + a long strip came out 720×3572, which Claude scales down.
     const tall = (label: string, h: number) => ({ label, rect: { x: 0, y: 0, w: 428, h } });
     const stack = stackRegions([tall("A", 772), tall("B", 40), tall("C", 712)], () => 30);
-    expect(stack.stripLines).toBe(30);
+    expect(stack.height - stack.bottom).toBe(stripHeight(30));
     expect(stack.height).toBeLessThanOrEqual(BUDGET.edge);
     expect(stack.width * stack.height).toBeLessThanOrEqual(BUDGET.area);
     expect(stack.placed[0]?.size.h).toBeLessThan(772);
@@ -135,7 +135,9 @@ describe("crops in the bundle", () => {
       drawings: { arrows: 1, boxes: 0, ellipses: 0, pens: 0, texts: [], pasted: 0 },
       image: null,
     });
-    expect(text.split("\n")).toEqual(["Pointer · https://x.dev/ · viewport 1280×800", "crop A · frame 10×10", "drawn: 1 arrow"]);
+    const lines = text.split("\n");
+    expect(lines[1]).toMatch(/^How to read:/);
+    expect(lines.slice(2)).toEqual(["crop A · frame 10×10", "drawn: 1 arrow"]);
   });
 });
 

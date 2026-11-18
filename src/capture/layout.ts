@@ -20,7 +20,7 @@ export const GAP = 10;
  */
 export const BUDGET = { edge: 1568, area: 1_150_000 } as const;
 
-export type Stack = { width: number; height: number; placed: Placed[]; bottom: number; stripLines: number };
+export type Stack = { width: number; height: number; placed: Placed[]; bottom: number };
 
 /**
  * The frames the picture can show (the part of each inside the viewport) and the labels of
@@ -67,6 +67,6 @@ export function stackRegions(regions: readonly Region[], linesFor: ((width: numb
     const stripLines = linesFor ? linesFor(width) : 0;
     const height = bottom + stripHeight(stripLines);
     const fits = width <= BUDGET.edge && height <= BUDGET.edge && width * height <= BUDGET.area;
-    if (fits || scale < 0.2) return { width, height, placed, bottom, stripLines };
+    if (fits || scale < 0.2) return { width, height, placed, bottom };
   }
 }

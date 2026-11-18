@@ -112,12 +112,13 @@ export async function copyBundle(ctx: CopyContext): Promise<CopyResult> {
   const image = shot
     ? (async () => {
         const [s, i] = await Promise.all([shot, infos]);
-        return picture(s.shot, s.regions, s.scene, formatStrip(data(i, null)), s.laid);
+        return picture(s.shot, s.regions, s.scene, formatStrip(data(i, null), true), s.laid);
       })()
     : null;
+  // With the picture: the full text beside it. Text only (the bar's switch): the compact lines.
   const text = (async () => {
     const [i, pic] = await Promise.all([infos, image]);
-    return bundle(i, pic?.size ?? null);
+    return image ? bundle(i, pic?.size ?? null) : formatStrip(data(i, null), false);
   })();
   const textBlob = text.then((t) => new Blob([t], { type: "text/plain" }));
   const parts: Record<string, Promise<Blob>> = { "text/plain": textBlob };

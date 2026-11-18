@@ -8,15 +8,25 @@ import type { Pin } from "../marks/types";
 import { createPastedLayer } from "../paste/pasted";
 import { liveLayout, shortName, viewRect } from "../pick/describe";
 import { elementAt, walk } from "../pick/walk";
-import { type Point, dragRect, near } from "../shared/geometry";
+import { type Point, near } from "../shared/geometry";
 import { editPlaceholder, placeholderAt } from "../shared/placeholder";
 import { componentOf } from "../source/client";
 import { isBubbleOpen, openBubble } from "./bubble";
+import { cropGestures } from "./crop-gesture";
 import { CSS } from "./css";
 import { drag as dragOn } from "./drag";
 import type { Extension, ExtensionHost } from "./extension";
 import { keyHandler } from "./keyboard";
-import { type State, type Tool, initialState, liveScene, pinsOf, scenePins, targetsElements } from "./state";
+import {
+  type State,
+  type Tool,
+  initialState,
+  liveScene,
+  otherOutput,
+  pinsOf,
+  scenePins,
+  targetsElements,
+} from "./state";
 import { createToast } from "./toast";
 import { createToolbar } from "./toolbar";
 
@@ -49,7 +59,7 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
   const bar = createToolbar({
     tool: setTool,
     color: (c) => update(() => (state.color = c)),
-    image: () => update(() => (state.forceImage = !state.forceImage)),
+    output: (o) => update(() => (state.output = o)),
     styles: () => hooks.togglePanel(lastPick()),
     undo,
     clear,
@@ -134,29 +144,7 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
     return hit ? pinsOf(state.marks)[hit.n - 1] : undefined;
   }
 
-  /** A crop of the component's box (followed live), its page rect kept for when it leaves. */
-  function cropElement(el: Element) {
-    const r = viewRect(el);
-    update(() => state.marks.push({ kind: "crop", el, rect: { ...r, x: r.x + scrollX, y: r.y + scrollY } }));
-  }
-
-  /** Crop tool: a click takes the component under the cursor, a drag draws a free frame. */
-  function startCrop(e: PointerEvent, page: Point, under: Element | null) {
-    let moved = false;
-    const move = (p: Point) => {
-      if (!moved && near(p, page, 4)) return;
-      moved = true;
-      update(() => (state.framing = dragRect(page, p, false)));
-    };
-    drag(e, move, () => {
-      const f = state.framing;
-      state.framing = null;
-      if (!moved) return under ? cropElement(under) : render();
-      if (f && f.w >= 8 && f.h >= 8) state.marks.push({ kind: "crop", el: null, rect: f });
-      else say("That frame is too small: drag at least 8 px each way.", "error");
-      render();
-    });
-  }
+  const { cropElement, startCrop } = cropGestures({ state, update, render, say, drag });
 
   /** A number is a handle, whatever the tool: a click edits its note (a pick's also opens its panel); a comment's number drags after 4px. */
   function grabPin(e: PointerEvent, pin: Pin, view: Point, page: Point) {
@@ -179,9 +167,10 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
     const page = { x: view.x + scrollX, y: view.y + scrollY };
     const tool = state.tool;
     const pin = pinAt(view);
+    // A press on Pointer's layer never starts a text selection on the page.
+    e.preventDefault();
     if (pin) return grabPin(e, pin, view, page);
     if (pasted.onDown(e)) return;
-    e.preventDefault();
     const under = elementAt(view.x, view.y, host);
     const box = placeholderAt(under);
     if (box && tool !== "comment") return editPlaceholder(box);
@@ -222,7 +211,7 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
   const onKey = keyHandler(() => state.tool, {
     tool: setTool,
     color: (c) => update(() => (state.color = c)),
-    image: () => update(() => (state.forceImage = !state.forceImage)),
+    image: () => update(() => (state.output = otherOutput(state.output))),
     undo,
     copy,
     escape: () => (state.tool === "page" ? close() : setTool("page")),
@@ -240,6 +229,7 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
       pick(el, { x: r.x + scrollX, y: r.y + scrollY });
     },
     panel: () => hooks.togglePanel(lastPick()),
+    overPasted: () => pasted.hovered() !== undefined,
     see: (direction) => {
       const p = pasted.hovered();
       if (p) pasted.see(p, direction);
@@ -264,7 +254,12 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
 
   function copy() {
     copyBundle({ state, host, changesOf: hooks.changesOf }).then(
-      ({ image }) => say(image ? `Copied: text + picture ${image.w}×${image.h}. Paste it in the agent's chat.` : "Copied: text only. Paste it in the agent's chat."),
+      ({ image, text }) =>
+        say(
+          image
+            ? `Copied: picture ${image.w}×${image.h} with its text. Paste it in the agent's chat.`
+            : `Copied: text only, ${text.split("\n").length} lines. Paste it in the agent's chat.`,
+        ),
       (err: unknown) => say(`Copy failed: ${err instanceof Error ? err.message : String(err)}`, "error"),
     );
   }

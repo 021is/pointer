@@ -16,6 +16,8 @@ export type KeyActions = {
   walk: (key: WalkKey) => void;
   take: () => void;
   panel: () => void;
+  /** True with a pasted image under the mouse: only then are [ ] Delete Backspace Pointer's. */
+  overPasted: () => boolean;
   see: (direction: -1 | 1) => void;
   remove: () => void;
 };
@@ -29,6 +31,7 @@ export function keyHandler(tool: () => Tool, run: KeyActions): (e: KeyboardEvent
     const cmd = commandFor(e, tool());
     if (!cmd) return;
     if (cmd.type === "copy" && !getSelection()?.isCollapsed) return;
+    if ((cmd.type === "see" || cmd.type === "remove") && !run.overPasted()) return;
     e.preventDefault();
     e.stopImmediatePropagation();
     switch (cmd.type) {

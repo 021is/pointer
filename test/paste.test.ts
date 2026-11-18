@@ -52,6 +52,21 @@ describe("moving and resizing", () => {
   });
 });
 
+describe("formatStrip without a picture", () => {
+  it("drops shapes and pasted images, keeps words typed on the page", () => {
+    const b: Bundle = {
+      url: "https://x.dev/",
+      viewport: { w: 1, h: 1 },
+      crops: [],
+      pins: [],
+      drawings: { arrows: 2, boxes: 1, ellipses: 0, pens: 0, texts: ["blue"], pasted: 1 },
+      image: null,
+    };
+    expect(formatStrip(b, false).split("\n").slice(1)).toEqual(['drawn: text "blue"']);
+    expect(formatStrip(b, true)).toContain("2 arrows");
+  });
+});
+
 describe("formatStrip: the compact lines under the picture", () => {
   const pin = (n: number, over: Partial<PinInfo> = {}): PinInfo => ({
     n,
@@ -84,8 +99,9 @@ describe("formatStrip: the compact lines under the picture", () => {
   };
 
   it("keeps who, where, the changes and the note; no selector, style or class when the file is known", () => {
-    expect(formatStrip(bundle).split("\n")).toEqual([
+    expect(formatStrip(bundle, false).split("\n")).toEqual([
       "Pointer · https://live.danceclub.dev/dance · viewport 1440×788 · react",
+      "How to read: [n] = an element the user marked; file:line = where its JSX is written, (in X) = where that component is used; changed = live CSS edits the user made, to apply in the code; note = what the user wants.",
       "[7] pick · IconLine · src/feature/dance/list/ui/EventCard.tsx:190 (in EventRows.tsx:32)",
       "   changed: gap 6px → 8px; font-style normal → italic",
       "   note: make it lighter",

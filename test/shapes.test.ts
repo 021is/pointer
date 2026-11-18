@@ -1,20 +1,26 @@
 import { describe, expect, it } from "vitest";
 import { extendShape, isMeaningful, startShape } from "../src/draw/shapes";
 import { arrowHead, escapeXml, renderSvg } from "../src/marks/svg";
-import { initialState, moveShape, shapeBox, summarize, wantsImage } from "../src/ui/state";
+import type { Pasted } from "../src/marks/types";
+import { initialState, moveShape, otherOutput, shapeBox, summarize, wantsImage } from "../src/ui/state";
 
-describe("wantsImage: when Copy adds the picture", () => {
-  const pin = { kind: "pick" as const, color: "red" as const, el: {} as Element, at: { x: 0, y: 0 }, note: "" };
+describe("the bar's Picture | Text switch decides what Copy gives", () => {
   const box = { kind: "box" as const, color: "red" as const, rect: { x: 0, y: 0, w: 9, h: 9 } };
 
-  it("not for picks and comments alone: text is enough and cheaper", () => {
-    expect(wantsImage({ ...initialState(), marks: [pin] })).toBe(false);
+  it("starts on Picture; Text gives text only, even with drawings on the page", () => {
+    expect(initialState().output).toBe("picture");
+    expect(wantsImage(initialState())).toBe(true);
+    expect(wantsImage({ ...initialState(), marks: [box], output: "text" })).toBe(false);
   });
 
-  it("when something is drawn, when asked, or when nothing is marked", () => {
-    expect(wantsImage({ ...initialState(), marks: [pin, box] })).toBe(true);
-    expect(wantsImage({ ...initialState(), marks: [pin], forceImage: true })).toBe(true);
-    expect(wantsImage(initialState())).toBe(true);
+  it("I flips it", () => {
+    expect(otherOutput("picture")).toBe("text");
+    expect(otherOutput("text")).toBe("picture");
+  });
+
+  it("counts pasted images apart from drawings", () => {
+    const pasted: Pasted = { kind: "image", img: {} as HTMLImageElement, rect: box.rect, opacity: 1 };
+    expect(summarize([box, pasted])).toMatchObject({ boxes: 1, pasted: 1 });
   });
 });
 

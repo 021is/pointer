@@ -43,7 +43,7 @@ After a rebuild, press reload on the extension's card and reload the page.
 | D A B E T | pen, arrow, box, ellipse, text. **Shift**: straight line, 45° arrow, square, circle |
 | 1 2 3 | red, blue, yellow |
 | V | use the page (clicks go through, marks stay) |
-| I | always add the picture (it is added anyway when something is drawn) |
+| I | flips the bar's **Picture \| Text** switch: what Copy gives |
 | Ctrl+Z, Ctrl+C | undo, Copy |
 | Esc | back to the page tool; again to close |
 
@@ -70,8 +70,10 @@ Edits are live, on that element only, and Copy adds them under `changed:`:
 
 Undoing or clearing a pick undoes its edits. A reload of the page drops them too.
 
-**What Copy sends:** text always. The picture only when something is drawn, when I is on, or
-when nothing is marked (a plain screenshot). A pick with a note is text only, about 80 tokens.
+**What Copy sends** is the bar's switch. **Text:** only the compact lines (who, file:line,
+changes, note per pin), about 30–40 tokens a pin, ~3× cheaper than a picture when the words say
+enough. **Picture:** the picture with those lines printed under it, plus the full text. Both open
+with one "How to read" line, so any agent knows what the numbers, files and changes mean.
 The picture is cropped to the marks and kept at one pixel per CSS pixel, long edge ≤ 1000 px
 (Claude prices an image at about w×h/750 tokens; a full Retina screenshot costs ~5,000).
 With a picture, a compact form of the lines is printed in a dark strip under it: Claude Code's

@@ -97,12 +97,28 @@ function stripPin(p: PinInfo): string[] {
 }
 
 /**
- * The strip printed under the picture: what an agent needs to act (where, what changed, what
- * Edvard said), nothing it can read in the file itself. The copied text keeps every detail.
+ * One line that tells any agent how to read the rest, so a paste never leaves it guessing
+ * (Edvard, 2026-11-18: "I just don't want the agent to be lost"). Only when something is marked.
  */
-export function formatStrip(b: Bundle): string {
-  const lines = [headLine(b), ...b.crops.map(formatCrop)];
-  const drawn = formatDrawings(b.drawings);
+export function legend(b: Bundle, onPicture: boolean): string | null {
+  if (!b.pins.length && !b.crops.length) return null;
+  const numbers = onPicture ? " (same number on the picture)" : "";
+  return `How to read: [n] = an element the user marked${numbers}; file:line = where its JSX is written, (in X) = where that component is used; changed = live CSS edits the user made, to apply in the code; note = what the user wants.`;
+}
+
+/**
+ * The compact form: what an agent needs to act (where, what changed, what the user said),
+ * nothing it can read in the file itself. Printed under the picture, or copied alone as the
+ * bar's "Text" output. The full form (formatBundle) keeps every detail.
+ */
+export function formatStrip(b: Bundle, onPicture: boolean): string {
+  const lines = [headLine(b)];
+  const how = legend(b, onPicture);
+  if (how) lines.push(how);
+  lines.push(...b.crops.map(formatCrop));
+  // Without the picture, shapes mean nothing; words typed on the page still do.
+  const shown = onPicture ? b.drawings : { arrows: 0, boxes: 0, ellipses: 0, pens: 0, texts: b.drawings.texts, pasted: 0 };
+  const drawn = formatDrawings(shown);
   if (drawn) lines.push(drawn);
   for (const pin of b.pins) lines.push(...stripPin(pin));
   return lines.join("\n");
@@ -110,6 +126,8 @@ export function formatStrip(b: Bundle): string {
 
 export function formatBundle(b: Bundle): string {
   const lines = [headLine(b)];
+  const how = legend(b, b.image !== null);
+  if (how) lines.push(how);
   if (b.image) {
     lines.push(
       `image: ${b.image.w}×${b.image.h} (≈${imageTokens(b.image)} tokens), numbers on it match [n] below`,
