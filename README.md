@@ -1,7 +1,7 @@
 # Pointer
 
 Coding rules first: [021is/code-rules](https://github.com/021is/code-rules) (on 021-dev:
-`~/projects/021/021/code-rules/`), then [AGENTS.md](AGENTS.md).
+`~/projects/021-code-rules/PRINCIPLES.md`), then [AGENTS.md](AGENTS.md).
 
 A Chrome extension for working on a frontend with a coding agent. Turn it on, draw on the page or
 pick an element, press Copy, paste into the agent's chat. The agent gets a cropped picture with

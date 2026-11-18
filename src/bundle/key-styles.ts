@@ -1,7 +1,7 @@
 // The handful of computed styles that tell an agent what an element looks like now, in one line,
 // defaults left out ("font 15px/21px Inter 600 · color #1a1a2e · padding 16px 24px").
 
-import { cssColorToHex } from "./color";
+import { byteHex, cssColorToHex } from "./color";
 
 /** The computed values read from getComputedStyle, by CSS property name. */
 export type StyleValues = Readonly<Record<string, string>>;
@@ -20,9 +20,6 @@ export const KEY_PROPS = [
   "border-radius",
   "border",
 ] as const;
-
-/** A 0–255 channel as two hex digits. */
-const byteHex = (v: number) => Math.round(v).toString(16).padStart(2, "0");
 
 /** rgb()/rgba()/lab()/oklch() → #rrggbb or #rrggbbaa; anything else (a keyword) as it is. */
 export function toHex(color: string): string {

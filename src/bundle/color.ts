@@ -4,8 +4,12 @@
 
 type Rgb = [number, number, number];
 
+/** A 0–255 channel as exactly two hex digits: clamped, so 300 is "ff", never "12c". */
+export const byteHex = (v: number) =>
+  Math.round(Math.min(255, Math.max(0, v))).toString(16).padStart(2, "0");
+
 /** A 0–1 channel (clipped into sRGB) as two hex digits. */
-const unitHex = (v: number) => Math.round(Math.min(1, Math.max(0, v)) * 255).toString(16).padStart(2, "0");
+const unitHex = (v: number) => byteHex(v * 255);
 
 function gamma(c: number): number {
   const a = Math.abs(c);

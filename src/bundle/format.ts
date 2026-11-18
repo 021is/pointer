@@ -4,6 +4,12 @@
 import { imageTokens } from "../shared/geometry";
 import type { Bundle, DrawingSummary, PinInfo, Source } from "./types";
 
+/** The page's address without query or hash: a URL can carry a token, and this goes into a chat. */
+export function safeUrl(href: string): string {
+  const u = new URL(href);
+  return u.origin + u.pathname;
+}
+
 const TEXT_MAX = 80;
 const CLASS_MAX = 160;
 

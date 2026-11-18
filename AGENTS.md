@@ -1,7 +1,7 @@
 # AGENTS.md: Pointer
 
 Coding rules first: [021is/code-rules](https://github.com/021is/code-rules) (on 021-dev:
-`~/projects/021/021/code-rules/principles.md`). This file holds only Pointer's own rules.
+`~/projects/021-code-rules/PRINCIPLES.md`). This file holds only Pointer's own rules.
 
 ## What it is
 

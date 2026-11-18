@@ -31,9 +31,12 @@ function part(el: Element): string {
 
 /** The shortest selector, up to five levels, that finds this element and only it. */
 export function selectorOf(el: Element): string {
+  // Every selector returned is the escaped one that was tested: `#a.b` would find nothing.
   const testId = el.getAttribute("data-testid");
-  if (testId && isUnique(`[data-testid="${CSS.escape(testId)}"]`)) return `[data-testid="${testId}"]`;
-  if (el.id && isUnique(`#${CSS.escape(el.id)}`)) return `#${el.id}`;
+  const byTestId = testId ? `[data-testid="${CSS.escape(testId)}"]` : null;
+  if (byTestId && isUnique(byTestId)) return byTestId;
+  const byId = el.id ? `#${CSS.escape(el.id)}` : null;
+  if (byId && isUnique(byId)) return byId;
   const parts: string[] = [];
   for (let node: Element | null = el; node && parts.length < MAX_DEPTH; node = node.parentElement) {
     if (node === document.documentElement) break;
