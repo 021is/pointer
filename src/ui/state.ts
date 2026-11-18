@@ -182,7 +182,30 @@ export function wantsImage(state: State): boolean {
 /** The switch's other side. */
 export const otherOutput = (o: Output): Output => (o === "picture" ? "text" : "picture");
 
-const PICTURE_TOOLS = new Set<Tool>(["crop", "pen", "arrow", "box", "ellipse", "text"]);
+/** Every tool says whether it only makes sense in a picture: a new tool must choose. */
+const PICTURE_ONLY: Record<Tool, boolean> = {
+  page: false,
+  pick: false,
+  comment: false,
+  crop: true,
+  pen: true,
+  arrow: true,
+  box: true,
+  ellipse: true,
+  text: true,
+};
 
 /** Tools that only make sense in a picture; the bar hides them in Text. */
-export const pictureOnly = (tool: Tool) => PICTURE_TOOLS.has(tool);
+export const pictureOnly = (tool: Tool) => PICTURE_ONLY[tool];
+
+export type Mode = { tool: Tool; output: Output };
+
+/** Choosing a tool: one that only works in a picture switches the output back to Picture. */
+export function chooseTool(mode: Mode, tool: Tool): Mode {
+  return { tool, output: pictureOnly(tool) ? "picture" : mode.output };
+}
+
+/** Switching the output: Text puts a picture-only tool down for pick. */
+export function chooseOutput(mode: Mode, output: Output): Mode {
+  return { output, tool: output === "text" && pictureOnly(mode.tool) ? "pick" : mode.tool };
+}

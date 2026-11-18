@@ -1,7 +1,20 @@
 import { describe, expect, it } from "vitest";
 import type { Mark } from "../src/marks/types";
 import { textAt } from "../src/ui/handles";
-import { pictureOnly } from "../src/ui/state";
+import { chooseOutput, chooseTool, pictureOnly } from "../src/ui/state";
+
+describe("the bar's mode rules", () => {
+  it("a picture-only tool chosen in Text switches the output to Picture", () => {
+    expect(chooseTool({ tool: "pick", output: "text" }, "pen")).toEqual({ tool: "pen", output: "picture" });
+    expect(chooseTool({ tool: "pen", output: "text" }, "comment")).toEqual({ tool: "comment", output: "text" });
+  });
+
+  it("switching to Text puts a picture-only tool down for pick, and keeps the others", () => {
+    expect(chooseOutput({ tool: "crop", output: "picture" }, "text")).toEqual({ tool: "pick", output: "text" });
+    expect(chooseOutput({ tool: "comment", output: "picture" }, "text")).toEqual({ tool: "comment", output: "text" });
+    expect(chooseOutput({ tool: "pen", output: "text" }, "picture")).toEqual({ tool: "pen", output: "picture" });
+  });
+});
 
 describe("textAt: a drawn text under the mouse can be grabbed", () => {
   const marks: Mark[] = [

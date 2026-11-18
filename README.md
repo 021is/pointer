@@ -41,16 +41,16 @@ After a rebuild, press reload on the extension's card and reload the page.
 | Cmd/Ctrl+V or ⬆ Add image | paste an image (a screenshot, a mockup) at the mouse, or pick files with the bar's image button: it sticks to the page and scrolls with it; drag moves it and its corner resizes it (Shift: free), both with P or V; `[` `]` make it see-through (100/75/50/25%), Delete removes it. It is in the picture, and it lives until the page reloads |
 | click a placeholder | edits its text where you click (the ⊕ boxes from the panel), whatever the tool |
 | drawn text | drag it to move it, click it to edit it (empty it to remove it), with any tool but the drawing ones |
-
-The bar follows the **Picture \| Text** switch: in Text it shows only what works without a
-picture (page, pick, comment, styles, undo, clear); choosing a drawing tool switches back to
-Picture. The 021 mark at its left drags it.
 | D A B E T | pen, arrow, box, ellipse, text. **Shift**: straight line, 45° arrow, square, circle |
 | 1 2 3 | red, blue, yellow |
 | V | use the page (clicks go through, marks stay) |
 | I | flips the bar's **Picture \| Text** switch: what Copy gives |
 | Ctrl+Z, Ctrl+C | undo, Copy |
 | Esc | back to the page tool; again to close |
+
+The bar follows the **Picture \| Text** switch: in Text it shows only what works without a
+picture (page, pick, comment, styles, undo, clear); choosing a drawing tool switches back to
+Picture. The 021 mark at its left drags it.
 
 ### The style panel
 

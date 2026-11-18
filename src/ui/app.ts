@@ -25,8 +25,9 @@ import {
   type Tool,
   initialState,
   liveScene,
+  chooseOutput,
+  chooseTool,
   otherOutput,
-  pictureOnly,
   pinsOf,
   scenePins,
   targetsElements,
@@ -92,21 +93,15 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
     render();
   }
 
-  /** A drawing tool belongs to the picture: choosing one in Text switches back to Picture. */
   function setTool(tool: Tool) {
     update(() => {
-      state.tool = tool;
+      Object.assign(state, chooseTool(state, tool));
       state.hover = null;
-      if (pictureOnly(tool)) state.output = "picture";
     });
   }
 
-  /** Text hides the drawing tools, so a drawing tool in hand goes back to pick. */
   function setOutput(output: Output) {
-    update(() => {
-      state.output = output;
-      if (output === "text" && pictureOnly(state.tool)) state.tool = "pick";
-    });
+    update(() => Object.assign(state, chooseOutput(state, output)));
   }
 
   function setHover(el: Element | null) {
