@@ -18,7 +18,7 @@ What goes into each field of the Chrome Web Store developer dashboard. Publisher
 Pointer turns "the thing on the left, a bit bigger, no, the other one" into one paste your coding
 agent can act on.
 
-Turn it on with Alt+Shift+P on the page you are building. Point at what you mean:
+Turn it on with Alt+P (⌥P on a Mac) on the page you are building. Point at what you mean:
 
 • Pick an element: everything else dims; the arrow keys walk to its parent or child.
 • Comment anywhere: a numbered pin with your note.

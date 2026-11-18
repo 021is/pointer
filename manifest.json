@@ -16,7 +16,7 @@
   },
   "commands": {
     "_execute_action": {
-      "suggested_key": { "default": "Alt+Shift+P", "mac": "Alt+Shift+P" },
+      "suggested_key": { "default": "Alt+P", "mac": "Alt+P" },
       "description": "Turn Pointer on or off on this tab"
     }
   }
