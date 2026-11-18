@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { edit } from "../src/panel/element";
 import { knownClasses, matchedProps } from "../src/panel/rules";
+import { renderPanel } from "../src/panel/view";
 
 const card = () => {
   const el = document.querySelector<HTMLElement>(".card");
@@ -44,6 +45,34 @@ describe("knownClasses", () => {
     expect(known.has("card")).toBe(true);
     expect(known.has("wide:p-8")).toBe(true);
     expect(known.has("never-used")).toBe(false);
+  });
+});
+
+describe("the panel's value field", () => {
+  it("Escape cancels: the blur's change event writes no edit and no inline style", () => {
+    const e = edit(card());
+    const panel = document.createElement("div");
+    document.body.append(panel);
+    renderPanel(panel, 1, e, null, { changed: () => {}, close: () => {} });
+    const row = panel.querySelector<HTMLElement>('.row[data-prop="color"]');
+    const value = row?.querySelector<HTMLInputElement>(".val");
+    if (!value) throw new Error("no color row");
+    value.value = "red";
+    value.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    value.dispatchEvent(new Event("change"));
+    expect(e.edits.props).toEqual([]);
+    expect(card().style.getPropertyValue("color")).toBe("");
+  });
+
+  it("Enter applies the typed value", () => {
+    const e = edit(card());
+    const panel = document.createElement("div");
+    renderPanel(panel, 1, e, null, { changed: () => {}, close: () => {} });
+    const value = panel.querySelector<HTMLInputElement>('.row[data-prop="color"] .val');
+    if (!value) throw new Error("no color row");
+    value.value = "red";
+    value.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
+    expect(e.edits.props[0]?.change).toEqual({ kind: "set", value: "red" });
   });
 });
 

@@ -23,11 +23,14 @@ export function wrapLines(text: string, max: number): string[] {
       out.push(line);
       continue;
     }
-    const indent = " ".repeat((line.match(/^\s*/)?.[0].length ?? 0) + 2);
+    // The continuation indent never takes more than half the width, and there is always room
+    // for one character: a deep indent on a narrow strip can't stall the loop.
+    const own = line.match(/^\s*/)?.[0].length ?? 0;
+    const indent = " ".repeat(Math.min(own + 2, Math.floor(max / 2)));
     let rest = line;
     let first = true;
     while (rest.length > 0) {
-      const room = first ? max : max - indent.length;
+      const room = Math.max(1, first ? max : max - indent.length);
       let cut = rest.length <= room ? rest.length : rest.lastIndexOf(" ", room);
       if (cut <= room / 2) cut = Math.min(room, rest.length);
       out.push((first ? "" : indent) + rest.slice(0, cut).trimEnd());

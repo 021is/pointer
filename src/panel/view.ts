@@ -37,7 +37,10 @@ function draggable(panel: HTMLElement, handle: HTMLElement) {
 
 let propNames: string[] | null = null;
 function allProps(): string[] {
-  propNames ??= [...getComputedStyle(document.documentElement)].filter((p) => !p.startsWith("--")).sort();
+  if (!propNames) {
+    const all = getComputedStyle(document.documentElement);
+    propNames = Array.from({ length: all.length }, (_, i) => all.item(i)).filter((p) => !p.startsWith("--")).sort();
+  }
   return propNames;
 }
 
@@ -123,12 +126,19 @@ export function renderPanel(panel: HTMLElement, n: number, edited: Edited, info:
             e.preventDefault();
             value.value = moved;
           } else if (e.key === "Escape") {
-            value.value = computed.getPropertyValue(prop).trim();
+            // Cancel: back to what the row showed, and the blur's change event writes nothing.
+            value.value = shown;
+            cancelled = true;
             return value.blur();
           } else if (e.key !== "Enter") return;
           apply();
         });
+        let cancelled = false;
         const apply = () => {
+          if (cancelled || value.value.trim() === shown) {
+            cancelled = false;
+            return;
+          }
           const refused = edited.set(prop, value.value.trim());
           tell(refused);
           if (!refused) box.checked = true;
