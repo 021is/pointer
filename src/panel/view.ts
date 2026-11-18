@@ -5,7 +5,7 @@ import { formatSource } from "../bundle/format";
 import type { ComponentInfo } from "../bundle/types";
 import { shortName, viewRect } from "../pick/describe";
 import type { Edited } from "./element";
-import { groupProps, nudge, parseDeclaration } from "./edits";
+import { groupProps, nudge, parseDeclaration, removedProps } from "./edits";
 import { matchedProps } from "./rules";
 
 export type ViewHooks = { changed: () => void; close: () => void };
@@ -43,7 +43,6 @@ function allProps(): string[] {
 
 export function renderPanel(panel: HTMLElement, n: number, edited: Edited, info: ComponentInfo | null, hooks: ViewHooks) {
   const el = edited.el;
-  const hidden = new Set<string>();
   const title = h("span", { className: "title", textContent: `[${n}] ${info?.chain[0] ? `${info.chain[0]} · ` : ""}${shortName(el, viewRect(el))}` });
   const collapse = h("button", { type: "button", textContent: "−", title: "Collapse · S" });
   const close = h("button", { type: "button", textContent: "✕", title: "Close the panel" });
@@ -98,13 +97,16 @@ export function renderPanel(panel: HTMLElement, n: number, edited: Edited, info:
 
   const paintRows = () => {
     const { props, unreadable } = matchedProps(el);
-    const names = groupProps([...props.keys(), ...edited.edits.props.map((p) => p.prop)]).filter((p) => !hidden.has(p));
+    // Rows come from the edits: a property removed with × stays gone, also after reopening.
+    const removed = removedProps(edited.edits);
+    const names = groupProps([...props.keys(), ...edited.edits.props.map((p) => p.prop)]).filter((p) => !removed.has(p));
     const computed = getComputedStyle(el);
     rows.replaceChildren(
       ...names.map((prop) => {
-        const edit = edited.edits.props.find((p) => p.prop === prop);
-        const box = h("input", { type: "checkbox", checked: edit?.after !== null, title: "On / off" });
-        const value = h("input", { className: "val", value: edit?.after ?? computed.getPropertyValue(prop).trim() });
+        const change = edited.edits.props.find((p) => p.prop === prop)?.change;
+        const box = h("input", { type: "checkbox", checked: change?.kind !== "off", title: "On / off" });
+        const shown = change?.kind === "set" ? change.value : computed.getPropertyValue(prop).trim();
+        const value = h("input", { className: "val", value: shown });
         const x = h("button", { type: "button", textContent: "×", title: `Remove ${prop}` });
         const row = h("div", { className: "row" }, box, h("span", { className: "name", textContent: prop }), value, h("i", { className: "dot" }), x);
         row.dataset.prop = prop;
@@ -134,8 +136,7 @@ export function renderPanel(panel: HTMLElement, n: number, edited: Edited, info:
         };
         value.addEventListener("change", apply);
         x.addEventListener("click", () => {
-          edited.off(prop);
-          hidden.add(prop);
+          edited.remove(prop);
           paintRows();
           changed();
         });
@@ -159,7 +160,6 @@ export function renderPanel(panel: HTMLElement, n: number, edited: Edited, info:
     const refused = edited.set(decl[0], decl[1]);
     tell(refused);
     if (refused) return;
-    hidden.delete(decl[0]);
     add.value = "";
     paintRows();
     changed();
@@ -182,7 +182,6 @@ export function renderPanel(panel: HTMLElement, n: number, edited: Edited, info:
   after.addEventListener("click", () => insert("after"));
   reset.addEventListener("click", () => {
     edited.reset();
-    hidden.clear();
     paintChips();
     paintRows();
     changed();

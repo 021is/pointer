@@ -1,12 +1,14 @@
 // The style panel's edits as data, and the pure rules around them: the diff lines the agent
 // reads, ↑/↓ nudging, and folding longhands into the shorthands people write.
 
+/** Set to a value; off (the checkbox, the row stays); removed (×, the row goes). */
+export type Change = { kind: "set"; value: string } | { kind: "off" } | { kind: "removed" };
+
 export type PropEdit = {
   prop: string;
-  /** The computed value before the first edit. */
+  /** The computed value when the panel first saw the element. */
   before: string;
-  /** The value typed, or null when the property is turned off or removed. */
-  after: string | null;
+  change: Change;
 };
 
 export type Inserted = { position: "before" | "after"; label: string; size: { w: number; h: number } };
@@ -15,38 +17,53 @@ export type ElementEdits = {
   props: PropEdit[];
   removedClasses: string[];
   addedClasses: { name: string; built: boolean }[];
-  inserted: Inserted[];
 };
 
-export const noEdits = (): ElementEdits => ({ props: [], removedClasses: [], addedClasses: [], inserted: [] });
+export const noEdits = (): ElementEdits => ({ props: [], removedClasses: [], addedClasses: [] });
 
-/** One line per change, as the bundle shows them under "changed:". */
-export function changeLines(e: ElementEdits): string[] {
+/** One line per change, as the bundle shows them under "changed:". Inserts are read live. */
+export function changeLines(e: ElementEdits, inserted: readonly Inserted[] = []): string[] {
   const lines: string[] = [];
   for (const p of e.props) {
-    if (p.after === null) lines.push(`removed ${p.prop} (was ${p.before})`);
-    else if (p.after !== p.before) lines.push(`${p.prop} ${p.before} → ${p.after}`);
+    if (p.change.kind !== "set") lines.push(`removed ${p.prop} (was ${p.before})`);
+    else if (p.change.value !== p.before) lines.push(`${p.prop} ${p.before} → ${p.change.value}`);
   }
   if (e.removedClasses.length) lines.push(`removed class: ${e.removedClasses.join(" ")}`);
   for (const c of e.addedClasses) lines.push(`added class: ${c.name}${c.built ? "" : " (not built yet)"}`);
-  for (const i of e.inserted) {
+  for (const i of inserted) {
     lines.push(`inserted ${i.position} it: placeholder "${i.label}" (${i.size.w}×${i.size.h})`);
   }
   return lines;
 }
 
 /** Sets or replaces the edit of one property, keeping its first `before`. */
-export function withProp(edits: ElementEdits, prop: string, before: string, after: string | null): ElementEdits {
+export function withProp(edits: ElementEdits, prop: string, before: string, change: Change): ElementEdits {
   const old = edits.props.find((p) => p.prop === prop);
-  const next = { prop, before: old?.before ?? before, after };
+  const next = { prop, before: old?.before ?? before, change };
   return { ...edits, props: old ? edits.props.map((p) => (p === old ? next : p)) : [...edits.props, next] };
 }
 
-const NUMBER = /-?\d*\.?\d+/;
+export const withoutProp = (edits: ElementEdits, prop: string): ElementEdits => ({
+  ...edits,
+  props: edits.props.filter((p) => p.prop !== prop),
+});
 
-/** ↑/↓ on a value: the first number moves by delta, its unit kept ("16px 24px" → "17px 24px"). */
+/** Properties removed with ×: their rows are not shown. */
+export const removedProps = (edits: ElementEdits): Set<string> =>
+  new Set(edits.props.filter((p) => p.change.kind === "removed").map((p) => p.prop));
+
+const NUMBER = /-?\d*\.?\d+/;
+/** Colours: their digits are channels, never a size to nudge. */
+const COLOR = /#[\da-f]{3,8}\b|\b(rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\([^)]*\)/gi;
+
+/**
+ * ↑/↓ on a value: the first number outside any colour moves by delta, its unit kept
+ * ("16px 24px" → "17px 24px", "0 1px 3px rgb(0 0 0)" → "1 1px 3px rgb(0 0 0)"). Null when there
+ * is nothing to nudge (#1a1a2e, auto).
+ */
 export function nudge(value: string, delta: number): string | null {
-  const m = value.match(NUMBER);
+  const masked = value.replace(COLOR, (c) => " ".repeat(c.length));
+  const m = masked.match(NUMBER);
   if (!m || m.index === undefined) return null;
   const decimals = m[0].includes(".") ? (m[0].split(".")[1]?.length ?? 0) : 0;
   const moved = Number((Number(m[0]) + delta).toFixed(Math.max(decimals, Number.isInteger(delta) ? 0 : 1)));

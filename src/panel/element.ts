@@ -1,7 +1,7 @@
 // Edits on one element, live: inline !important styles (they beat Tailwind's layers), classes,
 // placeholder boxes. Everything is undone by reset(), back to the element's own attributes.
 
-import { type ElementEdits, type Inserted, changeLines, noEdits, withProp } from "./edits";
+import { type ElementEdits, type Inserted, changeLines, noEdits, withProp, withoutProp } from "./edits";
 import { knownClasses } from "./rules";
 
 const PLACEHOLDER =
@@ -16,8 +16,9 @@ export type Edited = {
   readonly el: Element;
   edits: ElementEdits;
   set: (prop: string, value: string) => Refusal;
-  /** Off (the checkbox) keeps the row; removed drops it. Both read "removed" for the agent. */
+  /** Off (the checkbox) keeps the row; remove (×) drops it. Both read "removed" for the agent. */
   off: (prop: string) => void;
+  remove: (prop: string) => void;
   on: (prop: string) => void;
   removeClass: (name: string) => void;
   addClass: (name: string) => void;
@@ -40,32 +41,29 @@ export function edit(el: Element): Edited {
     if (!start.has(prop)) start.set(prop, live.getPropertyValue(prop).trim());
     return start.get(prop) ?? "";
   };
-  for (const prop of [...live, "padding", "margin", "gap", "border", "border-radius", "inset", "overflow"]) {
-    computed(prop);
-  }
+  for (let i = 0; i < live.length; i++) computed(live.item(i));
+  for (const prop of ["padding", "margin", "gap", "border", "border-radius", "inset", "overflow"]) computed(prop);
   const self: Edited = {
     el,
     edits: noEdits(),
     set(prop, value) {
       if (!value) return "type a value, or use × to remove it";
-      const previous = style.getPropertyValue(prop);
-      const priority = style.getPropertyPriority(prop);
+      // The browser silently drops a declaration it can't parse: ask first, and say so.
+      if (!CSS.supports(prop, value)) return `"${prop}: ${value}" is not valid CSS`;
       style.setProperty(prop, value, "important");
-      if (!style.getPropertyValue(prop)) {
-        // The browser drops what it can't parse: put the old inline value back and say so.
-        if (previous) style.setProperty(prop, previous, priority);
-        return `"${prop}: ${value}" is not valid CSS here`;
-      }
-      self.edits = withProp(self.edits, prop, computed(prop), value);
+      self.edits = withProp(self.edits, prop, computed(prop), { kind: "set", value });
       return null;
     },
     off(prop) {
-      self.edits = withProp(self.edits, prop, computed(prop), null);
+      self.edits = withProp(self.edits, prop, computed(prop), { kind: "off" });
+      style.setProperty(prop, "unset", "important");
+    },
+    remove(prop) {
+      self.edits = withProp(self.edits, prop, computed(prop), { kind: "removed" });
       style.setProperty(prop, "unset", "important");
     },
     on(prop) {
-      const edit = self.edits.props.find((p) => p.prop === prop);
-      self.edits = { ...self.edits, props: self.edits.props.filter((p) => p !== edit) };
+      self.edits = withoutProp(self.edits, prop);
       style.removeProperty(prop);
       const tmp = document.createElement("div");
       if (originalStyle) tmp.setAttribute("style", originalStyle);
@@ -112,7 +110,7 @@ export function edit(el: Element): Edited {
           const label = (node.textContent ?? "").trim() || "(empty)";
           return { position, label, size: { w: Math.round(r.width), h: Math.round(r.height) } };
         });
-      return changeLines({ ...self.edits, inserted });
+      return changeLines(self.edits, inserted);
     },
   };
   return self;
