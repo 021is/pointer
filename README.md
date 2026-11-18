@@ -43,6 +43,28 @@ After a rebuild, press reload on the extension's card and reload the page.
 | Ctrl+Z, Ctrl+C | undo, Copy |
 | Esc | back to the page tool; again to close |
 
+### The style panel
+
+Picking an element opens a panel at the top right (it floats; the page's width never changes).
+It lists the CSS that reaches the element (its own rules, resets that hit every element left
+out) and its classes. Click a value to change it, ↑/↓ nudge the first number (Shift ×10, Alt
+×0.1), Enter applies; the checkbox turns a property off, × removes it, `+ add` takes
+`gap: 12px`. A class chip's × removes the class; `+ class` adds one (marked "not built yet" when
+the page's CSS has no rule for it, as with a Tailwind class the code never used). ⊕ before /
+after puts a dashed placeholder next to the element: type its label right away. ↺ Reset puts the
+element back. S collapses the panel; clicking a pick's number opens its panel again.
+
+Edits are live, on that element only, and Copy adds them under `changed:`:
+
+```
+   changed: font-size 96px → 72px
+            letter-spacing -2.4px → 2px
+            removed class: font-urbanist
+            inserted after it: placeholder "Map" (1088×48)
+```
+
+Undoing or clearing a pick undoes its edits. A reload of the page drops them too.
+
 **What Copy sends:** text always. The picture only when something is drawn, when I is on, or
 when nothing is marked (a plain screenshot). A pick with a note is text only, about 80 tokens.
 The picture is cropped to the marks and kept at one pixel per CSS pixel, long edge ≤ 1000 px

@@ -17,7 +17,7 @@ import { createToolbar } from "./toolbar";
 
 export type App = { open: () => void; close: () => void; toggle: () => void };
 
-/** What a later feature (the style panel) hooks into. */
+/** What the style panel hooks into. */
 export type Extension = {
   changesOf: (pin: Pin) => string[];
   onPick: (pin: Pin) => void;
@@ -25,11 +25,14 @@ export type Extension = {
   togglePanel: () => void;
 };
 
+/** What the app gives the panel: a redraw, and a pin's number as the bundle shows it. */
+export type ExtensionHost = { rerender: () => void; numberOf: (pin: Pin) => number };
+
 const DRAW = new Set<Tool>(["pen", "arrow", "box", "ellipse"]);
 const isEditable = (t: EventTarget | undefined) =>
   t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || (t instanceof HTMLElement && t.isContentEditable);
 
-export function createApp(ext: (root: ShadowRoot, rerender: () => void) => Extension): App {
+export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extension): App {
   const state: State = initialState();
   const host = document.createElement("pointer-overlay");
   host.style.cssText = "position:fixed;inset:0;z-index:2147483647;pointer-events:none;display:block;";
@@ -40,7 +43,11 @@ export function createApp(ext: (root: ShadowRoot, rerender: () => void) => Exten
   layer.className = "layer";
   const toast = Object.assign(document.createElement("div"), { className: "toast" });
   toast.setAttribute("role", "status");
-  const hooks = ext(root, () => render());
+  root.append(style, layer);
+  const hooks = ext(root, {
+    rerender: () => render(),
+    numberOf: (pin) => pinsOf(state.marks).indexOf(pin) + 1,
+  });
   const bar = createToolbar({
     tool: setTool,
     color: (c) => update(() => (state.color = c)),
@@ -50,7 +57,7 @@ export function createApp(ext: (root: ShadowRoot, rerender: () => void) => Exten
     copy,
     close,
   });
-  root.append(style, layer, bar.el, toast);
+  root.append(bar.el, toast);
 
   const layout = liveLayout;
   let frame = 0;
@@ -153,6 +160,7 @@ export function createApp(ext: (root: ShadowRoot, rerender: () => void) => Exten
     if (tool === "comment" && pin?.kind === "comment") {
       return drag(e, (p) => update(() => (pin.at = p)), () => {});
     }
+    if (tool === "pick" && pin?.kind === "pick") return hooks.onPick(pin);
     if (tool === "pick") {
       const el = state.hover?.el ?? elementAt(view.x, view.y, host);
       if (el) void addPin("pick", el, page);
