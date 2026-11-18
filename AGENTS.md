@@ -1,5 +1,9 @@
 # AGENTS.md: Pointer
 
+Coding rules: 021is/code-rules (PRINCIPLES, then ts/), then this file. That repo is 021's
+internal one; the rules this repo keeps stand on their own below, so outside contributors need
+nothing more.
+
 For people and coding agents working on Pointer. What it does and how to use it:
 [README.md](README.md). This file is how the code is laid out and the rules it keeps.
 
