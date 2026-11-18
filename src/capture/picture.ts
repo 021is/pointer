@@ -2,10 +2,10 @@
 // to one pixel per CSS pixel, with the marks drawn on by the same SVG the overlay shows, and the
 // Pointer lines printed under it (strip.ts). The PNG comes from a canvas: no metadata at all.
 
-import { FRAME_INK, type Scene, renderSvg } from "../marks/svg";
+import { FRAME_TAB, type Scene, renderSvg } from "../marks/svg";
 import { type Size, toImagePixels } from "../shared/geometry";
 import type { CaptureReply, CaptureRequest } from "../shared/messages";
-import { type Region, TAB, stackRegions } from "./layout";
+import { type Region, stackRegions } from "./layout";
 import { STRIP, stripHeight, wrapLines } from "./strip";
 
 const nextFrame = () => new Promise<void>((r) => requestAnimationFrame(() => r()));
@@ -58,20 +58,18 @@ export async function picture(
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   ctx.imageSmoothingQuality = "high";
-  for (const { region, size, top } of stack.placed) {
+  for (const { region, size, top, tab } of stack.placed) {
     const src = toImagePixels(region.rect, ratio, image);
     ctx.drawImage(shot, src.x, src.y, src.w, src.h, 0, top, size.w, size.h);
-    const svg = renderSvg(scene, region.rect);
+    // One renderer: the marks and, for a frame, its outline and letter tab come from svg.ts,
+    // the view reaching FRAME_TAB above the region so the tab lands in its band.
+    const r = region.rect;
+    const band = region.label ? FRAME_TAB : 0;
+    const view = { x: r.x, y: r.y - band, w: r.w, h: r.h + band };
+    const frames = region.label ? [{ label: region.label, rect: r }] : [];
+    const svg = renderSvg({ ...scene, frames }, view);
     const marks = await load(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`);
-    ctx.drawImage(marks, 0, top, size.w, size.h);
-    if (region.label) {
-      ctx.fillStyle = FRAME_INK;
-      ctx.fillRect(0, top - TAB, 18 + region.label.length * 9, TAB);
-      ctx.font = "700 13px system-ui, sans-serif";
-      ctx.fillStyle = "#08130d";
-      ctx.textBaseline = "middle";
-      ctx.fillText(region.label, 8, top - TAB / 2);
-    }
+    ctx.drawImage(marks, 0, top - tab, size.w, size.h + tab);
   }
 
   // Setting the canvas size reset the context: font and colour again, then the lines.

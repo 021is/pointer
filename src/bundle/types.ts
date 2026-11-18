@@ -58,7 +58,13 @@ export type DrawingSummary = {
 };
 
 /** A crop frame: a component (with its component info) or a dragged rectangle. */
-export type CropInfo = { label: string; component: ComponentInfo | null; size: { w: number; h: number } };
+export type CropInfo = {
+  label: string;
+  component: ComponentInfo | null;
+  size: { w: number; h: number };
+  /** Scrolled out of view at Copy: named in the text, not in the picture. */
+  offScreen: boolean;
+};
 
 export type Bundle = {
   url: string;
