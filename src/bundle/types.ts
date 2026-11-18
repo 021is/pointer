@@ -5,17 +5,28 @@ export type Source = { file: string; line?: number; column?: number };
 
 export type Framework = "react" | "vue" | "svelte" | "angular" | "none";
 
+/**
+ * Where the code is: found (with, for a shared component such as button.tsx, the next file up
+ * that uses it), unknown with the reason said plainly, or nothing to say (no framework at all).
+ */
+export type Where =
+  | { kind: "found"; source: Source; usedAt?: Source }
+  | { kind: "unknown"; why: string }
+  | { kind: "silent" };
+
 /** What the page's own scripts say about an element (read in the page's world, see source/). */
 export type ComponentInfo = {
   framework: Framework;
   /** The component and its owners, innermost first: ["ProfileCard", "EventList", "EventsPage"]. */
   chain: string[];
-  source?: Source;
-  /** The next file up, when the source is a shared component (button.tsx used in Menu.tsx). */
-  usedAt?: Source;
-  /** Why there is no source, said plainly ("prod build: no source map"). */
-  sourceNote?: string;
+  where: Where;
 };
+
+export const unknown = (why: string): ComponentInfo => ({
+  framework: "none",
+  chain: [],
+  where: { kind: "unknown", why },
+});
 
 export type ElementInfo = {
   selector: string;

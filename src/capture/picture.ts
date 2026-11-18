@@ -4,8 +4,7 @@
 
 import { type Scene, renderSvg } from "../marks/svg";
 import { type Rect, type Size, outputSize, toImagePixels } from "../shared/geometry";
-
-type CaptureReply = { ok: true; dataUrl: string } | { ok: false; error: string };
+import type { CaptureReply, CaptureRequest } from "../shared/messages";
 
 const nextFrame = () => new Promise<void>((r) => requestAnimationFrame(() => r()));
 
@@ -21,7 +20,8 @@ export async function screenshot(host: HTMLElement): Promise<HTMLImageElement> {
   try {
     await nextFrame();
     await nextFrame();
-    const reply = (await chrome.runtime.sendMessage({ type: "capture" })) as CaptureReply | undefined;
+    const ask: CaptureRequest = { type: "capture" };
+    const reply = (await chrome.runtime.sendMessage(ask)) as CaptureReply | undefined;
     if (!reply) throw new Error("the extension did not answer (reload the extension?)");
     if (!reply.ok) throw new Error(reply.error);
     return await load(reply.dataUrl);

@@ -21,17 +21,18 @@ export const KEY_PROPS = [
   "border",
 ] as const;
 
-const hex2 = (v: number) => Math.round(v).toString(16).padStart(2, "0");
+/** A 0–255 channel as two hex digits. */
+const byteHex = (v: number) => Math.round(v).toString(16).padStart(2, "0");
 
 /** rgb()/rgba()/lab()/oklch() → #rrggbb or #rrggbbaa; anything else (a keyword) as it is. */
 export function toHex(color: string): string {
   const m = color.match(/^rgba?\(\s*([\d.]+)[ ,]+([\d.]+)[ ,]+([\d.]+)(?:\s*[,/]\s*([\d.]+%?))?\s*\)$/);
   if (!m) return cssColorToHex(color) ?? color;
   const [, r, g, b, a] = m;
-  const rgb = `#${hex2(Number(r))}${hex2(Number(g))}${hex2(Number(b))}`;
+  const rgb = `#${byteHex(Number(r))}${byteHex(Number(g))}${byteHex(Number(b))}`;
   if (a === undefined) return rgb;
   const alpha = a.endsWith("%") ? Number(a.slice(0, -1)) / 100 : Number(a);
-  return alpha >= 1 ? rgb : `${rgb}${hex2(alpha * 255)}`;
+  return alpha >= 1 ? rgb : `${rgb}${byteHex(alpha * 255)}`;
 }
 
 const isTransparent = (c: string) =>

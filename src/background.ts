@@ -2,6 +2,8 @@
 // click is what grants activeTab: no access to any site before it), and it takes the screenshot
 // the picture is cropped from (only the extension may call captureVisibleTab).
 
+import { type CaptureReply, isCaptureRequest } from "./shared/messages";
+
 async function toggle(tab: chrome.tabs.Tab): Promise<void> {
   const tabId = tab.id;
   if (tabId === undefined) return;
@@ -22,10 +24,8 @@ chrome.action.onClicked.addListener((tab) => {
   void toggle(tab);
 });
 
-type CaptureReply = { ok: true; dataUrl: string } | { ok: false; error: string };
-
 chrome.runtime.onMessage.addListener((message: unknown, sender, reply: (r: CaptureReply) => void) => {
-  if ((message as { type?: unknown } | null)?.type !== "capture") return false;
+  if (!isCaptureRequest(message)) return false;
   const windowId = sender.tab?.windowId;
   if (windowId === undefined) {
     reply({ ok: false, error: "capture asked from outside a tab" });

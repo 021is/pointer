@@ -14,8 +14,6 @@ export type Shape =
   | { kind: "ellipse"; color: Color; rect: Rect }
   | { kind: "text"; color: Color; at: Point; text: string };
 
-export type ShapeKind = Shape["kind"];
-
 /** A pick marks a whole element; a comment marks a point (and remembers the element under it). */
 export type Pin = {
   kind: "pick" | "comment";

@@ -9,7 +9,7 @@ const pick: PinInfo = {
   component: {
     framework: "react",
     chain: ["ProfileCard", "EventList", "EventsPage"],
-    source: { file: "src/feature/profile/ProfileCard.tsx", line: 24 },
+    where: { kind: "found", source: { file: "src/feature/profile/ProfileCard.tsx", line: 24 } },
   },
   el: {
     selector: "div.card",
@@ -26,7 +26,11 @@ const pick: PinInfo = {
 const comment: PinInfo = {
   n: 2,
   kind: "comment",
-  component: { framework: "react", chain: ["JoinButton"], sourceNote: "no source map for page.js" },
+  component: {
+    framework: "react",
+    chain: ["JoinButton"],
+    where: { kind: "unknown", why: "no source map for page.js" },
+  },
   el: { selector: "button.btn", tag: "button", text: "Join event", className: "btn w-auto", size: { w: 96, h: 40 } },
   changes: [],
   note: "full width on mobile",
@@ -71,7 +75,7 @@ describe("formatBundle", () => {
   });
 
   it("names no framework when the page has none and falls back to the tag", () => {
-    const plain: PinInfo = { ...comment, component: { framework: "none", chain: [] } };
+    const plain: PinInfo = { ...comment, component: { framework: "none", chain: [], where: { kind: "silent" } } };
     const text = formatBundle({ ...bundle, pins: [plain], image: null });
     expect(text.split("\n")[0]).toBe("Pointer · https://live.danceclub.dev/events/42 · viewport 1280×800");
     expect(text).toContain("[2] comment · button");
@@ -84,8 +88,11 @@ describe("formatBundle", () => {
       component: {
         framework: "react",
         chain: ["Button", "FullScreenMenu"],
-        source: { file: "src/components/ui/button.tsx", line: 52 },
-        usedAt: { file: "src/feature/site/menu/FullScreenMenu.tsx", line: 40 },
+        where: {
+          kind: "found",
+          source: { file: "src/components/ui/button.tsx", line: 52 },
+          usedAt: { file: "src/feature/site/menu/FullScreenMenu.tsx", line: 40 },
+        },
       },
     };
     const lines = formatBundle({ ...bundle, pins: [button], image: null }).split("\n");

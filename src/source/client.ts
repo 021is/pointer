@@ -1,8 +1,8 @@
 // The extension's side of the probe: asks the page's world about one element and waits for the
 // answer, at most a few seconds. Answers are cached per element.
 
-import type { ComponentInfo } from "../bundle/types";
-import { ANSWER, ASK, PROBE_ATTR } from "./protocol";
+import { type ComponentInfo, unknown } from "../bundle/types";
+import { ANSWER, ASK, type Answer, PROBE_ATTR, readMessage } from "./protocol";
 
 const TIMEOUT_MS = 4000;
 
@@ -20,14 +20,11 @@ function ask(el: Element): Promise<ComponentInfo> {
       resolve(info);
     };
     const onAnswer = (event: Event) => {
-      if (!(event instanceof CustomEvent) || typeof event.detail !== "string") return;
-      const reply = JSON.parse(event.detail) as { id: string; info: ComponentInfo };
-      if (reply.id === id) done(reply.info);
+      const reply = readMessage<Answer>(event);
+      if (reply instanceof Error) done(unknown(`unreadable answer from the page: ${reply.message}`));
+      else if (reply?.id === id) done(reply.info);
     };
-    const timer = setTimeout(
-      () => done({ framework: "none", chain: [], sourceNote: "the page did not answer in time" }),
-      TIMEOUT_MS,
-    );
+    const timer = setTimeout(() => done(unknown("the page did not answer in time")), TIMEOUT_MS);
     window.addEventListener(ANSWER, onAnswer);
     window.dispatchEvent(new CustomEvent(ASK, { detail: JSON.stringify({ id }) }));
   });
