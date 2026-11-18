@@ -6,7 +6,7 @@ import { buildBundle, copyBundle, estimateCosts } from "../capture/copy";
 import { textTokens } from "../capture/estimate";
 import type { Mark } from "../marks/types";
 import { imageTokens } from "../shared/geometry";
-import type { PreviewRequest } from "../shared/messages";
+import type { PreviewReply, PreviewRequest } from "../shared/messages";
 import type { Extension } from "./extension";
 import { type Output, type State, isEmpty, pinsOf } from "./state";
 import type { Toast } from "./toast";
@@ -65,7 +65,9 @@ export function copyFlow(h: CopyHost) {
       const body = (await text) ?? null;
       const tokens = pic ? imageTokens(pic.size) : textTokens(body ?? "");
       const ask: PreviewRequest = { type: "preview", png, text: body, tokens, output: h.state.output };
-      await chrome.runtime.sendMessage(ask);
+      const answer = (await chrome.runtime.sendMessage(ask)) as PreviewReply | undefined;
+      if (!answer) throw new Error("the extension did not answer (reload it in chrome://extensions)");
+      if (!answer.ok) throw new Error(answer.error);
     } catch (err) {
       h.say(`Preview failed: ${errorText(err)}`, "error");
     }

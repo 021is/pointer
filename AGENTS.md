@@ -17,10 +17,12 @@ dev-build information (React fibers, Vue and Svelte metadata, source maps).
 
 | Folder | What |
 |---|---|
-| `src/background.ts` | service worker: icon/shortcut → inject; `captureVisibleTab`; the welcome page on install |
-| `src/ui/` | the content script: shadow-rooted layer, toolbar, bubble, keys, state |
+| `src/background.ts` | service worker: icon/shortcut → inject; `captureVisibleTab`; the welcome page on install; the preview tab |
+| `src/ui/` | the content script: shadow-rooted layer, toolbar, bubble, keys, state; `copy-flow.ts` (Copy, clear after copy, preview), `copy-menu.ts` (the split button), `move.ts` (the Move tool) |
 | `src/draw/`, `src/pick/`, `src/marks/` | drawing gestures, element picking, marks → SVG |
-| `src/capture/` | screenshot, crop, layout within the image budget, text strip, clipboard |
+| `src/capture/` | screenshot, crop, layout within the image budget, text strip, clipboard, cost estimate |
+| `src/preview.ts`, `preview.html` | the preview page: what Copy would give, from the service worker |
+| `pages.css`, `brand/` | the extension's pages in 021's look, and 021's logo, bundled (never fetched) |
 | `src/panel/` | the style panel: matched CSS, live edits on one element, their diff |
 | `src/paste/` | images pasted onto the page: landing, move/resize, see-through, until reload |
 | `src/source/` | the page-world probe: framework, component chain, file:line via source maps |

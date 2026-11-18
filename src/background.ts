@@ -3,19 +3,28 @@
 // the picture is cropped from (only the extension may call captureVisibleTab). It also opens the
 // preview of what Copy would give in a tab of Pointer's own, and hands that page the result.
 
-import { type CaptureReply, type Preview, isCaptureRequest, isPreviewAsk, isPreviewRequest } from "./shared/messages";
+import {
+  type CaptureReply,
+  type Preview,
+  type PreviewReply,
+  isCaptureRequest,
+  isPreviewAsk,
+  isPreviewRequest,
+} from "./shared/messages";
 
 /** The last preview, held only until its page has taken it (in memory, never stored). */
 let preview: Preview | null = null;
 
-chrome.runtime.onMessage.addListener((message: unknown, _sender, reply: (r: Preview | null) => void) => {
+chrome.runtime.onMessage.addListener((message: unknown, _sender, reply: (r: PreviewReply | Preview | null) => void) => {
   if (isPreviewRequest(message)) {
     const { type: _type, ...rest } = message;
     preview = rest;
-    chrome.tabs
-      .create({ url: chrome.runtime.getURL("preview.html") })
-      .catch((err: unknown) => console.error("Pointer: the preview did not open:", err));
-    return false;
+    // The answer goes back to the page that asked: opened, or why not (shown to the person there).
+    chrome.tabs.create({ url: chrome.runtime.getURL("preview.html") }).then(
+      () => reply({ ok: true }),
+      (err: unknown) => reply({ ok: false, error: `the preview tab did not open: ${String(err)}` }),
+    );
+    return true;
   }
   if (isPreviewAsk(message)) {
     reply(preview);
