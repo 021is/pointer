@@ -18,8 +18,10 @@ export type KeyActions = {
   panel: () => void;
   /** Cmd/Ctrl+V outside a field: the paste is steered to Pointer (the key itself is not taken). */
   beforePaste: () => void;
-  /** True with a pasted image under the mouse: only then are [ ] Delete Backspace Pointer's. */
+  /** True with a pasted image under the mouse: only then are [ and ] Pointer's. */
   overPasted: () => boolean;
+  /** True with something removable under the mouse (a pasted image; any mark with Move): only then are Delete and Backspace Pointer's. */
+  canRemove: () => boolean;
   see: (direction: -1 | 1) => void;
   remove: () => void;
 };
@@ -34,7 +36,8 @@ export function keyHandler(tool: () => Tool, run: KeyActions): (e: KeyboardEvent
     const cmd = commandFor(e, tool());
     if (!cmd) return;
     if (cmd.type === "copy" && !getSelection()?.isCollapsed) return;
-    if ((cmd.type === "see" || cmd.type === "remove") && !run.overPasted()) return;
+    if (cmd.type === "see" && !run.overPasted()) return;
+    if (cmd.type === "remove" && !run.canRemove()) return;
     e.preventDefault();
     e.stopImmediatePropagation();
     switch (cmd.type) {

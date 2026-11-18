@@ -18,7 +18,7 @@ import {
 import type { Point, Rect } from "../shared/geometry";
 import { boundsOf, dragRect, inflate } from "../shared/geometry";
 
-export type Tool = "page" | "pick" | "comment" | "crop" | "pen" | "arrow" | "box" | "ellipse" | "text";
+export type Tool = "page" | "move" | "pick" | "comment" | "crop" | "pen" | "arrow" | "box" | "ellipse" | "text";
 
 export type State = {
   tool: Tool;
@@ -30,17 +30,39 @@ export type State = {
   framing: Rect | null;
   hover: { el: Element; label: string } | null;
   /**
-   * What Copy gives, switched on the bar (Edvard, 2026-11-18): the picture with the text strip,
-   * or the compact text only, about 3× cheaper when his words say enough.
+   * What Copy gives, chosen in Copy's menu (Edvard, 2026-11-18): the picture with its text, the
+   * compact text only (about 3× cheaper when his words say enough), or the picture alone.
    */
   output: Output;
+  /** Start fresh after a copy (the marks come back with Undo). */
+  clearAfterCopy: boolean;
 };
 
-export type Output = "picture" | "text";
+export type Output = "picture" | "text" | "image";
 
+/** The menu's order and its words. */
+export const OUTPUTS: readonly { output: Output; label: string }[] = [
+  { output: "picture", label: "Picture + text" },
+  { output: "text", label: "Text only" },
+  { output: "image", label: "Picture only" },
+];
+
+/** Comment is the first tool: click anywhere and say what you want (Edvard: "the most intuitive"). */
 export function initialState(): State {
-  return { tool: "pick", color: "red", marks: [], draft: null, framing: null, hover: null, output: "picture" };
+  return {
+    tool: "comment",
+    color: "red",
+    marks: [],
+    draft: null,
+    framing: null,
+    hover: null,
+    output: "picture",
+    clearAfterCopy: false,
+  };
 }
+
+/** Nothing on the page yet: Copy then has nothing to say beyond a plain screenshot. */
+export const isEmpty = (marks: readonly Mark[]) => marks.length === 0;
 
 export const pinsOf = (marks: readonly Mark[]): Pin[] => marks.filter(isPin);
 export const shapesOf = (marks: readonly Mark[]): Shape[] => marks.filter(isShape);
@@ -174,17 +196,18 @@ export function laidOf(marks: readonly Mark[], layout: Layout): { img: HTMLImage
   }));
 }
 
-/** The bar's switch decides: a picture, or text only. */
+/** Copy's choice decides: a picture (with or without its text), or text only. */
 export function wantsImage(state: State): boolean {
-  return state.output === "picture";
+  return state.output !== "text";
 }
 
-/** The switch's other side. */
-export const otherOutput = (o: Output): Output => (o === "picture" ? "text" : "picture");
+/** I flips between the picture and the text (Picture only is chosen in the menu). */
+export const otherOutput = (o: Output): Output => (o === "text" ? "picture" : "text");
 
 /** Every tool says whether it only makes sense in a picture: a new tool must choose. */
 const PICTURE_ONLY: Record<Tool, boolean> = {
   page: false,
+  move: false,
   pick: false,
   comment: false,
   crop: true,
