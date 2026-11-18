@@ -4,7 +4,7 @@
 
 import type { ComponentInfo, Source, Where } from "../bundle/types";
 import { appFrames, cleanSourcePath, isDependency, parseStack } from "./stack";
-import { resolveFrame } from "./resolve";
+import { type Found, resolveFrame } from "./resolve";
 
 type Loose = Record<string, unknown>;
 const obj = (v: unknown): Loose | null => (v !== null && typeof v === "object" ? (v as Loose) : null);
@@ -42,7 +42,7 @@ function reactFiber(el: Element): Loose | null {
   return null;
 }
 
-type Found = { source?: Source; note?: string };
+const NO_DEV_INFO: Found = { kind: "note", note: "no dev info on the element (production build?)" };
 
 /** Where one fiber's JSX was written: React ≤18's _debugSource, or React 19's _debugStack. */
 async function fiberSource(fiber: Loose): Promise<Found> {
@@ -50,17 +50,18 @@ async function fiberSource(fiber: Loose): Promise<Found> {
   const fileName = str(legacy?.fileName);
   if (fileName) {
     const line = legacy?.lineNumber;
-    return { source: { file: cleanSourcePath(fileName), line: typeof line === "number" ? line : undefined } };
+    const source = { file: cleanSourcePath(fileName), line: typeof line === "number" ? line : undefined };
+    return { kind: "source", source };
   }
   const stack = str(prop(fiber._debugStack, "stack"));
-  if (!stack) return { note: "no dev info on the element (production build?)" };
+  if (!stack) return NO_DEV_INFO;
   let note = "written inside a dependency";
   for (const frame of appFrames(parseStack(stack)).slice(0, 6)) {
     const found = await resolveFrame(frame);
-    if (found.source && !isDependency(found.source.file)) return { source: found.source };
-    if (found.note) note = found.note;
+    if (found.kind === "source" && !isDependency(found.source.file)) return found;
+    if (found.kind === "note") note = found.note;
   }
-  return { note };
+  return { kind: "note", note };
 }
 
 /**
@@ -74,10 +75,10 @@ async function reactSource(fiber: Loose): Promise<Found> {
     if (!f._debugStack && !f._debugSource) continue;
     tried++;
     const found = await fiberSource(f);
-    if (found.source) return found;
+    if (found.kind === "source") return found;
     first ??= found;
   }
-  return first ?? { note: "no dev info on the element (production build?)" };
+  return first ?? NO_DEV_INFO;
 }
 
 /**
@@ -91,7 +92,7 @@ async function usedAt(fiber: Loose, file: string): Promise<Source | undefined> {
     const stack = obj(o._debugStack) ?? obj(o.debugStack);
     if (stack || o._debugSource) {
       const found = await fiberSource({ _debugStack: stack, _debugSource: o._debugSource });
-      if (found.source && found.source.file !== file) return found.source;
+      if (found.kind === "source" && found.source.file !== file) return found.source;
     }
     o = obj(o._debugOwner) ?? obj(o.owner);
   }
@@ -128,10 +129,11 @@ async function react(el: Element): Promise<ComponentInfo | null> {
   if (!fiber) return null;
   const owners = ownerChain(fiber);
   const chain = owners.length ? owners : parentChain(fiber);
-  const { source, note } = await reactSource(fiber);
-  const where: Where = source
-    ? { kind: "found", source, usedAt: await usedAt(fiber, source.file) }
-    : { kind: "unknown", why: note ?? "no dev info on the element" };
+  const found = await reactSource(fiber);
+  const where: Where =
+    found.kind === "source"
+      ? { kind: "found", source: found.source, usedAt: await usedAt(fiber, found.source.file) }
+      : { kind: "unknown", why: found.note };
   return { framework: "react", chain, where };
 }
 

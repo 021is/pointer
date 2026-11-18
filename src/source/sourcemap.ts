@@ -11,6 +11,37 @@ export type RawMap = {
 
 export type Original = { source: string; line: number; column: number };
 
+const isNum = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
+
+/**
+ * A parsed JSON value checked as a source map where it enters: the map, or why it is not one.
+ * Plain maps need `sources` (strings) and `mappings`; index maps need valid `sections`.
+ */
+export function readMap(value: unknown, depth = 0): RawMap | string {
+  if (!value || typeof value !== "object") return "not an object";
+  const v = value as Record<string, unknown>;
+  if (v.version !== 3) return `version ${String(v.version)}, not 3`;
+  if (v.sourceRoot !== undefined && typeof v.sourceRoot !== "string") return "sourceRoot is not a string";
+  if (Array.isArray(v.sections)) {
+    if (depth > 0) return "sections inside a section";
+    const sections: NonNullable<RawMap["sections"]> = [];
+    for (const [i, s] of v.sections.entries()) {
+      const offset = (s as { offset?: { line?: unknown; column?: unknown } } | null)?.offset;
+      if (!isNum(offset?.line) || !isNum(offset?.column)) return `section ${i} has no numeric offset`;
+      const map = readMap((s as { map?: unknown }).map, depth + 1);
+      if (typeof map === "string") return `section ${i}: ${map}`;
+      sections.push({ offset: { line: offset.line, column: offset.column }, map });
+    }
+    return { version: 3, sections };
+  }
+  if (!Array.isArray(v.sources) || !v.sources.every((s) => typeof s === "string" || s === null)) {
+    return "sources is not a list of strings";
+  }
+  if (typeof v.mappings !== "string") return "mappings is not a string";
+  const sources = v.sources.map((s) => s ?? "");
+  return { version: 3, sources, mappings: v.mappings, sourceRoot: v.sourceRoot as string | undefined };
+}
+
 const B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 const DIGIT = new Map([...B64].map((ch, i) => [ch, i]));
 

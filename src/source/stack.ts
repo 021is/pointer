@@ -17,14 +17,25 @@ export function parseStack(stack: string): Frame[] {
   return frames;
 }
 
-/** Frames of the runtime, never the app's code: React, its JSX helpers, bundler runtimes. */
-const INTERNAL_URL =
-  /\/node_modules\/|react-dom|react-jsx|jsx-dev-runtime|next\/dist|turbopack-runtime|\[turbopack\]|<anonymous>|^native$|chrome-extension:/;
-const INTERNAL_FN = /^(exports\.)?(jsxDEV|jsxs?|createElement|react-stack-bottom-frame|Object\.react-stack-bottom-frame)$/;
+/**
+ * Code that is not the app's: packages (also as a bundler names their chunks,
+ * "node_modules_react-dom_…js") and the bundlers' runtimes. One rule, for a chunk URL or a
+ * source path alike.
+ */
+const DEPENDENCY =
+  /(^|\/)node_modules\/|^(react|react-dom|next)\/|react-dom|react-jsx|jsx-dev-runtime|next\/dist|turbopack-runtime|\[turbopack\]/;
+/** Frames with no file behind them at all. */
+const NO_FILE = /<anonymous>|^native$|chrome-extension:/;
+const RUNTIME_FN = /^(exports\.)?(jsxDEV|jsxs?|createElement|react-stack-bottom-frame|Object\.react-stack-bottom-frame)$/;
 
-/** The frames that may be the app's own code, outermost runtime frames dropped, in order. */
+/** A dependency, never the file to change. */
+export function isDependency(path: string): boolean {
+  return DEPENDENCY.test(path);
+}
+
+/** The frames that may be the app's own code, runtime frames dropped, in order. */
 export function appFrames(frames: readonly Frame[]): Frame[] {
-  return frames.filter((f) => !INTERNAL_URL.test(f.url) && !INTERNAL_FN.test(f.fn));
+  return frames.filter((f) => !isDependency(f.url) && !NO_FILE.test(f.url) && !RUNTIME_FN.test(f.fn));
 }
 
 /**
@@ -39,9 +50,4 @@ export function cleanSourcePath(path: string): string {
   p = p.replace(/^https?:\/\/[^/]+\//, "");
   p = p.replace(/^(\.\/)+/, "");
   return p;
-}
-
-/** A dependency, never the file to change. */
-export function isDependency(path: string): boolean {
-  return /(^|\/)node_modules\//.test(path) || /^(react|react-dom|next)\//.test(path);
 }

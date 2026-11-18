@@ -2,7 +2,7 @@
 // The item is handed to the clipboard at once, inside the click or key press, with its parts as
 // promises: Chrome then allows the write even though the screenshot takes a moment.
 
-import { formatBundle } from "../bundle/format";
+import { formatBundle, safeUrl } from "../bundle/format";
 import type { PinInfo } from "../bundle/types";
 import type { Pin } from "../marks/types";
 import { describeElement, liveLayout } from "../pick/describe";
@@ -48,7 +48,7 @@ export async function copyBundle(ctx: CopyContext): Promise<CopyResult> {
   const text = (async () => {
     const [pins, pic] = await Promise.all([pinInfos(ctx), image]);
     return formatBundle({
-      url: location.href,
+      url: safeUrl(location.href),
       viewport: { w: innerWidth, h: innerHeight },
       pins,
       drawings,
