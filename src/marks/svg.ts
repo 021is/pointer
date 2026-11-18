@@ -107,15 +107,16 @@ function hoverSvg(view: Rect, rect: Rect, label: string): string {
   );
 }
 
-/** The crop frames' green, on the page and on the picture's letter tabs. */
-export const FRAME_INK = "#2fd67b";
-const FRAME = FRAME_INK;
+/** The crop frames' green, on the page and in the picture. */
+const FRAME = "#2fd67b";
+/** The height of a frame's letter tab, drawn above the frame. */
+export const FRAME_TAB = 20;
 
 function frameSvg(f: Frame): string {
   const { x, y, w, h } = f.rect;
   const tab = f.label
-    ? `<rect x="${n(x)}" y="${n(y - 20)}" width="${n(14 + f.label.length * 8)}" height="20" rx="4" fill="${FRAME}"/>` +
-      `<text x="${n(x + 7)}" y="${n(y - 10)}" fill="#08130d" font-family="system-ui,sans-serif" font-size="12" font-weight="700" dominant-baseline="central">${escapeXml(f.label)}</text>`
+    ? `<rect x="${n(x)}" y="${n(y - FRAME_TAB)}" width="${n(14 + f.label.length * 8)}" height="${FRAME_TAB}" rx="4" fill="${FRAME}"/>` +
+      `<text x="${n(x + 7)}" y="${n(y - FRAME_TAB / 2)}" fill="#08130d" font-family="system-ui,sans-serif" font-size="12" font-weight="700" dominant-baseline="central">${escapeXml(f.label)}</text>`
     : "";
   return `<rect x="${n(x)}" y="${n(y)}" width="${n(w)}" height="${n(h)}" fill="none" stroke="${FRAME}" stroke-width="2" stroke-dasharray="8 4"/>${tab}`;
 }

@@ -63,11 +63,12 @@ function formatPin(p: PinInfo): string[] {
 /** "crop A · ProfileHeader ← ProfilePage · src/…/Header.tsx:42 · 320×180", or "crop B · frame 400×300". */
 export function formatCrop(c: CropInfo): string {
   const size = `${c.size.w}×${c.size.h}`;
+  const off = c.offScreen ? " (off screen, not in the picture)" : "";
   const info = c.component;
-  if (!info) return `crop ${c.label} · frame ${size}`;
+  if (!info) return `crop ${c.label} · frame ${size}${off}`;
   const who = info.chain.length ? `${info.chain.join(" ← ")} · ` : "";
   const file = info.where.kind === "found" ? `${formatSource(info.where.source)} · ` : "";
-  return `crop ${c.label} · ${who}${file}${size}`;
+  return `crop ${c.label} · ${who}${file}${size}${off}`;
 }
 
 export function formatBundle(b: Bundle): string {

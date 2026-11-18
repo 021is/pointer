@@ -3,10 +3,11 @@
 // promises: Chrome then allows the write even though the screenshot takes a moment.
 
 import { formatBundle, safeUrl } from "../bundle/format";
-import type { CropInfo, PinInfo } from "../bundle/types";
-import { type Pin, cropLabel } from "../marks/types";
+import type { ComponentInfo, CropInfo, PinInfo } from "../bundle/types";
+import type { Frame } from "../marks/svg";
+import { type Crop, type Pin, cropLabel } from "../marks/types";
 import { describeElement, liveLayout } from "../pick/describe";
-import { cropFor, intersect } from "../shared/geometry";
+import { cropFor } from "../shared/geometry";
 import { componentOf } from "../source/client";
 import {
   type State,
@@ -19,7 +20,7 @@ import {
   summarize,
   wantsImage,
 } from "../ui/state";
-import type { Region } from "./layout";
+import { type Region, shownFrames } from "./layout";
 import { picture, screenshot } from "./picture";
 
 export type CopyContext = {
@@ -44,40 +45,45 @@ async function pinInfos(ctx: CopyContext): Promise<PinInfo[]> {
   );
 }
 
-async function cropInfos(ctx: CopyContext): Promise<CropInfo[]> {
-  const frames = sceneFrames(ctx.state.marks, liveLayout());
+/** One line of the bundle per crop; a frame scrolled out of view says so (it is not in the picture). */
+export function cropInfos(
+  crops: readonly Crop[],
+  frames: readonly Frame[],
+  off: readonly string[],
+  componentOf: (el: Element) => Promise<ComponentInfo>,
+): Promise<CropInfo[]> {
   return Promise.all(
-    cropsOf(ctx.state.marks).map(async (c, i) => ({
-      label: cropLabel(i),
-      component: c.el ? await componentOf(c.el) : null,
-      size: { w: Math.round(frames[i]?.rect.w ?? 0), h: Math.round(frames[i]?.rect.h ?? 0) },
-    })),
+    crops.map(async (c, i) => {
+      const label = cropLabel(i);
+      const rect = frames[i]?.rect;
+      return {
+        label,
+        component: c.el ? await componentOf(c.el) : null,
+        size: { w: Math.round(rect?.w ?? 0), h: Math.round(rect?.h ?? 0) },
+        offScreen: off.includes(label),
+      };
+    }),
   );
 }
 
-/**
- * The parts of the screen the picture shows: the crop frames on screen, or else one crop around
- * every mark. Frames all scrolled out of view are a reason to stop, said plainly.
- */
-function regionsOf(ctx: CopyContext): Region[] {
+/** The frames as the page lays them out now, and which of them the picture can show. */
+function framesNow(ctx: CopyContext) {
   const viewport = { x: 0, y: 0, w: innerWidth, h: innerHeight };
   const frames = sceneFrames(ctx.state.marks, liveLayout());
-  if (frames.length) {
-    const shown = frames.flatMap((f) => {
-      const rect = intersect(f.rect, viewport);
-      return rect ? [{ label: f.label, rect }] : [];
-    });
-    if (!shown.length) throw new Error("every crop is scrolled out of view: scroll one back in");
-    return shown;
-  }
-  const scene = pictureScene(ctx.state, liveLayout());
-  return [{ label: null, rect: cropFor(pictureBoxes(scene), viewport) ?? viewport }];
+  return { viewport, frames, split: shownFrames(frames, viewport) };
 }
 
-/** The screenshot, taken at once (the page as it is at the click), with what to cut and draw. */
+/**
+ * The screenshot, taken at once (the page as it is at the click), and the regions to cut: the
+ * frames on screen, or else one crop around every mark.
+ */
 async function shoot(ctx: CopyContext) {
-  const regions = regionsOf(ctx);
+  const { viewport, frames, split } = framesNow(ctx);
+  if (split instanceof Error) throw split;
   const scene = pictureScene(ctx.state, liveLayout());
+  const regions: Region[] = frames.length
+    ? split.shown
+    : [{ label: null, rect: cropFor(pictureBoxes(scene), viewport) ?? viewport }];
   return { shot: await screenshot(ctx.host), regions, scene };
 }
 
@@ -88,7 +94,10 @@ async function shoot(ctx: CopyContext) {
  */
 export async function copyBundle(ctx: CopyContext): Promise<CopyResult> {
   const shot = wantsImage(ctx.state) ? shoot(ctx) : null;
-  const infos = Promise.all([pinInfos(ctx), cropInfos(ctx)]);
+  const { frames, split } = framesNow(ctx);
+  const off = split instanceof Error ? frames.map((f) => f.label) : split.off;
+  const crops = cropInfos(cropsOf(ctx.state.marks), frames, off, componentOf);
+  const infos = Promise.all([pinInfos(ctx), crops]);
   const drawings = summarize(shapesOf(ctx.state.marks));
   const viewport = { w: innerWidth, h: innerHeight };
   const bundle = ([pins, crops]: [PinInfo[], CropInfo[]], image: CopyResult["image"]) =>
