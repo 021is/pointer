@@ -25,8 +25,12 @@ chrome.action.onClicked.addListener((tab) => {
 });
 
 // The first install opens the welcome page (the extension's own page: no permission needed).
+// Updates and reloads do not; a page that fails to open says why in the service worker's log.
 chrome.runtime.onInstalled.addListener(({ reason }) => {
-  if (reason === "install") void chrome.tabs.create({ url: chrome.runtime.getURL("welcome.html") });
+  if (reason !== "install") return;
+  chrome.tabs
+    .create({ url: chrome.runtime.getURL("welcome.html") })
+    .catch((err: unknown) => console.error("Pointer: the welcome page did not open:", err));
 });
 
 chrome.runtime.onMessage.addListener((message: unknown, sender, reply: (r: CaptureReply) => void) => {

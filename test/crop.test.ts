@@ -139,6 +139,27 @@ describe("crops in the bundle", () => {
     expect(lines[1]).toMatch(/^Task: /);
     expect(lines.slice(2)).toEqual(["crop A · frame 10×10", "drawn: 1 arrow"]);
   });
+
+  it("a crop-only bundle asks to read the crops and their drawings, not quoted text or [n]", () => {
+    const base = {
+      url: "https://x.dev/",
+      viewport: { w: 1280, h: 800 },
+      pins: [],
+      drawings: { arrows: 1, boxes: 0, ellipses: 0, pens: 0, texts: [], pasted: 0 },
+      image: null,
+    };
+    const frame = formatBundle({ ...base, crops: [{ label: "A", component: null, size: { w: 10, h: 10 }, offScreen: false }] });
+    const task = frame.split("\n")[1] ?? "";
+    expect(task).toContain("framed these parts of the page");
+    expect(task).not.toMatch(/quoted text|\[n\]/);
+    const component = {
+      framework: "react" as const,
+      chain: ["Card"],
+      where: { kind: "found" as const, source: { file: "src/Card.tsx", line: 3 } },
+    };
+    const withFile = formatBundle({ ...base, crops: [{ label: "A", component, size: { w: 10, h: 10 }, offScreen: false }] });
+    expect(withFile.split("\n")[1]).toContain("a crop's file:line, when given, is where it is written");
+  });
 });
 
 describe("keys for the crop tool", () => {

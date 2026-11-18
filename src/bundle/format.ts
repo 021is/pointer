@@ -106,6 +106,11 @@ function stripPin(p: PinInfo): string[] {
  */
 export function task(b: Bundle, onPicture: boolean): string | null {
   if (!b.pins.length && !b.crops.length) return null;
+  // Only frames, no pins: the parts of the screen and what is drawn on them are the request.
+  if (!b.pins.length) {
+    const where = b.crops.some((c) => c.component?.where.kind === "found") ? " (a crop's file:line, when given, is where it is written)" : "";
+    return `Task: the user framed these parts of the page (crop A, B…) and marked them up on the picture${where}. Read each crop and what is drawn or written on it, make that change in the code, then answer per crop what you did.`;
+  }
   const numbers = onPicture ? " (its number is on the picture)" : "";
   // A page without a dev build gives no files: then the element is found by what it shows.
   const components = [...b.pins.map((p) => p.component), ...b.crops.flatMap((c) => (c.component ? [c.component] : []))];
