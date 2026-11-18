@@ -43,6 +43,26 @@ describe("keyHandler", () => {
     expect(run.see).toHaveBeenCalledWith(-1);
   });
 
+  it("Cmd+V and Ctrl+V outside a field steer the paste to Pointer and leave the key alone (macOS)", () => {
+    const run = actions(false);
+    const handle = keyHandler(() => "pick", run);
+    for (const mods of [{ metaKey: true }, { ctrlKey: true }]) {
+      const e = new KeyboardEvent("keydown", { key: "v", cancelable: true, ...mods });
+      handle(e);
+      expect(e.defaultPrevented).toBe(false);
+    }
+    expect(run.beforePaste).toHaveBeenCalledTimes(2);
+  });
+
+  it("plain V and Alt+Cmd+V are not a paste", () => {
+    const run = actions(false);
+    const handle = keyHandler(() => "pick", run);
+    handle(new KeyboardEvent("keydown", { key: "v", cancelable: true }));
+    handle(new KeyboardEvent("keydown", { key: "v", metaKey: true, altKey: true, cancelable: true }));
+    expect(run.beforePaste).not.toHaveBeenCalled();
+    expect(run.tool).toHaveBeenCalledWith("page");
+  });
+
   it("I flips the output switch", () => {
     const run = actions(false);
     press(keyHandler(() => "pen", run), "i");
