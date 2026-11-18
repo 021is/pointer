@@ -35,12 +35,16 @@ function formatPin(p: PinInfo): string[] {
   const c = p.component;
   const who = c.chain.length ? c.chain.join(" ← ") : p.el.tag;
   const lines = [`[${p.n}] ${p.kind} · ${who}`];
-  if (c.source) lines.push(`   file: ${formatSource(c.source)}`);
-  if (c.source && c.usedAt) lines.push(`   used at: ${formatSource(c.usedAt)}`);
-  else if (c.sourceNote) lines.push(`   file: unknown (${c.sourceNote})`);
+  const w = c.where;
+  if (w.kind === "found") {
+    lines.push(`   file: ${formatSource(w.source)}`);
+    if (w.usedAt) lines.push(`   used at: ${formatSource(w.usedAt)}`);
+  } else if (w.kind === "unknown") {
+    lines.push(`   file: unknown (${w.why})`);
+  }
   const text = p.el.text ? ` "${clip(p.el.text, TEXT_MAX)}"` : "";
   lines.push(`   el: ${p.el.selector}${text} · ${p.el.size.w}×${p.el.size.h}`);
-  if (!c.source && p.el.className) lines.push(`   class: "${clip(p.el.className, CLASS_MAX)}"`);
+  if (w.kind !== "found" && p.el.className) lines.push(`   class: "${clip(p.el.className, CLASS_MAX)}"`);
   if (p.el.style) lines.push(`   style: ${p.el.style}`);
   if (p.changes.length) {
     lines.push(`   changed: ${p.changes[0]}`);

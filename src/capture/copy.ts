@@ -5,7 +5,7 @@
 import { formatBundle } from "../bundle/format";
 import type { PinInfo } from "../bundle/types";
 import type { Pin } from "../marks/types";
-import { describeElement, viewRect } from "../pick/describe";
+import { describeElement, liveLayout } from "../pick/describe";
 import { cropFor } from "../shared/geometry";
 import { componentOf } from "../source/client";
 import { type State, pictureBoxes, pictureScene, pinsOf, shapesOf, summarize, wantsImage } from "../ui/state";
@@ -34,8 +34,7 @@ async function pinInfos(ctx: CopyContext): Promise<PinInfo[]> {
 }
 
 async function makeImage(ctx: CopyContext) {
-  const layout = { scroll: { x: scrollX, y: scrollY }, rectOf: viewRect };
-  const scene = pictureScene(ctx.state, layout);
+  const scene = pictureScene(ctx.state, liveLayout());
   const viewport = { w: innerWidth, h: innerHeight };
   const crop = cropFor(pictureBoxes(scene), viewport) ?? { x: 0, y: 0, ...viewport };
   const shot = await screenshot(ctx.host);

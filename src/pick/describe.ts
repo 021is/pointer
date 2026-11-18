@@ -4,6 +4,7 @@
 import type { ElementInfo } from "../bundle/types";
 import { KEY_PROPS, keyStyles } from "../bundle/key-styles";
 import type { Rect } from "../shared/geometry";
+import type { Layout } from "../ui/state";
 
 const PLAIN_CLASS = /^-?[a-zA-Z_][\w-]*$/;
 const MAX_DEPTH = 5;
@@ -12,7 +13,7 @@ const isUnique = (selector: string) => {
   try {
     return document.querySelectorAll(selector).length === 1;
   } catch {
-    return false;
+    return false; // a selector the browser can't parse finds nothing, so it isn't unique
   }
 };
 
@@ -57,6 +58,11 @@ export function shortName(el: Element, rect: Rect): string {
 export function viewRect(el: Element): Rect {
   const r = el.getBoundingClientRect();
   return { x: r.left, y: r.top, w: r.width, h: r.height };
+}
+
+/** The page as it is laid out right now: its scroll and every element's box. */
+export function liveLayout(): Layout {
+  return { scroll: { x: scrollX, y: scrollY }, rectOf: viewRect };
 }
 
 function textOf(el: Element): string | undefined {

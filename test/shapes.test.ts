@@ -1,7 +1,22 @@
 import { describe, expect, it } from "vitest";
 import { extendShape, isMeaningful, startShape } from "../src/draw/shapes";
 import { arrowHead, escapeXml, renderSvg } from "../src/marks/svg";
-import { moveShape, shapeBox, summarize } from "../src/ui/state";
+import { initialState, moveShape, shapeBox, summarize, wantsImage } from "../src/ui/state";
+
+describe("wantsImage: when Copy adds the picture", () => {
+  const pin = { kind: "pick" as const, color: "red" as const, el: {} as Element, at: { x: 0, y: 0 }, note: "" };
+  const box = { kind: "box" as const, color: "red" as const, rect: { x: 0, y: 0, w: 9, h: 9 } };
+
+  it("not for picks and comments alone: text is enough and cheaper", () => {
+    expect(wantsImage({ ...initialState(), marks: [pin] })).toBe(false);
+  });
+
+  it("when something is drawn, when asked, or when nothing is marked", () => {
+    expect(wantsImage({ ...initialState(), marks: [pin, box] })).toBe(true);
+    expect(wantsImage({ ...initialState(), marks: [pin], forceImage: true })).toBe(true);
+    expect(wantsImage(initialState())).toBe(true);
+  });
+});
 
 const start = { x: 10, y: 10 };
 

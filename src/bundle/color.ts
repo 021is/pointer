@@ -4,7 +4,8 @@
 
 type Rgb = [number, number, number];
 
-const hex2 = (v: number) => Math.round(Math.min(1, Math.max(0, v)) * 255).toString(16).padStart(2, "0");
+/** A 0–1 channel (clipped into sRGB) as two hex digits. */
+const unitHex = (v: number) => Math.round(Math.min(1, Math.max(0, v)) * 255).toString(16).padStart(2, "0");
 
 function gamma(c: number): number {
   const a = Math.abs(c);
@@ -68,7 +69,7 @@ export function cssColorToHex(color: string): string | null {
   }
   const linear = ok ? oklabToLinear(L, a, b) : labToLinear(L, a, b);
   if (linear.some((v) => Number.isNaN(v))) return null;
-  const rgb = `#${linear.map((v) => hex2(gamma(v))).join("")}`;
+  const rgb = `#${linear.map((v) => unitHex(gamma(v))).join("")}`;
   const alpha = alphaPart === undefined ? 1 : num(alphaPart.trim(), 1);
-  return alpha >= 1 ? rgb : `${rgb}${hex2(alpha)}`;
+  return alpha >= 1 ? rgb : `${rgb}${unitHex(alpha)}`;
 }

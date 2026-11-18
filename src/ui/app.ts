@@ -5,7 +5,7 @@ import { copyBundle } from "../capture/copy";
 import { type DrawTool, extendShape, isMeaningful, startShape } from "../draw/shapes";
 import { renderSvg } from "../marks/svg";
 import type { Pin } from "../marks/types";
-import { shortName, viewRect } from "../pick/describe";
+import { liveLayout, shortName, viewRect } from "../pick/describe";
 import { elementAt, walk } from "../pick/walk";
 import { type Point, near } from "../shared/geometry";
 import { componentOf } from "../source/client";
@@ -52,7 +52,7 @@ export function createApp(ext: (root: ShadowRoot, rerender: () => void) => Exten
   });
   root.append(style, layer, bar.el, toast);
 
-  const layout = () => ({ scroll: { x: scrollX, y: scrollY }, rectOf: viewRect });
+  const layout = liveLayout;
   let frame = 0;
   function render() {
     if (frame) return;
