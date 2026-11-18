@@ -1,0 +1,68 @@
+// The bundle as the agent reads it: short markdown lines, no JSON (fewer tokens, same meaning).
+// Every line earns its place: what is unknown says why, what is empty is left out.
+
+import { imageTokens } from "../shared/geometry";
+import type { Bundle, DrawingSummary, PinInfo, Source } from "./types";
+
+const TEXT_MAX = 80;
+const CLASS_MAX = 160;
+
+export function clip(s: string, max: number): string {
+  const flat = s.replace(/\s+/g, " ").trim();
+  return flat.length <= max ? flat : `${flat.slice(0, max - 1)}…`;
+}
+
+export function formatSource(s: Source): string {
+  if (s.line === undefined) return s.file;
+  return s.column === undefined ? `${s.file}:${s.line}` : `${s.file}:${s.line}:${s.column}`;
+}
+
+const plural = (count: number, one: string, many = `${one}s`) =>
+  `${count} ${count === 1 ? one : many}`;
+
+export function formatDrawings(d: DrawingSummary): string | null {
+  const parts = [
+    d.arrows ? plural(d.arrows, "arrow") : "",
+    d.boxes ? plural(d.boxes, "box", "boxes") : "",
+    d.ellipses ? plural(d.ellipses, "ellipse") : "",
+    d.pens ? plural(d.pens, "pen stroke") : "",
+    ...d.texts.map((t) => `text "${clip(t, TEXT_MAX)}"`),
+  ].filter(Boolean);
+  return parts.length ? `drawn: ${parts.join(", ")}` : null;
+}
+
+function formatPin(p: PinInfo): string[] {
+  const c = p.component;
+  const who = c.chain.length ? c.chain.join(" ← ") : p.el.tag;
+  const lines = [`[${p.n}] ${p.kind} · ${who}`];
+  if (c.source) lines.push(`   file: ${formatSource(c.source)}`);
+  if (c.source && c.usedAt) lines.push(`   used at: ${formatSource(c.usedAt)}`);
+  else if (c.sourceNote) lines.push(`   file: unknown (${c.sourceNote})`);
+  const text = p.el.text ? ` "${clip(p.el.text, TEXT_MAX)}"` : "";
+  lines.push(`   el: ${p.el.selector}${text} · ${p.el.size.w}×${p.el.size.h}`);
+  if (!c.source && p.el.className) lines.push(`   class: "${clip(p.el.className, CLASS_MAX)}"`);
+  if (p.el.style) lines.push(`   style: ${p.el.style}`);
+  if (p.changes.length) {
+    lines.push(`   changed: ${p.changes[0]}`);
+    for (const change of p.changes.slice(1)) lines.push(`            ${change}`);
+  }
+  if (p.note.trim()) lines.push(`   note: ${p.note.trim()}`);
+  return lines;
+}
+
+export function formatBundle(b: Bundle): string {
+  const frameworks = [...new Set(b.pins.map((p) => p.component.framework))].filter(
+    (f) => f !== "none",
+  );
+  const head = [`Pointer · ${b.url} · viewport ${b.viewport.w}×${b.viewport.h}`, ...frameworks];
+  const lines = [head.join(" · ")];
+  if (b.image) {
+    lines.push(
+      `image: ${b.image.w}×${b.image.h} (≈${imageTokens(b.image)} tokens), numbers on it match [n] below`,
+    );
+  }
+  const drawn = formatDrawings(b.drawings);
+  if (drawn) lines.push(drawn);
+  for (const pin of b.pins) lines.push(...formatPin(pin));
+  return lines.join("\n");
+}
