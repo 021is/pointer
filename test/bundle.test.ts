@@ -37,7 +37,7 @@ const comment: PinInfo = {
 };
 
 const bundle: Bundle = {
-  url: "https://live.danceclub.dev/events/42",
+  url: "https://app.example.com/events/42",
   viewport: { w: 1280, h: 800 },
   crops: [],
   pins: [pick, comment],
@@ -49,7 +49,7 @@ describe("formatBundle", () => {
   it("writes the few lines the agent needs, in order", () => {
     expect(formatBundle(bundle)).toBe(
       [
-        "Pointer · https://live.danceclub.dev/events/42 · viewport 1280×800 · react",
+        "Pointer · https://app.example.com/events/42 · viewport 1280×800 · react",
         'Task: the user marked these elements on this page. For each [n] (its number is on the picture): open the file at that line ((in X) = where that component is used), do what its note says, and turn "changed" (the user\'s live CSS edits) into code. Then answer per [n] what you did.',
         "image: 640×380 (≈325 tokens), numbers on it match [n] below",
         'drawn: 1 arrow, 2 boxes, text "bigger"',
@@ -84,14 +84,14 @@ describe("formatBundle", () => {
     expect(task).not.toContain("open the file");
   });
 
-  it("has no legend when nothing is marked (a plain screenshot)", () => {
+  it("has no Task line when nothing is marked (a plain screenshot)", () => {
     expect(formatBundle({ ...bundle, pins: [] }).split("\n")[1]).toMatch(/^image:/);
   });
 
   it("names no framework when the page has none and falls back to the tag", () => {
     const plain: PinInfo = { ...comment, component: { framework: "none", chain: [], where: { kind: "silent" } } };
     const text = formatBundle({ ...bundle, pins: [plain], image: null });
-    expect(text.split("\n")[0]).toBe("Pointer · https://live.danceclub.dev/events/42 · viewport 1280×800");
+    expect(text.split("\n")[0]).toBe("Pointer · https://app.example.com/events/42 · viewport 1280×800");
     expect(text).toContain("[2] comment · button");
     expect(text.split("\n").slice(2).join("\n")).not.toContain("file:");
   });

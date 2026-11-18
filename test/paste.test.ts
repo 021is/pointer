@@ -86,7 +86,7 @@ describe("formatStrip: the compact lines under the picture", () => {
     ...over,
   });
   const bundle: Bundle = {
-    url: "https://live.danceclub.dev/dance",
+    url: "https://app.example.com/dance",
     viewport: { w: 1440, h: 788 },
     crops: [],
     pins: [
@@ -100,7 +100,7 @@ describe("formatStrip: the compact lines under the picture", () => {
 
   it("keeps who, where, the changes and the note; no selector, style or class when the file is known", () => {
     expect(formatStrip(bundle, false).split("\n")).toEqual([
-      "Pointer · https://live.danceclub.dev/dance · viewport 1440×788 · react",
+      "Pointer · https://app.example.com/dance · viewport 1440×788 · react",
       'Task: the user marked these elements on this page. For each [n]: open the file at that line ((in X) = where that component is used), do what its note says, and turn "changed" (the user\'s live CSS edits) into code. Then answer per [n] what you did.',
       '[7] pick · IconLine "Nov 13 – 22" · src/feature/dance/list/ui/EventCard.tsx:190 (in EventRows.tsx:32)',
       "   changed: gap 6px → 8px; font-style normal → italic",

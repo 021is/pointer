@@ -1,13 +1,12 @@
 name: Check
 
 # The whole gate in one job, every step run even when an earlier one fails, so one run shows
-# every failure. On 021's own runners (private repo: no billed minutes). Also on flight branches,
-# so a branch is never unchecked until its PR.
+# every failure. On every pull request to main, and on main itself (its build and store zip).
 on:
   pull_request:
     branches: [main]
   push:
-    branches: ['flight/**']
+    branches: [main]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

@@ -7,8 +7,8 @@ import { appFrames, isDependency } from "../src/source/stack";
 
 describe("safeUrl", () => {
   it("drops the query and the hash, which can carry tokens", () => {
-    expect(safeUrl("https://live.danceclub.dev/events/42?token=abc&x=1#access_token=zz")).toBe(
-      "https://live.danceclub.dev/events/42",
+    expect(safeUrl("https://app.example.com/events/42?token=abc&x=1#access_token=zz")).toBe(
+      "https://app.example.com/events/42",
     );
     expect(safeUrl("http://localhost:3300/")).toBe("http://localhost:3300/");
   });

@@ -1,31 +1,33 @@
+<p align="center"><img src="icons/icon-128.png" width="96" alt="Pointer"></p>
+
 # Pointer
 
-Coding rules first: [021is/code-rules](https://github.com/021is/code-rules) (on 021-dev:
-`~/projects/021-code-rules/PRINCIPLES.md`), then [AGENTS.md](AGENTS.md).
+**Show your coding agent exactly what to change.** A Chrome extension for building a frontend
+with an AI agent: point at the page, then paste one picture with the source **file:line** of
+every element you marked into Claude Code, Cursor, Windsurf, ChatGPT or any chat.
 
-A Chrome extension for working on a frontend with a coding agent. Turn it on, draw on the page or
-pick an element, press Copy, paste into the agent's chat. The agent gets a cropped picture with
-numbered marks and a few lines saying **which file and line** wrote each marked element, so it
-opens the right file without searching.
+No more "the thing on the left, a bit bigger, no, the other one". Pick an element, comment, crop,
+draw or change its CSS live, press Copy, paste. Your agent opens the right file without searching:
 
 ```
-Pointer · https://live.danceclub.dev/ · viewport 1280×800 · react
-image: 878×244 (≈286 tokens), numbers on it match [n] below
-drawn: 1 box
-[1] pick · HomePage ← Home
-   file: src/feature/site/home/ui/HomePage.tsx:30
-   el: h1.font-urbanist.text-6xl "Nobody dances alone." · 696×182
-   style: font 96px/91.2px Urbanist 500 · color #f0f2f4
-   note: bigger please
+Pointer · http://localhost:3000/events · viewport 1440×900 · react
+Task: the user marked these elements on this page. For each [n] (its number is on the picture): open the file at that line …
+[1] pick · EventCard "Surf 'n Zouk 2026" · src/features/events/EventCard.tsx:142 (in EventList.tsx:32)
+   changed: font-size 14px → 18px
+   note: make the title stand out
+[2] comment · Button "Filters" · src/components/ui/button.tsx:70 (in FiltersButton.tsx:26)
+   note: remove this
 ```
 
-## Install (unpacked)
+Free and open source (MIT) by [021](https://021.is/plugins/pointer), made by Edvard Grei.
+
+## Install
+
+From the Chrome Web Store (link coming with the listing), or from source:
 
 1. `npm ci && npm run build`. That builds `dist/`.
-2. Get `dist/` onto the computer that runs Chrome. From VS Code Remote: right-click `dist` →
-   Download. Or take the `pointer-dist` artifact from the PR's CI run.
-3. `chrome://extensions` → Developer mode → Load unpacked → pick that `dist` folder.
-4. Optional: `chrome://extensions/shortcuts` to change Alt+Shift+P.
+2. `chrome://extensions` → Developer mode → Load unpacked → pick the `dist` folder.
+3. Pin Pointer from the puzzle menu. `chrome://extensions/shortcuts` changes Alt+Shift+P.
 
 After a rebuild, press reload on the extension's card and reload the page.
 
@@ -78,7 +80,7 @@ Undoing or clearing a pick undoes its edits. A reload of the page drops them too
 **What Copy sends** is the bar's switch. **Text:** only the compact lines (who, file:line,
 changes, note per pin), about 30–40 tokens a pin, ~3× cheaper than a picture when the words say
 enough. **Picture:** the picture with those lines printed under it, plus the full text. Both open
-with one "How to read" line, so any agent knows what the numbers, files and changes mean.
+with one "Task:" line, so any agent knows what the numbers, files and changes mean and what to do.
 The picture is cropped to the marks and kept at one pixel per CSS pixel, long edge ≤ 1000 px
 (Claude prices an image at about w×h/750 tokens; a full Retina screenshot costs ~5,000).
 With a picture, a compact form of the lines is printed in a dark strip under it: Claude Code's
@@ -98,11 +100,19 @@ build gives selector, text, classes and styles; the bundle says why there is no 
 ## Privacy
 
 `activeTab` + `scripting` only: no access to any site until you press the icon or the shortcut
-on that tab. Nothing leaves the browser except to your clipboard. The PNG is drawn on a canvas,
-so it carries no metadata.
+on that tab, and only until you turn it off. Pointer stores nothing and sends nothing: what you
+mark goes to your clipboard, and you decide where to paste it. The only reads beyond the page are
+its own dev server's source maps (same origin), to find the file and line. The PNG is drawn on a
+canvas, so it carries no metadata. Full policy: https://021.is/plugins/pointer/privacy
 
-## Develop
+## Contribute
 
-`npm run watch` rebuilds `dist/` on save. `npm run check` is the whole gate: Biome, tsc, the
-300-line rule, vitest, the build. Geometry, the bundle, colours, stacks and source maps are pure
-and unit-tested; the DOM edge lives in `src/ui`, `src/pick`, `src/capture`.
+Issues and pull requests are welcome. `npm run watch` rebuilds `dist/` on save; `npm run check`
+is the whole gate (Biome, tsc, the 300-line rule, vitest, the build), and CI runs the same plus
+gitleaks. Geometry, the bundle, colours, stacks and source maps are pure and unit-tested; the DOM
+edge lives in `src/ui`, `src/pick`, `src/capture`. How the code is laid out and the few rules it
+keeps: [AGENTS.md](AGENTS.md).
+
+## Licence
+
+MIT © Edvard Grei. Made at [021](https://021.is).
