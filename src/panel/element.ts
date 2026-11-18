@@ -1,34 +1,37 @@
 // Edits on one element, live: inline !important styles (they beat Tailwind's layers), classes,
 // placeholder boxes. Everything is undone by reset(), back to the element's own attributes.
 
-import { type ElementEdits, changeLines, noEdits, withProp } from "./edits";
+import { type ElementEdits, type Inserted, changeLines, noEdits, withProp } from "./edits";
 import { knownClasses } from "./rules";
 
-const INSERT_ATTR = "data-pointer-insert";
 const PLACEHOLDER =
   "outline:2px dashed #7c5cff;outline-offset:-2px;background:rgba(124,92,255,.08);color:#7c5cff;" +
   "min-height:48px;min-width:48px;display:flex;align-items:center;justify-content:center;" +
   "font:600 13px/1.3 system-ui,sans-serif;padding:8px;box-sizing:border-box;";
 
+/** Why a value was refused, said in the panel; null when it applied. */
+export type Refusal = string | null;
+
 export type Edited = {
   readonly el: Element;
   edits: ElementEdits;
-  set: (prop: string, value: string) => void;
+  set: (prop: string, value: string) => Refusal;
   /** Off (the checkbox) keeps the row; removed drops it. Both read "removed" for the agent. */
   off: (prop: string) => void;
   on: (prop: string) => void;
   removeClass: (name: string) => void;
-  addClass: (name: string) => boolean;
-  insert: (position: "before" | "after") => HTMLElement;
+  addClass: (name: string) => void;
+  insert: (position: Inserted["position"]) => HTMLElement;
   reset: () => void;
   lines: () => string[];
 };
 
 export function edit(el: Element): Edited {
-  const style = (el as HTMLElement).style as CSSStyleDeclaration | undefined;
+  // Every element Pointer can pick (HTML, SVG, MathML) has an inline style.
+  const style = (el as HTMLElement).style;
   const originalStyle = el.getAttribute("style");
   const originalClass = el.getAttribute("class");
-  const nodes: HTMLElement[] = [];
+  const placed: { node: HTMLElement; position: Inserted["position"] }[] = [];
   // "before" is what the element looked like when the panel first opened on it, so a value that
   // depends on another (letter-spacing in em, after a font-size edit) still reads its original.
   const live = getComputedStyle(el);
@@ -44,21 +47,30 @@ export function edit(el: Element): Edited {
     el,
     edits: noEdits(),
     set(prop, value) {
+      if (!value) return "type a value, or use × to remove it";
+      const previous = style.getPropertyValue(prop);
+      const priority = style.getPropertyPriority(prop);
+      style.setProperty(prop, value, "important");
+      if (!style.getPropertyValue(prop)) {
+        // The browser drops what it can't parse: put the old inline value back and say so.
+        if (previous) style.setProperty(prop, previous, priority);
+        return `"${prop}: ${value}" is not valid CSS here`;
+      }
       self.edits = withProp(self.edits, prop, computed(prop), value);
-      style?.setProperty(prop, value, "important");
+      return null;
     },
     off(prop) {
       self.edits = withProp(self.edits, prop, computed(prop), null);
-      style?.setProperty(prop, "unset", "important");
+      style.setProperty(prop, "unset", "important");
     },
     on(prop) {
       const edit = self.edits.props.find((p) => p.prop === prop);
       self.edits = { ...self.edits, props: self.edits.props.filter((p) => p !== edit) };
-      style?.removeProperty(prop);
+      style.removeProperty(prop);
       const tmp = document.createElement("div");
       if (originalStyle) tmp.setAttribute("style", originalStyle);
       const own = tmp.style.getPropertyValue(prop);
-      if (own) style?.setProperty(prop, own, tmp.style.getPropertyPriority(prop));
+      if (own) style.setProperty(prop, own, tmp.style.getPropertyPriority(prop));
     },
     removeClass(name) {
       el.classList.remove(name);
@@ -68,43 +80,37 @@ export function edit(el: Element): Edited {
         : { ...self.edits, removedClasses: [...self.edits.removedClasses, name] };
     },
     addClass(name) {
-      if (el.classList.contains(name)) return true;
+      if (el.classList.contains(name)) return;
       el.classList.add(name);
-      const built = knownClasses().has(name);
       const removed = self.edits.removedClasses.includes(name);
       self.edits = removed
         ? { ...self.edits, removedClasses: self.edits.removedClasses.filter((c) => c !== name) }
-        : { ...self.edits, addedClasses: [...self.edits.addedClasses, { name, built }] };
-      return built;
+        : { ...self.edits, addedClasses: [...self.edits.addedClasses, { name, built: knownClasses().has(name) }] };
     },
     insert(position) {
-      const box = document.createElement("div");
-      box.setAttribute(INSERT_ATTR, position);
-      box.setAttribute("style", PLACEHOLDER);
-      box.contentEditable = "true";
-      box.textContent = "New element";
-      el[position](box);
-      nodes.push(box);
-      return box;
+      const node = document.createElement("div");
+      node.setAttribute("style", PLACEHOLDER);
+      node.contentEditable = "true";
+      node.textContent = "New element";
+      el[position](node);
+      placed.push({ node, position });
+      return node;
     },
     reset() {
       if (originalStyle === null) el.removeAttribute("style");
       else el.setAttribute("style", originalStyle);
       if (originalClass === null) el.removeAttribute("class");
       else el.setAttribute("class", originalClass);
-      for (const n of nodes.splice(0)) n.remove();
+      for (const { node } of placed.splice(0)) node.remove();
       self.edits = noEdits();
     },
     lines() {
-      const inserted = nodes
-        .filter((n) => n.isConnected)
-        .map((n) => {
-          const r = n.getBoundingClientRect();
-          return {
-            position: n.getAttribute(INSERT_ATTR) === "before" ? ("before" as const) : ("after" as const),
-            label: (n.textContent ?? "").trim() || "(empty)",
-            size: { w: Math.round(r.width), h: Math.round(r.height) },
-          };
+      const inserted = placed
+        .filter(({ node }) => node.isConnected)
+        .map(({ node, position }) => {
+          const r = node.getBoundingClientRect();
+          const label = (node.textContent ?? "").trim() || "(empty)";
+          return { position, label, size: { w: Math.round(r.width), h: Math.round(r.height) } };
         });
       return changeLines({ ...self.edits, inserted });
     },

@@ -39,7 +39,7 @@ function eachRule(visit: (rule: CSSStyleRule) => void): number {
 
 /** A reset that hits every element (`*, ::before`, `:root`): noise in a list about one element. */
 export function isUniversal(selector: string): boolean {
-  return selector.split(",").every((s) => /^\s*(\*|::?[\w-]+(\([^)]*\))?|:root|html|:host)+\s*$/.test(s));
+  return selector.split(",").every((s) => /^\s*(\*|::?[\w-]+(\([^)]*\))?|html)+\s*$/.test(s));
 }
 
 /** Property → the selector that sets it last ("inline" for the style attribute). */
