@@ -1,8 +1,10 @@
 {
   "manifest_version": 3,
-  "name": "Pointer",
-  "version": "0.1.0",
-  "description": "Draw on a page or pick an element, then copy a small bundle for your coding agent: the picture and where the code lives.",
+  "name": "Pointer by 021 — show your coding agent exactly what to change",
+  "short_name": "Pointer",
+  "version": "1.0.0",
+  "description": "Pick an element, draw, crop, comment, then paste one picture + its source file:line into Claude Code, Cursor or any AI agent.",
+  "homepage_url": "https://021.is/plugins/pointer",
   "minimum_chrome_version": "116",
   "permissions": ["activeTab", "scripting"],
   "background": { "service_worker": "background.js" },

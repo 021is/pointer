@@ -77,6 +77,13 @@ describe("formatBundle", () => {
     expect(text.split("\n")[1]).not.toContain("picture");
   });
 
+  it("tells the agent to find elements by their text when the page gave no files", () => {
+    const plain: PinInfo = { ...comment, component: { framework: "none", chain: [], where: { kind: "silent" } } };
+    const task = formatBundle({ ...bundle, pins: [plain], image: null }).split("\n")[1];
+    expect(task).toContain("find the element in the code by its quoted text, selector and class");
+    expect(task).not.toContain("open the file");
+  });
+
   it("has no legend when nothing is marked (a plain screenshot)", () => {
     expect(formatBundle({ ...bundle, pins: [] }).split("\n")[1]).toMatch(/^image:/);
   });

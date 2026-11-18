@@ -107,7 +107,12 @@ function stripPin(p: PinInfo): string[] {
 export function task(b: Bundle, onPicture: boolean): string | null {
   if (!b.pins.length && !b.crops.length) return null;
   const numbers = onPicture ? " (its number is on the picture)" : "";
-  return `Task: the user marked these elements on this page. For each [n]${numbers}: open the file at that line ((in X) = where that component is used), do what its note says, and turn "changed" (the user's live CSS edits) into code. Then answer per [n] what you did.`;
+  // A page without a dev build gives no files: then the element is found by what it shows.
+  const components = [...b.pins.map((p) => p.component), ...b.crops.flatMap((c) => (c.component ? [c.component] : []))];
+  const find = components.some((c) => c.where.kind === "found")
+    ? "open the file at that line ((in X) = where that component is used)"
+    : "find the element in the code by its quoted text, selector and class";
+  return `Task: the user marked these elements on this page. For each [n]${numbers}: ${find}, do what its note says, and turn "changed" (the user's live CSS edits) into code. Then answer per [n] what you did.`;
 }
 
 /**
