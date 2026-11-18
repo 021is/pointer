@@ -25,8 +25,21 @@ export type Edited = {
   addClass: (name: string) => void;
   insert: (position: Inserted["position"]) => HTMLElement;
   reset: () => void;
+  /** The element as it is now, so a reset can be taken back (Undo after Clear everything). */
+  snapshot: () => Snapshot;
+  restore: (snap: Snapshot) => void;
   lines: () => string[];
 };
+
+export type Snapshot = {
+  style: string | null;
+  className: string | null;
+  edits: ElementEdits;
+  placed: { node: HTMLElement; position: Inserted["position"] }[];
+};
+
+const setOrRemove = (el: Element, name: string, value: string | null) =>
+  value === null ? el.removeAttribute(name) : el.setAttribute(name, value);
 
 export function edit(el: Element): Edited {
   // Every element Pointer can pick (HTML, SVG, MathML) has an inline style.
@@ -97,12 +110,25 @@ export function edit(el: Element): Edited {
       return node;
     },
     reset() {
-      if (originalStyle === null) el.removeAttribute("style");
-      else el.setAttribute("style", originalStyle);
-      if (originalClass === null) el.removeAttribute("class");
-      else el.setAttribute("class", originalClass);
+      setOrRemove(el, "style", originalStyle);
+      setOrRemove(el, "class", originalClass);
       for (const { node } of placed.splice(0)) node.remove();
       self.edits = noEdits();
+    },
+    snapshot: () => ({
+      style: el.getAttribute("style"),
+      className: el.getAttribute("class"),
+      edits: self.edits,
+      placed: placed.slice(),
+    }),
+    restore(snap) {
+      setOrRemove(el, "style", snap.style);
+      setOrRemove(el, "class", snap.className);
+      for (const p of snap.placed) {
+        el[p.position](p.node);
+        placed.push(p);
+      }
+      self.edits = snap.edits;
     },
     lines() {
       const inserted = placed

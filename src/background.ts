@@ -34,6 +34,21 @@ chrome.runtime.onMessage.addListener((message: unknown, _sender, reply: (r: Prev
   return false;
 });
 
+/** The icon's tooltip names the shortcut as Chrome has it now: ⌥⇧P on a Mac, a key the person
+ *  changed in chrome://extensions/shortcuts, or none set (Edvard, 2026-11-18, on a Mac). */
+async function title(): Promise<string> {
+  const commands = await chrome.commands.getAll();
+  const key = commands.find((c) => c.name === "_execute_action")?.shortcut;
+  return key ? `Pointer (${key})` : "Pointer (no shortcut: set one in chrome://extensions/shortcuts)";
+}
+
+const setTitle = (tabId?: number) =>
+  title()
+    .then((t) => chrome.action.setTitle(tabId === undefined ? { title: t } : { tabId, title: t }))
+    .catch((err: unknown) => console.error("Pointer: the icon's title was not set:", err));
+
+void setTitle();
+
 async function toggle(tab: chrome.tabs.Tab): Promise<void> {
   const tabId = tab.id;
   if (tabId === undefined) return;
@@ -41,7 +56,7 @@ async function toggle(tab: chrome.tabs.Tab): Promise<void> {
     await chrome.scripting.executeScript({ target: { tabId }, files: ["probe.js"], world: "MAIN" });
     await chrome.scripting.executeScript({ target: { tabId }, files: ["content.js"] });
     await chrome.action.setBadgeText({ tabId, text: "" });
-    await chrome.action.setTitle({ tabId, title: "Pointer (Alt+Shift+P)" });
+    await setTitle(tabId);
   } catch (err) {
     // chrome:// pages, the Web Store and the PDF viewer refuse every extension's scripts.
     await chrome.action.setBadgeBackgroundColor({ tabId, color: "#ff3366" });

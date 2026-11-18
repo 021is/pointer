@@ -39,4 +39,10 @@ describe("commandFor", () => {
     expect(commandFor(key("i"), "pen")).toEqual({ type: "image" });
     expect(commandFor(key("s"), "pick")).toEqual({ type: "panel" });
   });
+
+  it("Delete or Backspace removes one thing; with Shift (⇧⌫ on a Mac) it clears everything", () => {
+    expect(commandFor(key("Backspace"), "move")).toEqual({ type: "remove" });
+    expect(commandFor({ ...key("Backspace"), shiftKey: true }, "comment")).toEqual({ type: "clear" });
+    expect(commandFor({ ...key("Delete"), shiftKey: true }, "pen")).toEqual({ type: "clear" });
+  });
 });

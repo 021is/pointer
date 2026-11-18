@@ -19,9 +19,12 @@ export type Command =
   /** [ and ]: the pasted image under the mouse more or less see-through. */
   | { type: "see"; direction: -1 | 1 }
   /** Delete / Backspace: the pasted image under the mouse goes. */
-  | { type: "remove" };
+  | { type: "remove" }
+  /** Shift+Delete / ⇧⌫: everything goes, with Undo (Edvard, 2026-11-18; not Shift+Esc, which is
+   *  Chrome's Task Manager on Windows and Linux and never reaches the page). */
+  | { type: "clear" };
 
-export type KeyInput = Pick<KeyboardEvent, "key" | "ctrlKey" | "metaKey" | "altKey">;
+export type KeyInput = Pick<KeyboardEvent, "key" | "ctrlKey" | "metaKey" | "altKey"> & { shiftKey?: boolean };
 
 const WALK = new Set<string>(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"]);
 
@@ -37,7 +40,7 @@ export function commandFor(e: KeyInput, tool: Tool): Command | null {
   if (e.key === "Escape") return { type: "escape" };
   if (e.key === "[") return { type: "see", direction: -1 };
   if (e.key === "]") return { type: "see", direction: 1 };
-  if (e.key === "Delete" || e.key === "Backspace") return { type: "remove" };
+  if (e.key === "Delete" || e.key === "Backspace") return { type: e.shiftKey ? "clear" : "remove" };
   if (targetsElements(tool) && WALK.has(e.key)) return { type: "walk", key: e.key as WalkKey };
   if (targetsElements(tool) && e.key === "Enter") return { type: "pick-hover" };
   const k = e.key.toUpperCase();

@@ -19,7 +19,8 @@ export type CopyMenu = { el: HTMLElement; toggle: () => void; update: (s: State)
 const el = <K extends keyof HTMLElementTagNameMap>(tag: K, className: string, text = "") =>
   Object.assign(document.createElement(tag), { className, textContent: text });
 
-const SHORT: Record<Output, string> = { picture: "Picture", text: "Text", image: "Picture only" };
+/** The switch beside Copy already says Picture or Text; Copy names only what the switch can't. */
+const SHORT: Record<Output, string> = { picture: "", text: "", image: "· Picture only" };
 
 export function createCopyMenu(parts: CopyMenuParts): CopyMenu {
   const wrap = el("span", "copygroup");
@@ -96,7 +97,7 @@ export function createCopyMenu(parts: CopyMenuParts): CopyMenu {
     el: wrap,
     toggle: () => (menu.hidden ? open() : close()),
     update(s) {
-      mode.textContent = `· ${SHORT[s.output]}`;
+      mode.textContent = SHORT[s.output];
       for (const [o, { row }] of items) row.setAttribute("aria-checked", String(o === s.output));
       clear.setAttribute("aria-checked", String(s.clearAfterCopy));
     },

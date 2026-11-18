@@ -4,11 +4,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 type Listener = (details: { reason: string }) => void;
 
-function mockChrome(create: (props: { url: string }) => Promise<unknown>) {
+function mockChrome(create: (props: { url: string }) => Promise<unknown>, shortcut = "Alt+Shift+P") {
   const installed: Listener[] = [];
   const noop = { addListener: () => {} };
+  const setTitle = vi.fn(async () => {});
   vi.stubGlobal("chrome", {
-    action: { onClicked: noop },
+    action: { onClicked: noop, setTitle },
+    commands: { getAll: async () => [{ name: "_execute_action", shortcut }] },
     runtime: {
       onInstalled: { addListener: (fn: Listener) => installed.push(fn) },
       onMessage: noop,
@@ -16,7 +18,7 @@ function mockChrome(create: (props: { url: string }) => Promise<unknown>) {
     },
     tabs: { create },
   });
-  return installed;
+  return Object.assign(installed, { setTitle });
 }
 
 async function loadWorker() {
@@ -58,5 +60,21 @@ describe("install opens the welcome page", () => {
     for (const fn of installed) fn({ reason: "install" });
     await new Promise((r) => setTimeout(r, 0));
     expect(console.error).toHaveBeenCalledWith("Pointer: the welcome page did not open:", expect.any(Error));
+  });
+});
+
+describe("the icon's tooltip names the shortcut Chrome has now", () => {
+  it("as Chrome writes it on a Mac", async () => {
+    const { setTitle } = mockChrome(async () => ({}), "⌥⇧P");
+    await loadWorker();
+    await vi.waitFor(() => expect(setTitle).toHaveBeenCalledWith({ title: "Pointer (⌥⇧P)" }));
+  });
+
+  it("says where to set one when none is set", async () => {
+    const { setTitle } = mockChrome(async () => ({}), "");
+    await loadWorker();
+    await vi.waitFor(() =>
+      expect(setTitle).toHaveBeenCalledWith({ title: "Pointer (no shortcut: set one in chrome://extensions/shortcuts)" }),
+    );
   });
 });

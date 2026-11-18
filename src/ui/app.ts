@@ -11,6 +11,7 @@ import { type Point, near } from "../shared/geometry";
 import { editPlaceholder, placeholderAt } from "../shared/placeholder";
 import { componentOf } from "../source/client";
 import { isBubbleOpen, openBubble } from "./bubble";
+import { clearAll } from "./clear";
 import { copyFlow } from "./copy-flow";
 import { cropGestures } from "./crop-gesture";
 import { CSS } from "./css";
@@ -65,6 +66,7 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
   const bar = createToolbar({
     tool: setTool,
     color: (c) => update(() => (state.color = c)),
+    output: (o) => setOutput(o),
     upload: () => pasted.upload(),
     styles: () => hooks.togglePanel(lastPick()),
     undo,
@@ -243,6 +245,7 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
       const gone = pasted.hovered() ?? (state.tool === "move" ? markAt(state.marks, mouse) : undefined);
       if (gone) update(() => (state.marks = state.marks.filter((m) => m !== gone)));
     },
+    clear: () => clear(),
   });
 
   function undo() {
@@ -253,8 +256,7 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
   }
 
   function clear() {
-    for (const pin of pinsOf(state.marks)) hooks.onRemove(pin);
-    update(() => (state.marks = []));
+    clearAll({ state, hooks: () => hooks, update, say }, "Cleared everything.");
   }
 
   const listeners: [EventTarget, string, EventListener, AddEventListenerOptions?][] = [

@@ -70,7 +70,13 @@ describe("copyFlow", () => {
     return copyFlow({
       state: ctx.state,
       host: ctx.host,
-      hooks: () => ({ changesOf: () => [], onPick: () => {}, onRemove: () => {}, togglePanel: () => {} }),
+      hooks: () => ({
+        changesOf: () => [],
+        onPick: () => {},
+        onRemove: () => {},
+        park: () => () => {},
+        togglePanel: () => {},
+      }),
       say: (message, _kind, action) => said.push({ message, action }),
       flash: (m) => flashed.push(m),
       update: (change) => change(),
@@ -97,7 +103,11 @@ describe("copyFlow", () => {
   it("the preview sends the very result, and a refused tab says why", async () => {
     const ctx = setup("picture");
     const sent: unknown[] = [];
-    vi.stubGlobal("chrome", { runtime: { sendMessage: async (m: unknown) => (sent.push(m), { ok: false, error: "no window" }) } });
+    const sendMessage = async (m: unknown) => {
+      sent.push(m);
+      return { ok: false, error: "no window" };
+    };
+    vi.stubGlobal("chrome", { runtime: { sendMessage } });
     await flow(ctx).preview();
     expect(sent[0]).toMatchObject({ type: "preview", text: expect.stringContaining("[1] comment"), tokens: 1, output: "picture" });
     expect((sent[0] as { png: string }).png).toMatch(/^data:image\/png;base64,/);

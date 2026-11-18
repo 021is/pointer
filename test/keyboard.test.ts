@@ -17,6 +17,7 @@ const actions = (overPasted: boolean): KeyActions => ({
   canRemove: () => overPasted,
   see: vi.fn(),
   remove: vi.fn(),
+  clear: vi.fn(),
 });
 
 const press = (handler: (e: KeyboardEvent) => void, key: string) => {
@@ -62,6 +63,15 @@ describe("keyHandler", () => {
     handle(new KeyboardEvent("keydown", { key: "v", metaKey: true, altKey: true, cancelable: true }));
     expect(run.beforePaste).not.toHaveBeenCalled();
     expect(run.tool).toHaveBeenCalledWith("page");
+  });
+
+  it("Shift+Delete (⇧⌫) clears everything with any tool, and is kept from the page", () => {
+    const run = actions(false);
+    const e = new KeyboardEvent("keydown", { key: "Backspace", shiftKey: true, cancelable: true });
+    keyHandler(() => "comment", run)(e);
+    expect(e.defaultPrevented).toBe(true);
+    expect(run.clear).toHaveBeenCalledOnce();
+    expect(run.remove).not.toHaveBeenCalled();
   });
 
   it("I flips the output switch", () => {
