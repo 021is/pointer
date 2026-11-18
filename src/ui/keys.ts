@@ -15,7 +15,11 @@ export type Command =
   | { type: "escape" }
   | { type: "walk"; key: WalkKey }
   | { type: "pick-hover" }
-  | { type: "panel" };
+  | { type: "panel" }
+  /** [ and ]: the pasted image under the mouse more or less see-through. */
+  | { type: "see"; direction: -1 | 1 }
+  /** Delete / Backspace: the pasted image under the mouse goes. */
+  | { type: "remove" };
 
 export type KeyInput = Pick<KeyboardEvent, "key" | "ctrlKey" | "metaKey" | "altKey">;
 
@@ -31,6 +35,9 @@ export function commandFor(e: KeyInput, tool: Tool): Command | null {
   }
   if (mod || e.altKey) return null;
   if (e.key === "Escape") return { type: "escape" };
+  if (e.key === "[") return { type: "see", direction: -1 };
+  if (e.key === "]") return { type: "see", direction: 1 };
+  if (e.key === "Delete" || e.key === "Backspace") return { type: "remove" };
   if (targetsElements(tool) && WALK.has(e.key)) return { type: "walk", key: e.key as WalkKey };
   if (targetsElements(tool) && e.key === "Enter") return { type: "pick-hover" };
   const k = e.key.toUpperCase();

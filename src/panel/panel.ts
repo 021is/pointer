@@ -3,7 +3,7 @@
 
 import type { Pin } from "../marks/types";
 import { componentOf } from "../source/client";
-import type { Extension, ExtensionHost } from "../ui/app";
+import type { Extension, ExtensionHost } from "../ui/extension";
 import { PANEL_CSS } from "./css";
 import { type Edited, edit } from "./element";
 import { renderPanel } from "./view";

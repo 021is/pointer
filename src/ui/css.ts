@@ -9,7 +9,18 @@ export const CSS = `
 .layer[data-tool="pick"], .layer[data-tool="comment"] { cursor: crosshair; }
 .layer[data-tool="text"] { cursor: text; }
 .layer[data-tool="pen"], .layer[data-tool="arrow"], .layer[data-tool="box"], .layer[data-tool="ellipse"] { cursor: crosshair; }
-.layer svg { position: absolute; inset: 0; overflow: visible; }
+.layer svg { position: absolute; inset: 0; overflow: visible; pointer-events: none; }
+
+/* Pasted images: under the marks. They take the mouse with the page and pick tools (move,
+   resize); with drawing tools the layer draws over them. */
+.pasted { position: absolute; inset: 0; pointer-events: none; }
+.pimg { position: absolute; pointer-events: none; outline: 1px dashed rgba(124, 92, 255, 0.7); }
+.pimg img { display: block; width: 100%; height: 100%; user-select: none; }
+.pimg .grip {
+  position: absolute; right: -5px; bottom: -5px; width: 12px; height: 12px; border-radius: 3px;
+  background: #7c5cff; border: 2px solid #fff; cursor: nwse-resize;
+}
+.layer[data-tool="page"] .pimg, .layer[data-tool="pick"] .pimg { pointer-events: auto; cursor: move; }
 
 .bar {
   position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%);

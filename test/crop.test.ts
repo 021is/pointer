@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { formatBundle, formatCrop } from "../src/bundle/format";
 import { cropInfos } from "../src/capture/copy";
-import { GAP, shownFrames, stackRegions } from "../src/capture/layout";
+import { BUDGET, GAP, shownFrames, stackRegions } from "../src/capture/layout";
+import { STRIP, stripHeight } from "../src/capture/strip";
 import { FRAME_TAB as TAB } from "../src/marks/svg";
-import { STRIP } from "../src/capture/strip";
 import { type Crop, cropLabel } from "../src/marks/types";
 import { commandFor } from "../src/ui/keys";
 import { type Layout, initialState, liveScene, sceneFrames, shapesOf, wantsImage } from "../src/ui/state";
@@ -41,7 +41,7 @@ describe("stackRegions: several frames in one picture", () => {
         { label: "A", rect: { x: 0, y: 0, w: 300, h: 100 } },
         { label: "B", rect: { x: 0, y: 0, w: 500, h: 50 } },
       ],
-      false,
+      null,
     );
     expect(stack.placed.map((p) => p.top)).toEqual([TAB, TAB + 100 + GAP + TAB]);
     expect(stack.bottom).toBe(TAB + 100 + GAP + TAB + 50);
@@ -49,9 +49,25 @@ describe("stackRegions: several frames in one picture", () => {
   });
 
   it("the auto crop has no tab, and a strip makes the picture at least its minimum width", () => {
-    const stack = stackRegions([{ label: null, rect: { x: 0, y: 0, w: 300, h: 100 } }], true);
+    const stack = stackRegions([{ label: null, rect: { x: 0, y: 0, w: 300, h: 100 } }], () => 3);
     expect(stack.placed[0]?.top).toBe(0);
     expect(stack.width).toBe(STRIP.minWidth);
+    expect(stack.height).toBe(100 + stripHeight(3));
+  });
+
+  it("shrinks the frames, never the text, until Claude reads it at full size", () => {
+    // Edvard's paste: three tall frames + a long strip came out 720×3572, which Claude scales down.
+    const tall = (label: string, h: number) => ({ label, rect: { x: 0, y: 0, w: 428, h } });
+    const stack = stackRegions([tall("A", 772), tall("B", 40), tall("C", 712)], () => 30);
+    expect(stack.stripLines).toBe(30);
+    expect(stack.height).toBeLessThanOrEqual(BUDGET.edge);
+    expect(stack.width * stack.height).toBeLessThanOrEqual(BUDGET.area);
+    expect(stack.placed[0]?.size.h).toBeLessThan(772);
+  });
+
+  it("leaves a picture that already fits at full size", () => {
+    const stack = stackRegions([{ label: null, rect: { x: 0, y: 0, w: 600, h: 400 } }], () => 10);
+    expect(stack.placed[0]?.size).toEqual({ w: 600, h: 400 });
   });
 });
 
@@ -116,7 +132,7 @@ describe("crops in the bundle", () => {
       viewport: { w: 1280, h: 800 },
       crops: [{ label: "A", component: null, size: { w: 10, h: 10 }, offScreen: false }],
       pins: [],
-      drawings: { arrows: 1, boxes: 0, ellipses: 0, pens: 0, texts: [] },
+      drawings: { arrows: 1, boxes: 0, ellipses: 0, pens: 0, texts: [], pasted: 0 },
       image: null,
     });
     expect(text.split("\n")).toEqual(["Pointer · https://x.dev/ · viewport 1280×800", "crop A · frame 10×10", "drawn: 1 arrow"]);

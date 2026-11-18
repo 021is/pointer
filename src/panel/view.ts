@@ -4,6 +4,7 @@
 import { formatSource } from "../bundle/format";
 import type { ComponentInfo } from "../bundle/types";
 import { shortName, viewRect } from "../pick/describe";
+import { editPlaceholder } from "../shared/placeholder";
 import type { Edited } from "./element";
 import { groupProps, nudge, parseDeclaration, removedProps } from "./edits";
 import { matchedProps } from "./rules";
@@ -178,11 +179,7 @@ export function renderPanel(panel: HTMLElement, n: number, edited: Edited, info:
   const insert = (position: "before" | "after") => {
     const box = edited.insert(position);
     changed();
-    const range = document.createRange();
-    range.selectNodeContents(box);
-    getSelection()?.removeAllRanges();
-    getSelection()?.addRange(range);
-    box.focus();
+    editPlaceholder(box);
     box.addEventListener("input", hooks.changed);
   };
   const before = h("button", { type: "button", textContent: "⊕ before", title: "Insert a placeholder before it (type its label on the page)" });

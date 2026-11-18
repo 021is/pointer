@@ -1,39 +1,28 @@
-// Pointer on a page: the shadow-rooted layer, the bar, the tools' gestures and the keys. State
-// lives in state.ts; this file is the edge that meets the DOM.
+// Pointer on a page: the shadow-rooted layer, the bar, the tools' gestures. State lives in
+// state.ts, keys in keyboard.ts, pasted images in paste/; this file is the edge that meets the DOM.
 
 import { copyBundle } from "../capture/copy";
 import { type DrawTool, extendShape, isMeaningful, startShape } from "../draw/shapes";
 import { renderSvg } from "../marks/svg";
 import type { Pin } from "../marks/types";
+import { createPastedLayer } from "../paste/pasted";
 import { liveLayout, shortName, viewRect } from "../pick/describe";
 import { elementAt, walk } from "../pick/walk";
 import { type Point, dragRect, near } from "../shared/geometry";
+import { editPlaceholder, placeholderAt } from "../shared/placeholder";
 import { componentOf } from "../source/client";
 import { isBubbleOpen, openBubble } from "./bubble";
 import { CSS } from "./css";
 import { drag as dragOn } from "./drag";
-import { commandFor } from "./keys";
+import type { Extension, ExtensionHost } from "./extension";
+import { keyHandler } from "./keyboard";
 import { type State, type Tool, initialState, liveScene, pinsOf, scenePins, targetsElements } from "./state";
 import { createToast } from "./toast";
 import { createToolbar } from "./toolbar";
 
 export type App = { open: () => void; close: () => void; toggle: () => void };
 
-/** What the style panel hooks into. */
-export type Extension = {
-  changesOf: (pin: Pin) => string[];
-  onPick: (pin: Pin) => void;
-  onRemove: (pin: Pin) => void;
-  /** S: the panel for the last pick, or away again. */
-  togglePanel: (lastPick: Pin | undefined) => void;
-};
-
-/** What the app gives the panel: a redraw, and a pin's number as the bundle shows it. */
-export type ExtensionHost = { rerender: () => void; numberOf: (pin: Pin) => number };
-
 const DRAW = new Set<Tool>(["pen", "arrow", "box", "ellipse"]);
-const isEditable = (t: EventTarget | undefined) =>
-  t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || (t instanceof HTMLElement && t.isContentEditable);
 
 export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extension): App {
   const state: State = initialState();
@@ -44,17 +33,24 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
   style.textContent = CSS;
   const layer = document.createElement("div");
   layer.className = "layer";
+  const marksView = document.createElement("div");
   const toast = createToast();
   const say = toast.say;
-  root.append(style, layer);
-  const hooks = ext(root, {
-    rerender: () => render(),
-    numberOf: (pin) => pinsOf(state.marks).indexOf(pin) + 1,
+  const pasted = createPastedLayer({
+    marks: () => state.marks,
+    add: (p) => update(() => state.marks.push(p)),
+    update,
+    say,
   });
+  layer.append(pasted.el, marksView);
+  root.append(style, layer);
+  const hooks = ext(root, { rerender: () => render(), numberOf: (pin) => pinsOf(state.marks).indexOf(pin) + 1 });
+  const lastPick = () => pinsOf(state.marks).findLast((p) => p.kind === "pick");
   const bar = createToolbar({
     tool: setTool,
     color: (c) => update(() => (state.color = c)),
     image: () => update(() => (state.forceImage = !state.forceImage)),
+    styles: () => hooks.togglePanel(lastPick()),
     undo,
     clear,
     copy,
@@ -71,7 +67,8 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
     frame = requestAnimationFrame(() => {
       frame = 0;
       layer.dataset.tool = state.tool;
-      layer.innerHTML = renderSvg(liveScene(state, layout()), { x: 0, y: 0, w: innerWidth, h: innerHeight });
+      pasted.paint();
+      marksView.innerHTML = renderSvg(liveScene(state, layout()), { x: 0, y: 0, w: innerWidth, h: innerHeight });
       bar.update(state);
     });
   }
@@ -108,10 +105,17 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
     const note = await openBubble(root, {
       at: view,
       placeholder: kind === "pick" ? "Note (optional)" : "Comment",
-      hint: "Enter saves · Shift+Enter new line · Esc skips",
+      hint: kind === "pick" ? "Enter saves · Esc skips · S or 🎨: its styles" : "Enter saves · Shift+Enter new line · Esc skips",
     });
     if (kind === "comment" && !note) return removePin(pin);
     update(() => (pin.note = note ?? ""));
+  }
+
+  /** A pick of an element already picked opens that pick's note: no twins. */
+  function pick(el: Element, at: Point) {
+    const twin = pinsOf(state.marks).find((p) => p.kind === "pick" && p.el === el);
+    if (twin) return void editNote(twin, { x: at.x - scrollX, y: at.y - scrollY });
+    void addPin("pick", el, at);
   }
 
   function removePin(pin: Pin) {
@@ -125,10 +129,9 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
   }
 
   function pinAt(view: Point): Pin | undefined {
-    const pins = pinsOf(state.marks);
     const drawn = scenePins(state.marks, layout());
     const hit = drawn.findLast((p) => near(view, p.badge, 13));
-    return hit ? pins[hit.n - 1] : undefined;
+    return hit ? pinsOf(state.marks)[hit.n - 1] : undefined;
   }
 
   /** A crop of the component's box (followed live), its page rect kept for when it leaves. */
@@ -140,73 +143,70 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
   /** Crop tool: a click takes the component under the cursor, a drag draws a free frame. */
   function startCrop(e: PointerEvent, page: Point, under: Element | null) {
     let moved = false;
-    drag(
-      e,
-      (p) => {
-        if (!moved && near(p, page, 4)) return;
-        moved = true;
-        update(() => (state.framing = dragRect(page, p, false)));
-      },
-      () => {
-        const frame = state.framing;
-        state.framing = null;
-        if (!moved) return under ? cropElement(under) : render();
-        if (frame && frame.w >= 8 && frame.h >= 8) state.marks.push({ kind: "crop", el: null, rect: frame });
-        render();
-      },
-    );
+    const move = (p: Point) => {
+      if (!moved && near(p, page, 4)) return;
+      moved = true;
+      update(() => (state.framing = dragRect(page, p, false)));
+    };
+    drag(e, move, () => {
+      const f = state.framing;
+      state.framing = null;
+      if (!moved) return under ? cropElement(under) : render();
+      if (f && f.w >= 8 && f.h >= 8) state.marks.push({ kind: "crop", el: null, rect: f });
+      else say("That frame is too small: drag at least 8 px each way.", "error");
+      render();
+    });
+  }
+
+  /** A number is a handle, whatever the tool: a click edits its note (a pick's also opens its panel); a comment's number drags after 4px. */
+  function grabPin(e: PointerEvent, pin: Pin, view: Point, page: Point) {
+    let moved = false;
+    const move = (p: Point) => {
+      if (pin.kind !== "comment" || (!moved && near(p, page, 4))) return;
+      moved = true;
+      update(() => (pin.at = p));
+    };
+    drag(e, move, () => {
+      if (moved) return;
+      if (pin.kind === "pick") hooks.onPick(pin);
+      void editNote(pin, view);
+    });
   }
 
   function onDown(e: PointerEvent) {
     if (e.button !== 0 || isBubbleOpen(root)) return;
-    e.preventDefault();
     const view = { x: e.clientX, y: e.clientY };
     const page = { x: view.x + scrollX, y: view.y + scrollY };
     const tool = state.tool;
     const pin = pinAt(view);
-    if (pin) {
-      // A number is a handle, whatever the tool: a click edits its note (a pick's also opens its
-      // panel); a comment's number drags once the pointer moves 4px.
-      let moved = false;
-      return drag(
-        e,
-        (p) => {
-          if (pin.kind !== "comment" || (!moved && near(p, page, 4))) return;
-          moved = true;
-          update(() => (pin.at = p));
-        },
-        () => {
-          if (moved) return;
-          if (pin.kind === "pick") hooks.onPick(pin);
-          void editNote(pin, view);
-        },
-      );
-    }
+    if (pin) return grabPin(e, pin, view, page);
+    if (pasted.onDown(e)) return;
+    e.preventDefault();
+    const under = elementAt(view.x, view.y, host);
+    const box = placeholderAt(under);
+    if (box && tool !== "comment") return editPlaceholder(box);
     if (tool === "pick") {
-      const el = state.hover?.el ?? elementAt(view.x, view.y, host);
-      if (el) void addPin("pick", el, page);
+      const el = state.hover?.el ?? under;
+      if (el) pick(el, page);
     } else if (tool === "crop") {
-      startCrop(e, page, state.hover?.el ?? elementAt(view.x, view.y, host));
+      startCrop(e, page, state.hover?.el ?? under);
     } else if (tool === "comment") {
-      const el = elementAt(view.x, view.y, host);
-      if (el) void addPin("comment", el, page);
+      if (under) void addPin("comment", under, page);
     } else if (tool === "text") {
       void openBubble(root, { at: view, placeholder: "Text on the page", hint: "Enter places it · Esc cancels" }).then(
         (text) => text && update(() => state.marks.push({ kind: "text", color: state.color, at: page, text })),
       );
     } else if (DRAW.has(tool)) {
       state.draft = startShape(tool as DrawTool, state.color, page);
-      drag(
-        e,
-        (p, shift) =>
-          update(() => {
-            if (state.draft) state.draft = extendShape(state.draft, page, p, shift);
-          }),
-        () =>
-          update(() => {
-            if (state.draft && isMeaningful(state.draft)) state.marks.push(state.draft);
-            state.draft = null;
-          }),
+      const move = (p: Point, shift: boolean) =>
+        update(() => {
+          if (state.draft) state.draft = extendShape(state.draft, page, p, shift);
+        });
+      drag(e, move, () =>
+        update(() => {
+          if (state.draft && isMeaningful(state.draft)) state.marks.push(state.draft);
+          state.draft = null;
+        }),
       );
     }
   }
@@ -219,45 +219,36 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
   }
 
   const trail: Element[] = [];
-  function onKey(e: KeyboardEvent) {
-    if (isEditable(e.composedPath()[0])) return;
-    const cmd = commandFor(e, state.tool);
-    if (!cmd) return;
-    if (cmd.type === "copy" && !getSelection()?.isCollapsed) return;
-    e.preventDefault();
-    e.stopImmediatePropagation();
-    switch (cmd.type) {
-      case "tool":
-        return setTool(cmd.tool);
-      case "color":
-        return update(() => (state.color = cmd.color));
-      case "image":
-        return update(() => (state.forceImage = !state.forceImage));
-      case "undo":
-        return undo();
-      case "copy":
-        return copy();
-      case "escape":
-        return state.tool === "page" ? close() : setTool("page");
-      case "walk":
-        if (state.hover) {
-          const next = walk(state.hover.el, cmd.key, trail);
-          state.hover = null;
-          setHover(next);
-        }
-        return;
-      case "pick-hover": {
-        const el = state.hover?.el;
-        if (!el) return;
-        if (state.tool === "crop") return cropElement(el);
-        const r = viewRect(el);
-        void addPin("pick", el, { x: r.x + scrollX, y: r.y + scrollY });
-        return;
-      }
-      case "panel":
-        return hooks.togglePanel(pinsOf(state.marks).findLast((p) => p.kind === "pick"));
-    }
-  }
+  const onKey = keyHandler(() => state.tool, {
+    tool: setTool,
+    color: (c) => update(() => (state.color = c)),
+    image: () => update(() => (state.forceImage = !state.forceImage)),
+    undo,
+    copy,
+    escape: () => (state.tool === "page" ? close() : setTool("page")),
+    walk: (key) => {
+      if (!state.hover) return;
+      const next = walk(state.hover.el, key, trail);
+      state.hover = null;
+      setHover(next);
+    },
+    take: () => {
+      const el = state.hover?.el;
+      if (!el) return;
+      if (state.tool === "crop") return cropElement(el);
+      const r = viewRect(el);
+      pick(el, { x: r.x + scrollX, y: r.y + scrollY });
+    },
+    panel: () => hooks.togglePanel(lastPick()),
+    see: (direction) => {
+      const p = pasted.hovered();
+      if (p) pasted.see(p, direction);
+    },
+    remove: () => {
+      const p = pasted.hovered();
+      if (p) update(() => (state.marks = state.marks.filter((m) => m !== p)));
+    },
+  });
 
   function undo() {
     const last = state.marks.at(-1);
@@ -281,6 +272,8 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
   const listeners: [EventTarget, string, EventListener, AddEventListenerOptions?][] = [
     [layer, "pointerdown", onDown as EventListener],
     [layer, "pointermove", onHoverMove as EventListener],
+    [window, "pointermove", pasted.track as EventListener, { passive: true }],
+    [window, "paste", pasted.onPaste as EventListener, { capture: true }],
     [window, "keydown", onKey as EventListener, { capture: true }],
     [window, "scroll", render, { passive: true, capture: true }],
     [window, "resize", render],

@@ -41,7 +41,7 @@ const bundle: Bundle = {
   viewport: { w: 1280, h: 800 },
   crops: [],
   pins: [pick, comment],
-  drawings: { arrows: 1, boxes: 2, ellipses: 0, pens: 0, texts: ["bigger"] },
+  drawings: { arrows: 1, boxes: 2, ellipses: 0, pens: 0, texts: ["bigger"], pasted: 0 },
   image: { w: 640, h: 380 },
 };
 
@@ -69,7 +69,7 @@ describe("formatBundle", () => {
   });
 
   it("is text only, with no image or drawing lines, for a plain pick", () => {
-    const text = formatBundle({ ...bundle, pins: [pick], image: null, drawings: { arrows: 0, boxes: 0, ellipses: 0, pens: 0, texts: [] } });
+    const text = formatBundle({ ...bundle, pins: [pick], image: null, drawings: { arrows: 0, boxes: 0, ellipses: 0, pens: 0, texts: [], pasted: 0 } });
     expect(text).not.toContain("image:");
     expect(text).not.toContain("drawn:");
     expect(text.split("\n")).toHaveLength(8);
@@ -105,8 +105,11 @@ describe("formatBundle", () => {
 
   it("clips long text with an ellipsis", () => {
     expect(clip("a".repeat(100), 10)).toBe(`${"a".repeat(9)}…`);
-    expect(formatDrawings({ arrows: 0, boxes: 1, ellipses: 2, pens: 1, texts: [] })).toBe(
+    expect(formatDrawings({ arrows: 0, boxes: 1, ellipses: 2, pens: 1, texts: [], pasted: 0 })).toBe(
       "drawn: 1 box, 2 ellipses, 1 pen stroke",
+    );
+    expect(formatDrawings({ arrows: 0, boxes: 0, ellipses: 0, pens: 0, texts: [], pasted: 2 })).toBe(
+      "drawn: 2 pasted images (a reference laid on the page, not the page)",
     );
   });
 });

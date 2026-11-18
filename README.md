@@ -37,7 +37,9 @@ After a rebuild, press reload on the extension's card and reload the page.
 | P | pick: hover an element (the rest dims), ↑ parent, ↓ back down, ← → siblings, click or Enter picks, then a note |
 | C | comment: click anywhere, type, Enter. Click any number to edit its note (a pick's also reopens its panel); drag a comment's number to move it |
 | X | crop: click a component (↑ ↓ walk, Enter takes it) or drag a frame; several frames A, B… make one picture, stacked; draw and comment inside them |
-| S | the style panel for the last pick (again: away) |
+| S or 🎨 | the style panel for the last pick (again: away) |
+| Ctrl+V | paste an image (a screenshot, a mockup) at the mouse: it sticks to the page and scrolls with it; drag moves it and its corner resizes it (Shift: free), both with P or V; `[` `]` make it see-through (100/75/50/25%), Delete removes it. It is in the picture, and it lives until the page reloads |
+| click a placeholder | edits its text (the ⊕ boxes from the panel) |
 | D A B E T | pen, arrow, box, ellipse, text. **Shift**: straight line, 45° arrow, square, circle |
 | 1 2 3 | red, blue, yellow |
 | V | use the page (clicks go through, marks stay) |
@@ -72,9 +74,12 @@ Undoing or clearing a pick undoes its edits. A reload of the page drops them too
 when nothing is marked (a plain screenshot). A pick with a note is text only, about 80 tokens.
 The picture is cropped to the marks and kept at one pixel per CSS pixel, long edge ≤ 1000 px
 (Claude prices an image at about w×h/750 tokens; a full Retina screenshot costs ~5,000).
-With a picture, the same lines are also printed in a dark strip under it: Claude Code's chat
-keeps only the image of a text + image paste, so one paste still carries the file:line, notes
-and changes. A strip line costs about what the text would (~24 tokens).
+With a picture, a compact form of the lines is printed in a dark strip under it: Claude Code's
+chat keeps only the image of a text + image paste, so one paste still carries each pin's
+component, file:line, changes and note (selectors and styles stay in the copied text). A strip
+line costs about 17 tokens, less than the same text. The whole picture stays within what Claude
+reads at full size (≤ 1568 px a side, ≤ 1.15 MP): when it would not, the frames shrink, never
+the text. Picking an element that is already picked opens that pick's note, never a twin.
 
 ## Where the file comes from
 

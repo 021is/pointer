@@ -2,8 +2,8 @@
 // The item is handed to the clipboard at once, inside the click or key press, with its parts as
 // promises: Chrome then allows the write even though the screenshot takes a moment.
 
-import { formatBundle, safeUrl } from "../bundle/format";
-import type { ComponentInfo, CropInfo, PinInfo } from "../bundle/types";
+import { formatBundle, formatStrip, safeUrl } from "../bundle/format";
+import type { Bundle, ComponentInfo, CropInfo, PinInfo } from "../bundle/types";
 import type { Frame } from "../marks/svg";
 import { type Crop, type Pin, cropLabel } from "../marks/types";
 import { describeElement, liveLayout } from "../pick/describe";
@@ -12,11 +12,11 @@ import { componentOf } from "../source/client";
 import {
   type State,
   cropsOf,
+  laidOf,
   pictureBoxes,
   pictureScene,
   pinsOf,
   sceneFrames,
-  shapesOf,
   summarize,
   wantsImage,
 } from "../ui/state";
@@ -81,10 +81,10 @@ async function shoot(ctx: CopyContext) {
   const { viewport, frames, split } = framesNow(ctx);
   if (split instanceof Error) throw split;
   const scene = pictureScene(ctx.state, liveLayout());
-  const regions: Region[] = frames.length
-    ? split.shown
-    : [{ label: null, rect: cropFor(pictureBoxes(scene), viewport) ?? viewport }];
-  return { shot: await screenshot(ctx.host), regions, scene };
+  const laid = laidOf(ctx.state.marks, liveLayout());
+  const boxes = [...pictureBoxes(scene), ...laid.map((p) => p.rect)];
+  const regions: Region[] = frames.length ? split.shown : [{ label: null, rect: cropFor(boxes, viewport) ?? viewport }];
+  return { shot: await screenshot(ctx.host), regions, scene, laid };
 }
 
 /**
@@ -98,14 +98,21 @@ export async function copyBundle(ctx: CopyContext): Promise<CopyResult> {
   const off = split instanceof Error ? frames.map((f) => f.label) : split.off;
   const crops = cropInfos(cropsOf(ctx.state.marks), frames, off, componentOf);
   const infos = Promise.all([pinInfos(ctx), crops]);
-  const drawings = summarize(shapesOf(ctx.state.marks));
+  const drawings = summarize(ctx.state.marks);
   const viewport = { w: innerWidth, h: innerHeight };
-  const bundle = ([pins, crops]: [PinInfo[], CropInfo[]], image: CopyResult["image"]) =>
-    formatBundle({ url: safeUrl(location.href), viewport, crops, pins, drawings, image });
+  const data = ([pins, crops]: [PinInfo[], CropInfo[]], image: CopyResult["image"]): Bundle => ({
+    url: safeUrl(location.href),
+    viewport,
+    crops,
+    pins,
+    drawings,
+    image,
+  });
+  const bundle = (i: [PinInfo[], CropInfo[]], image: CopyResult["image"]) => formatBundle(data(i, image));
   const image = shot
     ? (async () => {
         const [s, i] = await Promise.all([shot, infos]);
-        return picture(s.shot, s.regions, s.scene, bundle(i, null));
+        return picture(s.shot, s.regions, s.scene, formatStrip(data(i, null)), s.laid);
       })()
     : null;
   const text = (async () => {

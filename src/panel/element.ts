@@ -2,6 +2,7 @@
 // placeholder boxes. Everything is undone by reset(), back to the element's own attributes.
 
 import { type ElementEdits, type Inserted, changeLines, noEdits, withProp, withoutProp } from "./edits";
+import { PLACEHOLDER_ATTR } from "../shared/placeholder";
 import { knownClasses } from "./rules";
 
 const PLACEHOLDER =
@@ -88,6 +89,7 @@ export function edit(el: Element): Edited {
     insert(position) {
       const node = document.createElement("div");
       node.setAttribute("style", PLACEHOLDER);
+      node.setAttribute(PLACEHOLDER_ATTR, position);
       node.contentEditable = "true";
       node.textContent = "New element";
       el[position](node);

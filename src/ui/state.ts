@@ -2,7 +2,19 @@
 
 import type { DrawingSummary } from "../bundle/types";
 import type { Frame, Scene, ScenePin } from "../marks/svg";
-import { type Color, type Crop, type Mark, type Pin, type Shape, cropLabel, isCrop, isPin, isShape } from "../marks/types";
+import {
+  type Color,
+  type Crop,
+  type Mark,
+  type Pasted,
+  type Pin,
+  type Shape,
+  cropLabel,
+  isCrop,
+  isPasted,
+  isPin,
+  isShape,
+} from "../marks/types";
 import type { Point, Rect } from "../shared/geometry";
 import { boundsOf, dragRect, inflate } from "../shared/geometry";
 
@@ -28,6 +40,7 @@ export function initialState(): State {
 export const pinsOf = (marks: readonly Mark[]): Pin[] => marks.filter(isPin);
 export const shapesOf = (marks: readonly Mark[]): Shape[] => marks.filter(isShape);
 export const cropsOf = (marks: readonly Mark[]): Crop[] => marks.filter(isCrop);
+export const pastedOf = (marks: readonly Mark[]): Pasted[] => marks.filter(isPasted);
 
 /** Picking and cropping both hover elements, walk them with the arrows and take them with Enter. */
 export const targetsElements = (tool: Tool) => tool === "pick" || tool === "crop";
@@ -134,7 +147,8 @@ export function pictureBoxes(scene: Scene): Rect[] {
   return [...scene.shapes.map(shapeBox), ...outlines, ...badges];
 }
 
-export function summarize(shapes: readonly Shape[]): DrawingSummary {
+export function summarize(marks: readonly Mark[]): DrawingSummary {
+  const shapes = shapesOf(marks);
   const count = (k: Shape["kind"]) => shapes.filter((s) => s.kind === k).length;
   return {
     arrows: count("arrow"),
@@ -142,7 +156,17 @@ export function summarize(shapes: readonly Shape[]): DrawingSummary {
     ellipses: count("ellipse"),
     pens: count("pen"),
     texts: shapes.flatMap((s) => (s.kind === "text" ? [s.text] : [])),
+    pasted: pastedOf(marks).length,
   };
+}
+
+/** Pasted images as they lie on screen now (viewport coordinates). */
+export function laidOf(marks: readonly Mark[], layout: Layout): { img: HTMLImageElement; rect: Rect; opacity: number }[] {
+  return pastedOf(marks).map((p) => ({
+    img: p.img,
+    rect: { ...p.rect, x: p.rect.x - layout.scroll.x, y: p.rect.y - layout.scroll.y },
+    opacity: p.opacity,
+  }));
 }
 
 /** The picture is sent when something is drawn or cropped, when asked for, or when nothing is marked. */
@@ -151,6 +175,7 @@ export function wantsImage(state: State): boolean {
     state.forceImage ||
     shapesOf(state.marks).length > 0 ||
     cropsOf(state.marks).length > 0 ||
+    pastedOf(state.marks).length > 0 ||
     pinsOf(state.marks).length === 0
   );
 }

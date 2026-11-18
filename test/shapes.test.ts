@@ -76,7 +76,7 @@ describe("shapes in page and viewport coordinates", () => {
         { kind: "box", color: "red", rect: { x: 0, y: 0, w: 5, h: 5 } },
         { kind: "text", color: "red", at: start, text: "bigger" },
       ]),
-    ).toEqual({ arrows: 0, boxes: 2, ellipses: 0, pens: 0, texts: ["bigger"] });
+    ).toEqual({ arrows: 0, boxes: 2, ellipses: 0, pens: 0, texts: ["bigger"], pasted: 0 });
   });
 });
 

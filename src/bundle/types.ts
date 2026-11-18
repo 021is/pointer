@@ -55,6 +55,8 @@ export type DrawingSummary = {
   ellipses: number;
   pens: number;
   texts: string[];
+  /** Images Edvard pasted onto the page: references, not the page itself. */
+  pasted: number;
 };
 
 /** A crop frame: a component (with its component info) or a dragged rectangle. */
