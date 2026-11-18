@@ -124,11 +124,8 @@ export function mapUrlOf(code: string, codeUrl: string): string | null {
  */
 export function sourceAgainst(source: string, codeUrl: string): string {
   if (/^[a-z][\w+.-]*:/i.test(source) || source.startsWith("/") || source.startsWith("[")) return source;
-  try {
-    return new URL(source, codeUrl).href;
-  } catch {
-    return source; // a code URL that is not a URL (a server frame's path): the source as given
-  }
+  // A code URL that is not a URL (a server frame's path): the source as given.
+  return URL.canParse(source, codeUrl) ? new URL(source, codeUrl).href : source;
 }
 
 /** A `data:application/json;base64,…` map, decoded; other data URLs as their raw text. */

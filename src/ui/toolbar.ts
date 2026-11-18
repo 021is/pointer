@@ -1,6 +1,7 @@
 // The floating bar. The 021 mark drags it; every button shows its name and key on hover. Its
-// groups follow what Copy gives: drawing, crops, colours and image upload only matter for a
-// picture, so Text only hides them. Copy is a split button (copy-menu.ts).
+// groups follow the Picture | Text switch (Edvard, 2026-11-18: kept beside the Copy menu):
+// drawing, crops, colours and image upload only matter for a picture, so Text hides them. Copy is
+// a split button (copy-menu.ts) whose menu also offers Picture only.
 
 import { COLORS, type Color } from "../marks/types";
 import { type CopyMenu, createCopyMenu } from "./copy-menu";
@@ -11,6 +12,7 @@ import { type Output, type State, type Tool, pictureOnly } from "./state";
 export type BarActions = {
   tool: (t: Tool) => void;
   color: (c: Color) => void;
+  output: (o: Output) => void;
   upload: () => void;
   styles: () => void;
   undo: () => void;
@@ -28,7 +30,7 @@ type Entry = { tool: Tool; key: string; icon: IconName; title: string };
 export const TOOLS: readonly Entry[] = [
   { tool: "page", key: "V", icon: "page", title: "Use the page" },
   { tool: "move", key: "M", icon: "move", title: "Move marks and images · Delete removes" },
-  { tool: "pick", key: "P", icon: "pick", title: "Pick an element" },
+  { tool: "pick", key: "P", icon: "pick", title: "Pick: edit an element's CSS" },
   { tool: "comment", key: "C", icon: "comment", title: "Comment" },
   { tool: "crop", key: "X", icon: "crop", title: "Crop a component or a frame" },
   { tool: "pen", key: "D", icon: "pen", title: "Pen · Shift: straight" },
@@ -40,7 +42,9 @@ export const TOOLS: readonly Entry[] = [
 
 export const COLOR_KEYS: readonly Color[] = ["red", "blue", "yellow"];
 
-const MOD = /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘" : "Ctrl+";
+const MAC = /Mac|iPhone|iPad/.test(navigator.platform);
+const MOD = MAC ? "⌘" : "Ctrl+";
+const CLEAR_KEY = MAC ? "⇧⌫" : "Shift+Delete";
 
 function button(name: IconName | null, tip: string, key: string, onClick: () => void, label?: string): HTMLButtonElement {
   const b = document.createElement("button");
@@ -125,7 +129,7 @@ export function createToolbar(act: BarActions): Toolbar {
   edit.append(
     button("styles", "Styles of the last pick", "S", act.styles),
     button("undo", "Undo", `${MOD}Z`, act.undo),
-    button("clear", "Clear everything", "", act.clear),
+    button("clear", "Clear everything", CLEAR_KEY, act.clear),
   );
 
   const menu: CopyMenu = createCopyMenu({
@@ -136,10 +140,17 @@ export function createToolbar(act: BarActions): Toolbar {
     clearAfterCopy: act.clearAfterCopy,
     estimate: act.estimate,
   });
+  // Picture lights for both picture outputs; the Copy menu tells Picture + text from Picture only.
+  const outputs = new Map<"picture" | "text", HTMLButtonElement>([
+    ["picture", button("picture", "Copy gives a picture", "I", () => act.output("picture"), "Picture")],
+    ["text", button("textOnly", "Copy gives the text only, ~3× cheaper", "I", () => act.output("text"), "Text")],
+  ]);
+  const toggle = Object.assign(document.createElement("span"), { className: "switch" });
+  toggle.append(...outputs.values());
   const close = button("close", "Close", "Esc Esc", act.close);
   close.classList.add("close");
 
-  bar.append(grip(bar), marking, drawing, swatches, upload, edit, menu.el, close);
+  bar.append(grip(bar), marking, drawing, swatches, upload, edit, toggle, menu.el, close);
 
   return {
     el: bar,
@@ -148,6 +159,8 @@ export function createToolbar(act: BarActions): Toolbar {
       bar.dataset.output = s.output;
       for (const [t, b] of tools) b.setAttribute("aria-pressed", String(t === s.tool));
       for (const [c, b] of colors) b.setAttribute("aria-pressed", String(c === s.color));
+      const lit = s.output === "text" ? "text" : "picture";
+      for (const [o, b] of outputs) b.setAttribute("aria-pressed", String(o === lit));
       menu.update(s);
     },
   };

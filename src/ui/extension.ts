@@ -6,6 +6,8 @@ export type Extension = {
   changesOf: (pin: Pin) => string[];
   onPick: (pin: Pin) => void;
   onRemove: (pin: Pin) => void;
+  /** Clear everything: onRemove for each pin, but the returned function takes it back (Undo). */
+  park: (pins: Pin[]) => () => void;
   /** S or 🎨: the panel for the last pick, or away again. */
   togglePanel: (lastPick: Pin | undefined) => void;
 };

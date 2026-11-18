@@ -20,16 +20,19 @@ export function notes(host: NotesHost) {
     update(() => (state.marks = state.marks.filter((m) => m !== pin)));
   }
 
+  /** A comment asks for its words; a pick is the CSS tool and opens its style box (Edvard,
+   *  2026-11-18). A note on a pick stays one click away: click its number. */
   async function addPin(kind: Pin["kind"], el: Element, at: Point) {
     const pin: Pin = { kind, color: state.color, el, at, note: "" };
     update(() => state.marks.push(pin));
+    if (kind === "pick") return host.hooks().onPick(pin);
     const note = await openBubble(root, {
       at: toView(at),
-      placeholder: kind === "pick" ? "Note (optional)" : "Comment",
-      hint: kind === "pick" ? "Enter saves · Esc skips · S or Styles: its CSS" : "Enter saves · Shift+Enter new line · Esc skips",
+      placeholder: "Comment",
+      hint: "Enter saves · Shift+Enter new line · Esc skips",
     });
-    if (kind === "comment" && !note) return removePin(pin);
-    update(() => (pin.note = note ?? ""));
+    if (!note) return removePin(pin);
+    update(() => (pin.note = note));
   }
 
   async function editNote(pin: Pin, view: Point) {
@@ -39,7 +42,7 @@ export function notes(host: NotesHost) {
 
   function pick(el: Element, at: Point) {
     const twin = pinsOf(state.marks).find((p) => p.kind === "pick" && p.el === el);
-    if (twin) return void editNote(twin, toView(at));
+    if (twin) return host.hooks().onPick(twin);
     void addPin("pick", el, at);
   }
 

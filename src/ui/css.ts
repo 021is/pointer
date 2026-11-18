@@ -25,14 +25,16 @@ export const CSS = `
 .layer[data-tool="move"] { cursor: grab; }
 .pimg:hover .grip { width: 16px; height: 16px; right: -7px; bottom: -7px; box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.35); }
 
-/* The bar: frosted dark glass, one violet accent, quiet until hovered. */
+/* Pointer's glass, one rule for the bar and the note box: frosted dark, one violet accent. */
+.bar, .bubble {
+  background: linear-gradient(180deg, rgba(34, 30, 50, 0.88), rgba(18, 16, 28, 0.93));
+  -webkit-backdrop-filter: blur(16px) saturate(1.5); backdrop-filter: blur(16px) saturate(1.5);
+  color: #ece9fb; border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: 0 18px 50px rgba(5, 3, 15, 0.55), 0 2px 6px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
 .bar {
   position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%);
-  display: flex; align-items: center; gap: 4px; padding: 6px;
-  background: linear-gradient(180deg, rgba(34, 30, 50, 0.86), rgba(18, 16, 28, 0.9));
-  -webkit-backdrop-filter: blur(16px) saturate(1.5); backdrop-filter: blur(16px) saturate(1.5);
-  color: #ece9fb; border: 1px solid rgba(255, 255, 255, 0.09); border-radius: 16px;
-  box-shadow: 0 18px 50px rgba(5, 3, 15, 0.55), 0 2px 6px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  display: flex; align-items: center; gap: 4px; padding: 6px; border-radius: 16px;
   font: 600 12.5px/1 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   letter-spacing: 0.01em; pointer-events: auto; user-select: none;
 }
@@ -67,6 +69,13 @@ export const CSS = `
 }
 .bar button.swatch[aria-pressed="true"] { background: none; box-shadow: none; }
 .bar button.swatch[aria-pressed="true"]::after { transform: scale(1.15); box-shadow: 0 0 0 2px #17142a, 0 0 0 4px var(--swatch); }
+/* Picture | Text: what Copy gives, one press away. */
+.bar .switch {
+  display: inline-flex; gap: 2px; padding: 3px; margin-left: 6px; position: relative;
+  border-radius: 12px; background: rgba(0, 0, 0, 0.28); box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+.bar .switch button { height: 28px; padding: 0 10px 0 8px; border-radius: 9px; font-size: 12px; }
+.bar .switch button[aria-pressed="true"] { box-shadow: 0 2px 10px rgba(106, 76, 240, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.25); }
 /* Copy: a split button. The main part copies as chosen; ▾ opens the menu above it. */
 .bar .copygroup { position: relative; display: inline-flex; margin-left: 6px; border-radius: 10px;
   box-shadow: 0 6px 20px rgba(157, 133, 255, 0.35); }
@@ -112,12 +121,8 @@ export const CSS = `
 /* The note box: the bar's glass. all: unset also resets box-sizing, so it is set again: without
    it the field's padding pushed it past the box's right edge. */
 .bubble {
-  position: fixed; width: 300px; padding: 10px; pointer-events: auto;
-  background: linear-gradient(180deg, rgba(34, 30, 50, 0.92), rgba(18, 16, 28, 0.95));
-  -webkit-backdrop-filter: blur(16px) saturate(1.5); backdrop-filter: blur(16px) saturate(1.5);
-  border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 14px;
-  box-shadow: 0 18px 44px rgba(5, 3, 15, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  font: 13px/1.4 ui-sans-serif, system-ui, -apple-system, sans-serif; color: #ece9fb;
+  position: fixed; width: 300px; padding: 10px; pointer-events: auto; border-radius: 14px;
+  font: 13px/1.4 ui-sans-serif, system-ui, -apple-system, sans-serif;
 }
 .bubble textarea {
   all: unset; box-sizing: border-box; display: block; width: 100%; min-height: 44px; max-height: 160px;

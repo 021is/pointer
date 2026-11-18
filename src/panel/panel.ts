@@ -49,20 +49,37 @@ export function createPanel(root: ShadowRoot, host: ExtensionHost): Extension {
     });
   }
 
+  function remove(pin: Pin) {
+    if (owner.get(pin.el) === pin) {
+      edited.get(pin.el)?.reset();
+      edited.delete(pin.el);
+      owner.delete(pin.el);
+      host.rerender();
+    }
+    if (showing === pin) hide();
+  }
+
   return {
     changesOf: (pin) => (owner.get(pin.el) === pin ? (edited.get(pin.el)?.lines() ?? []) : []),
+    // Pick is the CSS tool (Edvard, 2026-11-18): a pick opens its style box, no note box.
     onPick: show,
-    onRemove(pin) {
-      if (owner.get(pin.el) === pin) {
-        edited.get(pin.el)?.reset();
-        edited.delete(pin.el);
-        owner.delete(pin.el);
+    onRemove: remove,
+    park(pins) {
+      const kept = pins.flatMap((pin) => {
+        const e = owner.get(pin.el) === pin ? edited.get(pin.el) : undefined;
+        return e ? [{ pin, e, snap: e.snapshot() }] : [];
+      });
+      for (const pin of pins) remove(pin);
+      return () => {
+        for (const { pin, e, snap } of kept) {
+          e.restore(snap);
+          edited.set(pin.el, e);
+          owner.set(pin.el, pin);
+        }
         host.rerender();
-      }
-      if (showing === pin) hide();
+      };
     },
-    // A pick opens only its note (Edvard, 2026-11-18): S brings the panel for the last pick,
-    // and takes it away again.
+    // S or the 🎨 button: the style box for the last pick, and away again.
     togglePanel(lastPick) {
       if (!panel.hidden) return hide();
       if (lastPick) show(lastPick);

@@ -123,4 +123,21 @@ describe("edit: live changes on one element, and their diff", () => {
     expect(card().nextElementSibling?.tagName).toBe("P");
     expect(e.lines()).toEqual([]);
   });
+
+  it("a snapshot taken before a reset brings every edit back (Undo after Clear everything)", () => {
+    const e = edit(card());
+    e.set("color", "red");
+    e.removeClass("shadow");
+    const box = e.insert("after");
+    box.textContent = "Map";
+    const before = e.lines();
+    const snap = e.snapshot();
+    e.reset();
+    expect(e.lines()).toEqual([]);
+    e.restore(snap);
+    expect(e.lines()).toEqual(before);
+    expect(card().style.getPropertyValue("color")).toBe("red");
+    expect(card().classList.contains("shadow")).toBe(false);
+    expect(card().nextElementSibling?.textContent).toBe("Map");
+  });
 });

@@ -4,11 +4,11 @@
 
 import { buildBundle, copyBundle, estimateCosts } from "../capture/copy";
 import { textTokens } from "../capture/estimate";
-import type { Mark } from "../marks/types";
 import { imageTokens } from "../shared/geometry";
 import type { PreviewReply, PreviewRequest } from "../shared/messages";
+import { clearAll } from "./clear";
 import type { Extension } from "./extension";
-import { type Output, type State, isEmpty, pinsOf } from "./state";
+import { type Output, type State, isEmpty } from "./state";
 import type { Toast } from "./toast";
 
 export type CopyHost = {
@@ -31,13 +31,6 @@ export function copiedLabel(marks: number, tokens: number): string {
 export function copyFlow(h: CopyHost) {
   const ctx = () => ({ state: h.state, host: h.host, changesOf: h.hooks().changesOf });
 
-  function clearForNextRound() {
-    const before: Mark[] = h.state.marks.slice();
-    for (const pin of pinsOf(h.state.marks)) h.hooks().onRemove(pin);
-    h.update(() => (h.state.marks = []));
-    h.say("Cleared for the next round.", "ok", { label: "Undo", run: () => h.update(() => (h.state.marks = before)) });
-  }
-
   function copy() {
     if (isEmpty(h.state.marks) && h.state.output === "text") {
       return h.say("Nothing marked yet: comment, pick or crop something first.");
@@ -46,7 +39,7 @@ export function copyFlow(h: CopyHost) {
     copyBundle(ctx()).then(
       ({ text, image }) => {
         h.flash(copiedLabel(marks, image ? imageTokens(image) : textTokens(text)));
-        if (h.state.clearAfterCopy) clearForNextRound();
+        if (h.state.clearAfterCopy) clearAll(h, "Cleared for the next round.");
       },
       (err: unknown) => h.say(`Copy failed: ${errorText(err)}`, "error"),
     );

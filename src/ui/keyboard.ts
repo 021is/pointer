@@ -24,6 +24,7 @@ export type KeyActions = {
   canRemove: () => boolean;
   see: (direction: -1 | 1) => void;
   remove: () => void;
+  clear: () => void;
 };
 
 export const isEditable = (t: EventTarget | null | undefined) =>
@@ -63,6 +64,8 @@ export function keyHandler(tool: () => Tool, run: KeyActions): (e: KeyboardEvent
         return run.see(cmd.direction);
       case "remove":
         return run.remove();
+      case "clear":
+        return run.clear();
     }
   };
 }
