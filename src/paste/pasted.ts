@@ -6,6 +6,7 @@
 import { type Mark, type Pasted, isPasted } from "../marks/types";
 import type { Point } from "../shared/geometry";
 import { drag } from "../ui/drag";
+import { isEditable } from "../ui/keyboard";
 import { type Grip, dragged, gripAt, landing, stepOpacity } from "./geometry";
 
 export type PasteHost = {
@@ -26,9 +27,6 @@ export type PastedLayer = {
   hovered: () => Pasted | undefined;
   see: (p: Pasted, direction: -1 | 1) => void;
 };
-
-const isEditable = (t: EventTarget | null) =>
-  t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || (t instanceof HTMLElement && t.isContentEditable);
 
 export function createPastedLayer(host: PasteHost): PastedLayer {
   const el = Object.assign(document.createElement("div"), { className: "pasted" });

@@ -2,12 +2,12 @@
 // way of what is being marked.
 
 import { COLORS, type Color } from "../marks/types";
-import type { State, Tool } from "./state";
+import type { Output, State, Tool } from "./state";
 
 export type BarActions = {
   tool: (t: Tool) => void;
   color: (c: Color) => void;
-  image: () => void;
+  output: (o: Output) => void;
   styles: () => void;
   undo: () => void;
   clear: () => void;
@@ -99,23 +99,31 @@ export function createToolbar(act: BarActions): Toolbar {
     bar.append(b);
   });
   bar.append(sep());
-  const image = button("📷", "Always add the picture · I (it is added anyway when something is drawn)", act.image);
+  // What Copy gives: a switch of two, I flips it.
+  const outputs = new Map<Output, HTMLButtonElement>([
+    ["picture", button("🖼 Picture", "Copy gives the picture with the text strip under it · I switches", () => act.output("picture"))],
+    ["text", button("≡ Text", "Copy gives the text only, ~3× cheaper when your words say enough · I switches", () => act.output("text"))],
+  ]);
+  const toggle = Object.assign(document.createElement("span"), { className: "switch" });
+  toggle.append(...outputs.values());
+  const copy = button("⧉ Copy", "Copy for the agent · Ctrl+C", act.copy);
+  copy.classList.add("copy");
   bar.append(
-    image,
     button("🎨", "Styles of the last pick · S (or click a pick's number)", act.styles),
     button("↶", "Undo · Ctrl+Z", act.undo),
     button("⌫", "Clear everything", act.clear),
-    button("⧉ Copy", "Copy for the agent · Ctrl+C", act.copy),
+    sep(),
+    toggle,
+    copy,
     button("✕", "Close · Esc twice, or Alt+Shift+P", act.close),
   );
-  bar.querySelector<HTMLButtonElement>('button[title^="Copy"]')?.classList.add("copy");
 
   return {
     el: bar,
     update(s) {
       for (const [t, b] of tools) b.setAttribute("aria-pressed", String(t === s.tool));
       for (const [c, b] of colors) b.setAttribute("aria-pressed", String(c === s.color));
-      image.setAttribute("aria-pressed", String(s.forceImage));
+      for (const [o, b] of outputs) b.setAttribute("aria-pressed", String(o === s.output));
     },
   };
 }

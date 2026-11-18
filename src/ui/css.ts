@@ -42,6 +42,8 @@ export const CSS = `
 .bar button[aria-pressed="true"] { background: #7c5cff; color: #fff; }
 .bar button.copy { background: #f4f2ff; color: #16141f; font-size: 13px; font-weight: 650; padding: 0 12px; margin-left: 2px; }
 .bar button.copy:hover { background: #fff; }
+.bar .switch { display: inline-flex; padding: 2px; gap: 2px; border-radius: 9px; background: rgba(255, 255, 255, 0.08); }
+.bar .switch button { height: 26px; font-size: 12px; font-weight: 600; }
 .bar .dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, .35); }
 .bar button[aria-pressed="true"] .dot { border-color: #fff; }
 

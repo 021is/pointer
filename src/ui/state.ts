@@ -29,12 +29,17 @@ export type State = {
   /** The crop frame being dragged right now, in page coordinates. */
   framing: Rect | null;
   hover: { el: Element; label: string } | null;
-  /** Copy with a picture even when only picks and comments are on the page. */
-  forceImage: boolean;
+  /**
+   * What Copy gives, switched on the bar (Edvard, 2026-11-18): the picture with the text strip,
+   * or the compact text only, about 3× cheaper when his words say enough.
+   */
+  output: Output;
 };
 
+export type Output = "picture" | "text";
+
 export function initialState(): State {
-  return { tool: "pick", color: "red", marks: [], draft: null, framing: null, hover: null, forceImage: false };
+  return { tool: "pick", color: "red", marks: [], draft: null, framing: null, hover: null, output: "picture" };
 }
 
 export const pinsOf = (marks: readonly Mark[]): Pin[] => marks.filter(isPin);
@@ -169,13 +174,10 @@ export function laidOf(marks: readonly Mark[], layout: Layout): { img: HTMLImage
   }));
 }
 
-/** The picture is sent when something is drawn or cropped, when asked for, or when nothing is marked. */
+/** The bar's switch decides: a picture, or text only. */
 export function wantsImage(state: State): boolean {
-  return (
-    state.forceImage ||
-    shapesOf(state.marks).length > 0 ||
-    cropsOf(state.marks).length > 0 ||
-    pastedOf(state.marks).length > 0 ||
-    pinsOf(state.marks).length === 0
-  );
+  return state.output === "picture";
 }
+
+/** The switch's other side. */
+export const otherOutput = (o: Output): Output => (o === "picture" ? "text" : "picture");

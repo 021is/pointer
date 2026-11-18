@@ -50,6 +50,7 @@ describe("formatBundle", () => {
     expect(formatBundle(bundle)).toBe(
       [
         "Pointer · https://live.danceclub.dev/events/42 · viewport 1280×800 · react",
+        "How to read: [n] = an element the user marked (same number on the picture); file:line = where its JSX is written, (in X) = where that component is used; changed = live CSS edits the user made, to apply in the code; note = what the user wants.",
         "image: 640×380 (≈325 tokens), numbers on it match [n] below",
         'drawn: 1 arrow, 2 boxes, text "bigger"',
         "[1] pick · ProfileCard ← EventList ← EventsPage",
@@ -72,7 +73,12 @@ describe("formatBundle", () => {
     const text = formatBundle({ ...bundle, pins: [pick], image: null, drawings: { arrows: 0, boxes: 0, ellipses: 0, pens: 0, texts: [], pasted: 0 } });
     expect(text).not.toContain("image:");
     expect(text).not.toContain("drawn:");
-    expect(text.split("\n")).toHaveLength(8);
+    expect(text.split("\n")).toHaveLength(9);
+    expect(text.split("\n")[1]).not.toContain("picture");
+  });
+
+  it("has no legend when nothing is marked (a plain screenshot)", () => {
+    expect(formatBundle({ ...bundle, pins: [] }).split("\n")[1]).toMatch(/^image:/);
   });
 
   it("names no framework when the page has none and falls back to the tag", () => {
@@ -80,7 +86,7 @@ describe("formatBundle", () => {
     const text = formatBundle({ ...bundle, pins: [plain], image: null });
     expect(text.split("\n")[0]).toBe("Pointer · https://live.danceclub.dev/events/42 · viewport 1280×800");
     expect(text).toContain("[2] comment · button");
-    expect(text).not.toContain("file:");
+    expect(text.split("\n").slice(2).join("\n")).not.toContain("file:");
   });
 
   it("says where a shared component is used", () => {
@@ -97,7 +103,7 @@ describe("formatBundle", () => {
       },
     };
     const lines = formatBundle({ ...bundle, pins: [button], image: null }).split("\n");
-    expect(lines.slice(3, 5)).toEqual([
+    expect(lines.slice(4, 6)).toEqual([
       "   file: src/components/ui/button.tsx:52",
       "   used at: src/feature/site/menu/FullScreenMenu.tsx:40",
     ]);
