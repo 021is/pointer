@@ -1,13 +1,16 @@
-// The floating bar. Every button names its key in its tooltip; the grip drags the bar out of the
-// way of what is being marked.
+// The floating bar. The 021 mark drags it; every button shows its name and key on hover. Its
+// groups follow the Picture | Text switch: drawing, crops, colours and image upload only matter
+// for a picture, so Text hides them (Edvard, 2026-11-18).
 
 import { COLORS, type Color } from "../marks/types";
+import { type IconName, icon } from "./icons";
 import type { Output, State, Tool } from "./state";
 
 export type BarActions = {
   tool: (t: Tool) => void;
   color: (c: Color) => void;
   output: (o: Output) => void;
+  upload: () => void;
   styles: () => void;
   undo: () => void;
   clear: () => void;
@@ -15,28 +18,31 @@ export type BarActions = {
   close: () => void;
 };
 
-type Entry = { tool: Tool; key: string; icon: string; title: string };
+type Entry = { tool: Tool; key: string; icon: IconName; title: string };
 
 export const TOOLS: readonly Entry[] = [
-  { tool: "page", key: "V", icon: "↖", title: "Use the page (clicks go through)" },
-  { tool: "pick", key: "P", icon: "⌖", title: "Pick an element (↑ ↓ ← → walk, Enter picks)" },
-  { tool: "comment", key: "C", icon: "💬", title: "Comment: click to pin a note" },
-  { tool: "crop", key: "X", icon: "⛶", title: "Crop: click a component or drag a frame (several: A, B…)" },
-  { tool: "pen", key: "D", icon: "✎", title: "Pen (Shift: straight)" },
-  { tool: "arrow", key: "A", icon: "➚", title: "Arrow (Shift: 0/45/90°)" },
-  { tool: "box", key: "B", icon: "▭", title: "Box (Shift: square)" },
-  { tool: "ellipse", key: "E", icon: "◯", title: "Ellipse (Shift: circle)" },
-  { tool: "text", key: "T", icon: "T", title: "Text" },
+  { tool: "page", key: "V", icon: "page", title: "Use the page" },
+  { tool: "pick", key: "P", icon: "pick", title: "Pick an element" },
+  { tool: "comment", key: "C", icon: "comment", title: "Comment" },
+  { tool: "crop", key: "X", icon: "crop", title: "Crop a component or a frame" },
+  { tool: "pen", key: "D", icon: "pen", title: "Pen · Shift: straight" },
+  { tool: "arrow", key: "A", icon: "arrow", title: "Arrow · Shift: 45°" },
+  { tool: "box", key: "B", icon: "box", title: "Box · Shift: square" },
+  { tool: "ellipse", key: "E", icon: "ellipse", title: "Ellipse · Shift: circle" },
+  { tool: "text", key: "T", icon: "text", title: "Text on the page" },
 ];
 
 export const COLOR_KEYS: readonly Color[] = ["red", "blue", "yellow"];
 
-function button(icon: string, title: string, onClick: () => void): HTMLButtonElement {
+const MOD = /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘" : "Ctrl+";
+
+function button(name: IconName | null, tip: string, key: string, onClick: () => void, label?: string): HTMLButtonElement {
   const b = document.createElement("button");
   b.type = "button";
-  b.textContent = icon;
-  b.title = title;
-  b.setAttribute("aria-label", title);
+  if (name) b.append(icon(name));
+  if (label) b.append(Object.assign(document.createElement("span"), { className: "label", textContent: label }));
+  b.dataset.tip = key ? `${tip}  ${key}` : tip;
+  b.setAttribute("aria-label", key ? `${tip} (${key})` : tip);
   b.addEventListener("click", (e) => {
     e.stopPropagation();
     onClick();
@@ -44,11 +50,16 @@ function button(icon: string, title: string, onClick: () => void): HTMLButtonEle
   return b;
 }
 
-const sep = () => Object.assign(document.createElement("span"), { className: "sep" });
+const group = (only?: Output) => {
+  const g = Object.assign(document.createElement("span"), { className: "group" });
+  if (only) g.dataset.only = only;
+  return g;
+};
 
 function grip(bar: HTMLElement): HTMLElement {
-  const g = Object.assign(document.createElement("span"), { className: "grip", textContent: "⋮⋮" });
-  g.title = "Drag the bar";
+  const g = Object.assign(document.createElement("span"), { className: "grip" });
+  g.append(icon("mark"));
+  g.dataset.tip = "Pointer by 021 · drag to move the bar";
   g.addEventListener("pointerdown", (down) => {
     down.preventDefault();
     g.setPointerCapture(down.pointerId);
@@ -81,46 +92,52 @@ export function createToolbar(act: BarActions): Toolbar {
   bar.addEventListener("pointerdown", (e) => e.stopPropagation());
 
   const tools = new Map<Tool, HTMLButtonElement>();
-  bar.append(grip(bar));
-  for (const t of TOOLS) {
-    if (t.tool === "pen") bar.append(sep());
-    const b = button(t.icon, `${t.title} · ${t.key}`, () => act.tool(t.tool));
+  const toolButton = (t: Entry) => {
+    const b = button(t.icon, t.title, t.key, () => act.tool(t.tool));
     tools.set(t.tool, b);
-    bar.append(b);
-  }
-  bar.append(sep());
+    return b;
+  };
+  const marking = group();
+  marking.append(...TOOLS.slice(0, 3).map(toolButton));
+  const drawing = group("picture");
+  drawing.append(...TOOLS.slice(3).map(toolButton));
+
   const colors = new Map<Color, HTMLButtonElement>();
+  const swatches = group("picture");
   COLOR_KEYS.forEach((c, i) => {
-    const b = button("", `${c} · ${i + 1}`, () => act.color(c));
-    const dot = Object.assign(document.createElement("span"), { className: "dot" });
-    dot.style.background = COLORS[c];
-    b.append(dot);
+    const b = button(null, c[0]?.toUpperCase() + c.slice(1), String(i + 1), () => act.color(c));
+    b.classList.add("swatch");
+    b.style.setProperty("--swatch", COLORS[c]);
     colors.set(c, b);
-    bar.append(b);
+    swatches.append(b);
   });
-  bar.append(sep());
-  // What Copy gives: a switch of two, I flips it.
+  const upload = group("picture");
+  upload.append(button("upload", `Add an image (or paste: ${MOD}V)`, "", act.upload));
+
+  const edit = group();
+  edit.append(
+    button("styles", "Styles of the last pick", "S", act.styles),
+    button("undo", "Undo", `${MOD}Z`, act.undo),
+    button("clear", "Clear everything", "", act.clear),
+  );
+
   const outputs = new Map<Output, HTMLButtonElement>([
-    ["picture", button("🖼 Picture", "Copy gives the picture with the text strip under it · I switches", () => act.output("picture"))],
-    ["text", button("≡ Text", "Copy gives the text only, ~3× cheaper when your words say enough · I switches", () => act.output("text"))],
+    ["picture", button("picture", "Copy gives the picture + its text", "I", () => act.output("picture"), "Picture")],
+    ["text", button("textOnly", "Copy gives the text only, ~3× cheaper", "I", () => act.output("text"), "Text")],
   ]);
   const toggle = Object.assign(document.createElement("span"), { className: "switch" });
   toggle.append(...outputs.values());
-  const copy = button("⧉ Copy", "Copy for the agent · Ctrl+C", act.copy);
+  const copy = button("copy", "Copy for the agent", `${MOD}C`, act.copy, "Copy");
   copy.classList.add("copy");
-  bar.append(
-    button("🎨", "Styles of the last pick · S (or click a pick's number)", act.styles),
-    button("↶", "Undo · Ctrl+Z", act.undo),
-    button("⌫", "Clear everything", act.clear),
-    sep(),
-    toggle,
-    copy,
-    button("✕", "Close · Esc twice, or Alt+Shift+P", act.close),
-  );
+  const close = button("close", "Close", "Esc Esc", act.close);
+  close.classList.add("close");
+
+  bar.append(grip(bar), marking, drawing, swatches, upload, edit, toggle, copy, close);
 
   return {
     el: bar,
     update(s) {
+      bar.dataset.output = s.output;
       for (const [t, b] of tools) b.setAttribute("aria-pressed", String(t === s.tool));
       for (const [c, b] of colors) b.setAttribute("aria-pressed", String(c === s.color));
       for (const [o, b] of outputs) b.setAttribute("aria-pressed", String(o === s.output));

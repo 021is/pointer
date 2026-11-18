@@ -14,6 +14,7 @@ export const CSS = `
 /* Pasted images: under the marks. They take the mouse with the page and pick tools (move,
    resize); with drawing tools the layer draws over them. */
 .pasted { position: absolute; inset: 0; pointer-events: none; }
+.pasted .catcher { position: fixed; left: -9999px; top: 0; width: 1px; height: 1px; opacity: 0; }
 .pimg { position: absolute; pointer-events: none; outline: 1px dashed rgba(124, 92, 255, 0.7); }
 .pimg img { display: block; width: 100%; height: 100%; user-select: none; }
 .pimg .grip {
@@ -22,30 +23,68 @@ export const CSS = `
 }
 .layer[data-tool="page"] .pimg, .layer[data-tool="pick"] .pimg { pointer-events: auto; cursor: move; }
 
+/* The bar: frosted dark glass, one violet accent, quiet until hovered. */
 .bar {
-  position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%);
-  display: flex; align-items: center; gap: 2px; padding: 5px;
-  background: rgba(22, 20, 32, 0.94); color: #f4f2ff;
-  border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
-  font: 500 13px/1 system-ui, sans-serif; pointer-events: auto; user-select: none;
+  position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 4px; padding: 6px;
+  background: linear-gradient(180deg, rgba(34, 30, 50, 0.86), rgba(18, 16, 28, 0.9));
+  -webkit-backdrop-filter: blur(16px) saturate(1.5); backdrop-filter: blur(16px) saturate(1.5);
+  color: #ece9fb; border: 1px solid rgba(255, 255, 255, 0.09); border-radius: 16px;
+  box-shadow: 0 18px 50px rgba(5, 3, 15, 0.55), 0 2px 6px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  font: 600 12.5px/1 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  letter-spacing: 0.01em; pointer-events: auto; user-select: none;
 }
-.bar .grip { width: 14px; height: 28px; cursor: grab; display: grid; place-items: center; opacity: .5; }
-.bar .sep { width: 1px; height: 20px; background: rgba(255, 255, 255, 0.14); margin: 0 4px; }
+.bar .group { display: inline-flex; align-items: center; gap: 1px; padding: 0 5px; position: relative; }
+.bar .group + .group::before, .bar .group + .switch::before {
+  content: ""; position: absolute; left: -3px; top: 7px; bottom: 7px; width: 1px; background: rgba(255, 255, 255, 0.1);
+}
+.bar[data-output="text"] [data-only="picture"] { display: none; }
+.bar .grip {
+  position: relative; width: 30px; height: 32px; display: grid; place-items: center; cursor: grab; color: #b9a8ff;
+  border-radius: 10px; transition: color .15s, background .15s;
+}
+.bar .grip:hover { color: #fff; background: rgba(124, 92, 255, 0.18); }
+.bar .grip:active { cursor: grabbing; }
+.bar .icon { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
 .bar button {
-  all: unset; height: 30px; min-width: 30px; padding: 0 7px; border-radius: 8px;
-  display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;
-  font: inherit; font-size: 15px; color: inherit; white-space: nowrap;
+  all: unset; position: relative; height: 34px; min-width: 34px; padding: 0; border-radius: 10px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px; cursor: pointer;
+  font: inherit; color: #c9c3e6; white-space: nowrap; transition: background .15s, color .15s, box-shadow .15s, transform .08s;
 }
-.bar button:hover { background: rgba(255, 255, 255, 0.1); }
+.bar button:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+.bar button:active { transform: translateY(1px); }
 .bar button:focus-visible { outline: 2px solid #9d85ff; outline-offset: 1px; }
-.bar button[aria-pressed="true"] { background: #7c5cff; color: #fff; }
-.bar button.copy { background: #f4f2ff; color: #16141f; font-size: 13px; font-weight: 650; padding: 0 12px; margin-left: 2px; }
-.bar button.copy:hover { background: #fff; }
-.bar .switch { display: inline-flex; padding: 2px; gap: 2px; border-radius: 9px; background: rgba(255, 255, 255, 0.08); }
-.bar .switch button { height: 26px; font-size: 12px; font-weight: 600; }
-.bar .dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, .35); }
-.bar button[aria-pressed="true"] .dot { border-color: #fff; }
+.bar button[aria-pressed="true"] {
+  color: #fff; background: linear-gradient(180deg, #8a6dff, #6a4cf0);
+  box-shadow: 0 0 0 1px rgba(173, 152, 255, 0.55), 0 6px 18px rgba(106, 76, 240, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+.bar button.swatch { min-width: 28px; padding: 0; }
+.bar button.swatch::after {
+  content: ""; width: 14px; height: 14px; border-radius: 50%; background: var(--swatch);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25); transition: transform .15s, box-shadow .15s;
+}
+.bar button.swatch[aria-pressed="true"] { background: none; box-shadow: none; }
+.bar button.swatch[aria-pressed="true"]::after { transform: scale(1.15); box-shadow: 0 0 0 2px #17142a, 0 0 0 4px var(--swatch); }
+.bar .switch {
+  display: inline-flex; gap: 2px; padding: 3px; margin-left: 6px; position: relative;
+  border-radius: 12px; background: rgba(0, 0, 0, 0.28); box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+.bar .switch button { height: 28px; padding: 0 10px 0 8px; border-radius: 9px; font-size: 12px; }
+.bar .switch button[aria-pressed="true"] { box-shadow: 0 2px 10px rgba(106, 76, 240, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.25); }
+.bar button.copy {
+  margin-left: 4px; padding: 0 14px 0 11px; color: #160f33; font-weight: 700;
+  background: linear-gradient(180deg, #ffffff, #e4ddff); box-shadow: 0 6px 20px rgba(157, 133, 255, 0.35), inset 0 -1px 0 rgba(106, 76, 240, 0.25);
+}
+.bar button.copy:hover { color: #160f33; background: linear-gradient(180deg, #ffffff, #d6cbff); }
+.bar button.close { min-width: 30px; color: #8f88ad; }
+.bar button.close:hover { color: #fff; background: rgba(255, 51, 102, 0.22); }
+/* Tooltips: the name and the key, above the button. */
+.bar [data-tip]:hover::before {
+  content: attr(data-tip); position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%);
+  padding: 6px 9px; border-radius: 8px; white-space: pre; pointer-events: none;
+  background: #0d0b16; color: #f1eeff; font: 600 11.5px/1 ui-sans-serif, system-ui, sans-serif;
+  border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+}
 
 .bubble {
   position: fixed; width: 280px; padding: 8px; pointer-events: auto;

@@ -181,3 +181,8 @@ export function wantsImage(state: State): boolean {
 
 /** The switch's other side. */
 export const otherOutput = (o: Output): Output => (o === "picture" ? "text" : "picture");
+
+const PICTURE_TOOLS = new Set<Tool>(["crop", "pen", "arrow", "box", "ellipse", "text"]);
+
+/** Tools that only make sense in a picture; the bar hides them in Text. */
+export const pictureOnly = (tool: Tool) => PICTURE_TOOLS.has(tool);

@@ -37,9 +37,14 @@ After a rebuild, press reload on the extension's card and reload the page.
 | P | pick: hover an element (the rest dims), ↑ parent, ↓ back down, ← → siblings, click or Enter picks, then a note |
 | C | comment: click anywhere, type, Enter. Click any number to edit its note (a pick's also reopens its panel); drag a comment's number to move it |
 | X | crop: click a component (↑ ↓ walk, Enter takes it) or drag a frame; several frames A, B… make one picture, stacked; draw and comment inside them |
-| S or 🎨 | the style panel for the last pick (again: away) |
-| Ctrl+V | paste an image (a screenshot, a mockup) at the mouse: it sticks to the page and scrolls with it; drag moves it and its corner resizes it (Shift: free), both with P or V; `[` `]` make it see-through (100/75/50/25%), Delete removes it. It is in the picture, and it lives until the page reloads |
-| click a placeholder | edits its text (the ⊕ boxes from the panel) |
+| S or Styles | the style panel for the last pick (again: away) |
+| Cmd/Ctrl+V or ⬆ Add image | paste an image (a screenshot, a mockup) at the mouse, or pick files with the bar's image button: it sticks to the page and scrolls with it; drag moves it and its corner resizes it (Shift: free), both with P or V; `[` `]` make it see-through (100/75/50/25%), Delete removes it. It is in the picture, and it lives until the page reloads |
+| click a placeholder | edits its text where you click (the ⊕ boxes from the panel), whatever the tool |
+| drawn text | drag it to move it, click it to edit it (empty it to remove it), with any tool but the drawing ones |
+
+The bar follows the **Picture \| Text** switch: in Text it shows only what works without a
+picture (page, pick, comment, styles, undo, clear); choosing a drawing tool switches back to
+Picture. The 021 mark at its left drags it.
 | D A B E T | pen, arrow, box, ellipse, text. **Shift**: straight line, 45° arrow, square, circle |
 | 1 2 3 | red, blue, yellow |
 | V | use the page (clicks go through, marks stay) |
