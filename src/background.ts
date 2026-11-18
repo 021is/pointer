@@ -24,6 +24,11 @@ chrome.action.onClicked.addListener((tab) => {
   void toggle(tab);
 });
 
+// The first install opens the welcome page (the extension's own page: no permission needed).
+chrome.runtime.onInstalled.addListener(({ reason }) => {
+  if (reason === "install") void chrome.tabs.create({ url: chrome.runtime.getURL("welcome.html") });
+});
+
 chrome.runtime.onMessage.addListener((message: unknown, sender, reply: (r: CaptureReply) => void) => {
   if (!isCaptureRequest(message)) return false;
   const windowId = sender.tab?.windowId;

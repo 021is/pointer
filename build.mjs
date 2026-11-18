@@ -22,6 +22,7 @@ const options = {
 
 await mkdir("dist/icons", { recursive: true });
 await copyFile("manifest.json", "dist/manifest.json");
+await copyFile("welcome.html", "dist/welcome.html");
 for (const name of await readdir("icons")) {
   if (name.endsWith(".png")) await copyFile(`icons/${name}`, `dist/icons/${name}`);
 }

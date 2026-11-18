@@ -16,7 +16,9 @@ concurrency:
 jobs:
   check:
     name: Check
-    runs-on: [self-hosted, "021"]
+    # Private: 021's own runners (no billed minutes). Public: GitHub's runners, never 021's: a
+    # public repo's pull requests must not run strangers' code on 021's machines.
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted","021"]') || 'ubuntu-latest' }}
     timeout-minutes: 10
     steps:
       # The whole history: gitleaks reads every commit.
@@ -54,6 +56,21 @@ jobs:
           name: pointer-dist
           path: dist/
           retention-days: 14
+      # The file the Chrome Web Store takes: dist's contents, the manifest at the zip's root.
+      - name: Store zip
+        id: zip
+        if: ${{ steps.build.outcome == 'success' && !github.event.repository.private }}
+        run: |
+          version=$(node -p "require('./manifest.json').version")
+          (cd dist && zip -qr "../pointer-$version.zip" .)
+          echo "file=pointer-$version.zip" >> "$GITHUB_OUTPUT"
+      - name: Upload the store zip
+        if: ${{ steps.zip.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: pointer-store-zip
+          path: ${{ steps.zip.outputs.file }}
+          retention-days: 30
 
       - name: Fetch gitleaks
         id: gitleaks
