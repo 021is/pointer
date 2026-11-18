@@ -18,7 +18,7 @@ dev-build information (React fibers, Vue and Svelte metadata, source maps).
 | Folder | What |
 |---|---|
 | `src/background.ts` | service worker: icon/shortcut → inject; `captureVisibleTab`; the welcome page on install; the preview tab |
-| `src/ui/` | the content script: shadow-rooted layer, toolbar, bubble, keys, state; `copy-flow.ts` (Copy, clear after copy, preview), `copy-menu.ts` (the split button), `move.ts` (the Move tool) |
+| `src/ui/` | the content script: shadow-rooted layer, toolbar, bubble, keys, state; `copy-flow.ts` (Copy, clear after copy, preview), `copy-menu.ts` (the split button), `move.ts` (the Move tool), `clear.ts` (Clear everything + Undo, the one way) |
 | `src/draw/`, `src/pick/`, `src/marks/` | drawing gestures, element picking, marks → SVG |
 | `src/capture/` | screenshot, crop, layout within the image budget, text strip, clipboard, cost estimate |
 | `src/preview.ts`, `preview.html` | the preview page: what Copy would give, from the service worker |
@@ -29,6 +29,7 @@ dev-build information (React fibers, Vue and Svelte metadata, source maps).
 | `src/bundle/` | the bundle's data and its text format, key styles, colours |
 | `icons/`, `store/`, `welcome.html` | the icon (SVG master + PNGs), the store listing and tile, the first-run page |
 | `test/` | vitest; pure modules, plus happy-dom for the DOM pieces |
+| `demo/`, `scripts/screenshots.mjs` | a small fictional Vite + React app to try Pointer on, and the store screenshots taken on it |
 
 ## Rules
 

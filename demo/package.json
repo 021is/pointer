@@ -1,0 +1,17 @@
+{
+  "name": "pointer-demo",
+  "private": true,
+  "description": "A small fictional React app to try Pointer on (and to make the store screenshots): npm i && npm run dev",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 5173 --strictPort"
+  },
+  "dependencies": {
+    "react": "19.2.9",
+    "react-dom": "19.2.9"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "5.2.0",
+    "vite": "7.3.7"
+  }
+}

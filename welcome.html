@@ -13,31 +13,65 @@
     <img src="icons/icon-128.png" alt="" class="mark">
     <div>
       <p class="eyebrow">Pointer by 021</p>
-      <h1>Pointer is ready.</h1>
+      <h1>✓ Pointer is installed.</h1>
     </div>
   </header>
-  <p class="lead">Show your coding agent exactly what to change. Point at the page, then paste one picture
-    with the source <strong>file:line</strong> of every element you marked into Claude Code, Cursor or
-    any AI chat.</p>
+  <p class="lead">Show your coding agent exactly what to change. Point at your page, click Copy, and paste
+    one picture with the source <strong>file:line</strong> of everything you marked into Claude Code, Cursor or
+    any AI chat. Pointer stays off until you turn it on, on the tab you choose.</p>
 
-  <p class="eyebrow">Start</p>
+  <p class="eyebrow">Start in four steps</p>
   <ol>
-    <li>Open the page you are working on. A dev build gives the file and the line.</li>
-    <li>Press <kbd>Alt+Shift+P</kbd>, or click Pointer's icon. Pin it from the puzzle menu to keep it in the toolbar.</li>
-    <li>Comment, pick, crop or draw. Then <strong>Copy</strong> and paste into your agent's chat.</li>
+    <li><strong>Open your app.</strong> Open the page you are building in Chrome. In development mode
+      (<code>npm run dev</code>) your agent also gets the file and line.</li>
+    <li><strong>Turn Pointer on.</strong> Press <kbd>Alt+Shift+P</kbd> (on a Mac <kbd>⌥⇧P</kbd>), or click
+      Pointer's icon. A dark bar appears at the bottom of the page: it is on.</li>
+    <li><strong>Show what you mean.</strong> Click where something should change, type what you want, press
+      <kbd>Enter</kbd>. A numbered pin marks it. Add as many as you like.</li>
+    <li><strong>Copy and paste.</strong> Click <strong>Copy</strong>, then paste into your agent's chat:
+      <kbd>Ctrl+V</kbd> in Claude Code's terminal (on a Mac too), <kbd>⌘V</kbd> or <kbd>Ctrl+V</kbd> in Cursor
+      and VS Code.</li>
   </ol>
+  <p class="note">No icon in the toolbar? Click the puzzle piece next to the address bar and pin Pointer.</p>
 
-  <p class="eyebrow">Keys</p>
+  <p class="eyebrow">Is it working?</p>
   <table>
-    <tr><td><kbd>C</kbd></td><td>Comment: click anywhere, type, Enter. Click a number to edit it.</td></tr>
-    <tr><td><kbd>P</kbd></td><td>Pick an element. <kbd>↑</kbd> <kbd>↓</kbd> walk to its parent or child; <kbd>Enter</kbd> takes it.</td></tr>
-    <tr><td><kbd>X</kbd></td><td>Crop a component (click) or a frame (drag). Several crops make one picture.</td></tr>
-    <tr><td><kbd>D</kbd> <kbd>A</kbd> <kbd>B</kbd> <kbd>E</kbd> <kbd>T</kbd></td><td>Pen, arrow, box, ellipse, text. <kbd>Shift</kbd> for straight lines and squares.</td></tr>
-    <tr><td><kbd>M</kbd></td><td>Move marks and pasted images. <kbd>Delete</kbd> removes the one under the mouse.</td></tr>
-    <tr><td><kbd>S</kbd></td><td>Styles of the last pick: change its CSS live; the changes go into the copy.</td></tr>
-    <tr><td><kbd>⌘V</kbd> <kbd>Ctrl+V</kbd></td><td>Paste a screenshot or a mockup onto the page. <kbd>[</kbd> <kbd>]</kbd> make it see-through.</td></tr>
-    <tr><td><kbd>⌘C</kbd> <kbd>Ctrl+C</kbd></td><td>Copy. <kbd>▾</kbd> next to Copy: picture + text, text only or picture only, each with its cost, and a preview.</td></tr>
-    <tr><td><kbd>Esc</kbd> <kbd>Esc</kbd></td><td>Close Pointer.</td></tr>
+    <tr><td>On</td><td>A dark bar sits at the bottom centre of the page, with Comment selected, and the
+      mouse is a crosshair.</td></tr>
+    <tr><td>Off</td><td>Press the shortcut again, click Pointer's icon again, press <kbd>Esc</kbd> twice, or
+      click the ✕ at the right end of the bar.</td></tr>
+  </table>
+
+  <p class="eyebrow">Nothing happens?</p>
+  <table>
+    <tr><td>A red <strong>!</strong> on the icon</td><td>Chrome lets no extension run on this page (chrome://
+      pages, the Web Store, the PDF viewer). Try it on your app's tab.</td></tr>
+    <tr><td>The shortcut does nothing</td><td>Another app may use it. Open <code>chrome://extensions/shortcuts</code>
+      and give Pointer a key of your own, or click the icon.</td></tr>
+    <tr><td>No file and line</td><td>Your app is not in development mode, or its framework has no source
+      information. Your agent still gets each element's text and selector, which is enough to find it.</td></tr>
+    <tr><td>A file:// page</td><td>Open <code>chrome://extensions</code>, then Pointer's <strong>Details</strong>, and
+      turn on <strong>Allow access to file URLs</strong>.</td></tr>
+  </table>
+
+  <p class="eyebrow">Tools and keys</p>
+  <table>
+    <tr><td><kbd>C</kbd> Comment</td><td>Click anywhere, type, <kbd>Enter</kbd>. Click a number to edit it,
+      drag it to move it.</td></tr>
+    <tr><td><kbd>P</kbd> Pick</td><td>Edit an element's CSS live: click it and its style box opens. <kbd>↑</kbd>
+      <kbd>↓</kbd> walk to its parent or child, <kbd>Enter</kbd> takes it. Your changes go into the copy.</td></tr>
+    <tr><td><kbd>X</kbd> Crop</td><td>Click a component or drag a frame. Several crops make one picture.</td></tr>
+    <tr><td><kbd>D</kbd> <kbd>A</kbd> <kbd>B</kbd> <kbd>E</kbd> <kbd>T</kbd></td><td>Pen, arrow, box, ellipse,
+      text. <kbd>Shift</kbd> gives straight lines, squares and circles.</td></tr>
+    <tr><td><kbd>M</kbd> Move</td><td>Drag marks and pasted images. <kbd>Delete</kbd> removes the one under the
+      mouse.</td></tr>
+    <tr><td><kbd>⌘V</kbd> <kbd>Ctrl+V</kbd></td><td>Paste a screenshot or a mockup onto the page. <kbd>[</kbd>
+      <kbd>]</kbd> make it see-through.</td></tr>
+    <tr><td><kbd>⌘C</kbd> <kbd>Ctrl+C</kbd></td><td>Copy. The <kbd>▾</kbd> next to Copy chooses picture + text,
+      text only or picture only, shows what each costs, and opens a preview.</td></tr>
+    <tr><td><kbd>⌘Z</kbd> <kbd>Ctrl+Z</kbd></td><td>Undo the last mark.</td></tr>
+    <tr><td><kbd>⇧⌫</kbd> <kbd>Shift+Delete</kbd></td><td>Clear everything. Changed your mind? Click
+      <strong>Undo</strong> in the message.</td></tr>
   </table>
 
   <p class="eyebrow">What your agent gets</p>
@@ -45,16 +79,16 @@
 Task: the user marked these elements on this page. For each [n]: open the file at that line …
 [1] pick · EventCard "Night Market Live" · src/features/events/EventCard.tsx:142
    changed: font-size 14px → 18px
-   note: make the title stand out
 [2] comment · Button "Filters" · src/components/ui/button.tsx:70 (in FiltersButton.tsx:26)
    note: remove this</pre>
-  <p class="note">The file and line come from your app's dev build (React, Vue, Svelte). On any other page you
-    still get the element, its text and its styles.</p>
+  <p class="note">The file and line come from your app's development build (React, Vue, Svelte). On any other
+    page your agent still gets the element, its text and its styles.</p>
 
   <p class="eyebrow">Privacy</p>
   <p>Pointer runs only on the tab where you turn it on, and only until you turn it off. It stores nothing and
     sends nothing: what you mark goes to your clipboard, and you decide where to paste it.
     <a href="https://021.is/plugins/pointer/privacy">The privacy policy</a>.</p>
+  <p class="note">To open this page again: right-click Pointer's icon and choose <strong>Options</strong>.</p>
 
   <footer class="foot">
     <a class="by" href="https://021.is/plugins/pointer"><img class="light" src="brand/021.svg" alt="021"><img class="dark" src="brand/021-white.svg" alt="021"> Pointer</a>
