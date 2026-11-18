@@ -16,6 +16,8 @@ export type KeyActions = {
   walk: (key: WalkKey) => void;
   take: () => void;
   panel: () => void;
+  /** Cmd/Ctrl+V outside a field: the paste is steered to Pointer (the key itself is not taken). */
+  beforePaste: () => void;
   /** True with a pasted image under the mouse: only then are [ ] Delete Backspace Pointer's. */
   overPasted: () => boolean;
   see: (direction: -1 | 1) => void;
@@ -28,6 +30,7 @@ export const isEditable = (t: EventTarget | null | undefined) =>
 export function keyHandler(tool: () => Tool, run: KeyActions): (e: KeyboardEvent) => void {
   return (e) => {
     if (isEditable(e.composedPath()[0])) return;
+    if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === "v") return run.beforePaste();
     const cmd = commandFor(e, tool());
     if (!cmd) return;
     if (cmd.type === "copy" && !getSelection()?.isCollapsed) return;

@@ -20,6 +20,10 @@ export type PastedLayer = {
   el: HTMLElement;
   paint: () => void;
   onPaste: (e: ClipboardEvent) => void;
+  /** Cmd/Ctrl+V outside any field: steer the coming paste into Pointer's hidden field. */
+  catchPaste: () => void;
+  /** The bar's upload button: a file picker, the images land in the middle of the view. */
+  upload: () => void;
   /** A press on a pasted image: moves or resizes it. False when the press is not on one. */
   onDown: (e: PointerEvent) => boolean;
   track: (e: PointerEvent) => void;
@@ -59,12 +63,8 @@ export function createPastedLayer(host: PasteHost): PastedLayer {
     }
   }
 
-  async function onPaste(e: ClipboardEvent) {
-    if (isEditable(e.composedPath()[0] ?? null)) return;
-    const file = [...(e.clipboardData?.files ?? [])].find((f) => f.type.startsWith("image/"));
-    if (!file) return;
-    e.preventDefault();
-    e.stopImmediatePropagation();
+  /** An image file onto the page, centred on `at` (viewport coordinates). */
+  async function addFile(file: File, at: Point): Promise<boolean> {
     const img = new Image();
     img.src = URL.createObjectURL(file);
     img.draggable = false;
@@ -72,14 +72,62 @@ export function createPastedLayer(host: PasteHost): PastedLayer {
       await img.decode();
     } catch {
       URL.revokeObjectURL(img.src);
-      return host.say("That image could not be read.", "error");
+      host.say(`${file.name || "That image"} could not be read.`, "error");
+      return false;
     }
-    const at = { x: mouse.x + scrollX, y: mouse.y + scrollY };
     const natural = { w: img.naturalWidth, h: img.naturalHeight };
-    const rect = landing(natural, devicePixelRatio, at, { w: innerWidth, h: innerHeight });
+    const rect = landing(natural, devicePixelRatio, { x: at.x + scrollX, y: at.y + scrollY }, { w: innerWidth, h: innerHeight });
     host.add({ kind: "image", img, rect, opacity: 1 });
-    host.say("Image pasted: drag it, its corner resizes (Shift: free), [ ] see-through, Del removes.");
+    return true;
   }
+
+  const HINT = "drag it, its corner resizes (Shift: free), [ ] see-through, Delete removes";
+
+  // macOS Chrome pastes only into something editable: Cmd+V on a page with nothing focused does
+  // nothing at all. So on Cmd/Ctrl+V Pointer focuses this hidden field for a moment, the paste
+  // lands here, and the focus goes back (Edvard's Mac, 2026-11-18).
+  const catcher = Object.assign(document.createElement("textarea"), { className: "catcher", tabIndex: -1 });
+  catcher.setAttribute("aria-hidden", "true");
+  el.append(catcher);
+  let back: HTMLElement | null = null;
+  let release = 0;
+  const giveBack = () => {
+    clearTimeout(release);
+    catcher.value = "";
+    catcher.blur();
+    back?.focus({ preventScroll: true });
+    back = null;
+  };
+
+  function catchPaste() {
+    back = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    catcher.focus({ preventScroll: true });
+    clearTimeout(release);
+    release = window.setTimeout(giveBack, 400);
+  }
+
+  async function onPaste(e: ClipboardEvent) {
+    const target = e.composedPath()[0] ?? null;
+    if (target !== catcher && isEditable(target)) return;
+    const file = [...(e.clipboardData?.files ?? [])].find((f) => f.type.startsWith("image/"));
+    if (target === catcher) giveBack();
+    if (!file) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    if (await addFile(file, mouse)) host.say(`Image pasted: ${HINT}.`);
+  }
+
+  const picker = Object.assign(document.createElement("input"), { type: "file", accept: "image/*", multiple: true, hidden: true });
+  el.append(picker);
+  picker.addEventListener("change", async () => {
+    const files = [...(picker.files ?? [])];
+    picker.value = "";
+    let added = 0;
+    for (const [i, file] of files.entries()) {
+      if (await addFile(file, { x: innerWidth / 2 + i * 24, y: innerHeight / 2 + i * 24 })) added++;
+    }
+    if (added) host.say(`${added === 1 ? "Image" : `${added} images`} added: ${HINT}.`);
+  });
 
   function onDown(e: PointerEvent): boolean {
     const target = e.target instanceof Element ? e.target.closest(".pimg") : null;
@@ -104,6 +152,8 @@ export function createPastedLayer(host: PasteHost): PastedLayer {
     el,
     paint,
     onPaste: (e) => void onPaste(e),
+    catchPaste,
+    upload: () => picker.click(),
     onDown,
     track: (e) => {
       mouse = { x: e.clientX, y: e.clientY };

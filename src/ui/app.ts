@@ -17,12 +17,16 @@ import { CSS } from "./css";
 import { drag as dragOn } from "./drag";
 import type { Extension, ExtensionHost } from "./extension";
 import { keyHandler } from "./keyboard";
+import { notes } from "./notes";
+import { handles, textAt } from "./handles";
 import {
+  type Output,
   type State,
   type Tool,
   initialState,
   liveScene,
   otherOutput,
+  pictureOnly,
   pinsOf,
   scenePins,
   targetsElements,
@@ -59,7 +63,8 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
   const bar = createToolbar({
     tool: setTool,
     color: (c) => update(() => (state.color = c)),
-    output: (o) => update(() => (state.output = o)),
+    output: setOutput,
+    upload: () => pasted.upload(),
     styles: () => hooks.togglePanel(lastPick()),
     undo,
     clear,
@@ -87,10 +92,20 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
     render();
   }
 
+  /** A drawing tool belongs to the picture: choosing one in Text switches back to Picture. */
   function setTool(tool: Tool) {
     update(() => {
       state.tool = tool;
       state.hover = null;
+      if (pictureOnly(tool)) state.output = "picture";
+    });
+  }
+
+  /** Text hides the drawing tools, so a drawing tool in hand goes back to pick. */
+  function setOutput(output: Output) {
+    update(() => {
+      state.output = output;
+      if (output === "text" && pictureOnly(state.tool)) state.tool = "pick";
     });
   }
 
@@ -108,35 +123,7 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
     });
   }
 
-  async function addPin(kind: Pin["kind"], el: Element, at: Point) {
-    const pin: Pin = { kind, color: state.color, el, at, note: "" };
-    update(() => state.marks.push(pin));
-    const view = { x: at.x - scrollX, y: at.y - scrollY };
-    const note = await openBubble(root, {
-      at: view,
-      placeholder: kind === "pick" ? "Note (optional)" : "Comment",
-      hint: kind === "pick" ? "Enter saves · Esc skips · S or 🎨: its styles" : "Enter saves · Shift+Enter new line · Esc skips",
-    });
-    if (kind === "comment" && !note) return removePin(pin);
-    update(() => (pin.note = note ?? ""));
-  }
-
-  /** A pick of an element already picked opens that pick's note: no twins. */
-  function pick(el: Element, at: Point) {
-    const twin = pinsOf(state.marks).find((p) => p.kind === "pick" && p.el === el);
-    if (twin) return void editNote(twin, { x: at.x - scrollX, y: at.y - scrollY });
-    void addPin("pick", el, at);
-  }
-
-  function removePin(pin: Pin) {
-    hooks.onRemove(pin);
-    update(() => (state.marks = state.marks.filter((m) => m !== pin)));
-  }
-
-  async function editNote(pin: Pin, view: Point) {
-    const note = await openBubble(root, { at: view, placeholder: "Note", value: pin.note, hint: "Enter saves · Esc keeps it" });
-    if (note !== null) update(() => (pin.note = note));
-  }
+  const { addPin, pick, removePin, editNote, editText } = notes({ root, state, update, hooks: () => hooks });
 
   function pinAt(view: Point): Pin | undefined {
     const drawn = scenePins(state.marks, layout());
@@ -145,21 +132,14 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
   }
 
   const { cropElement, startCrop } = cropGestures({ state, update, render, say, drag });
-
-  /** A number is a handle, whatever the tool: a click edits its note (a pick's also opens its panel); a comment's number drags after 4px. */
-  function grabPin(e: PointerEvent, pin: Pin, view: Point, page: Point) {
-    let moved = false;
-    const move = (p: Point) => {
-      if (pin.kind !== "comment" || (!moved && near(p, page, 4))) return;
-      moved = true;
-      update(() => (pin.at = p));
-    };
-    drag(e, move, () => {
-      if (moved) return;
-      if (pin.kind === "pick") hooks.onPick(pin);
-      void editNote(pin, view);
-    });
-  }
+  const { grabPin, grabText } = handles({
+    state,
+    update,
+    drag,
+    editNote: (pin, view) => void editNote(pin, view),
+    editText: (text, view) => void editText(text, view),
+    onPick: (pin) => hooks.onPick(pin),
+  });
 
   function onDown(e: PointerEvent) {
     if (e.button !== 0 || isBubbleOpen(root)) return;
@@ -171,9 +151,13 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
     e.preventDefault();
     if (pin) return grabPin(e, pin, view, page);
     if (pasted.onDown(e)) return;
+    // Drawing tools draw over everything; the others grab a drawn text first.
+    const text = DRAW.has(tool) ? undefined : textAt(state.marks, page);
+    if (text) return grabText(e, text, view, page);
     const under = elementAt(view.x, view.y, host);
+    // A ⊕ placeholder is Pointer's own: a click edits its label, whatever the tool.
     const box = placeholderAt(under);
-    if (box && tool !== "comment") return editPlaceholder(box);
+    if (box) return editPlaceholder(box, view);
     if (tool === "pick") {
       const el = state.hover?.el ?? under;
       if (el) pick(el, page);
@@ -211,7 +195,7 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
   const onKey = keyHandler(() => state.tool, {
     tool: setTool,
     color: (c) => update(() => (state.color = c)),
-    image: () => update(() => (state.output = otherOutput(state.output))),
+    image: () => setOutput(otherOutput(state.output)),
     undo,
     copy,
     escape: () => (state.tool === "page" ? close() : setTool("page")),
@@ -229,6 +213,7 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
       pick(el, { x: r.x + scrollX, y: r.y + scrollY });
     },
     panel: () => hooks.togglePanel(lastPick()),
+    beforePaste: () => pasted.catchPaste(),
     overPasted: () => pasted.hovered() !== undefined,
     see: (direction) => {
       const p = pasted.hovered();
