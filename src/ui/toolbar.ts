@@ -20,6 +20,7 @@ export const TOOLS: readonly Entry[] = [
   { tool: "page", key: "V", icon: "↖", title: "Use the page (clicks go through)" },
   { tool: "pick", key: "P", icon: "⌖", title: "Pick an element (↑ ↓ ← → walk, Enter picks)" },
   { tool: "comment", key: "C", icon: "💬", title: "Comment: click to pin a note" },
+  { tool: "crop", key: "X", icon: "⛶", title: "Crop: click a component or drag a frame (several: A, B…)" },
   { tool: "pen", key: "D", icon: "✎", title: "Pen (Shift: straight)" },
   { tool: "arrow", key: "A", icon: "➚", title: "Arrow (Shift: 0/45/90°)" },
   { tool: "box", key: "B", icon: "▭", title: "Box (Shift: square)" },

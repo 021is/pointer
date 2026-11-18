@@ -7,12 +7,14 @@ import { renderSvg } from "../marks/svg";
 import type { Pin } from "../marks/types";
 import { liveLayout, shortName, viewRect } from "../pick/describe";
 import { elementAt, walk } from "../pick/walk";
-import { type Point, near } from "../shared/geometry";
+import { type Point, dragRect, near } from "../shared/geometry";
 import { componentOf } from "../source/client";
 import { isBubbleOpen, openBubble } from "./bubble";
 import { CSS } from "./css";
+import { drag as dragOn } from "./drag";
 import { commandFor } from "./keys";
-import { type State, type Tool, initialState, liveScene, pinsOf, scenePins } from "./state";
+import { type State, type Tool, initialState, liveScene, pinsOf, scenePins, targetsElements } from "./state";
+import { createToast } from "./toast";
 import { createToolbar } from "./toolbar";
 
 export type App = { open: () => void; close: () => void; toggle: () => void };
@@ -22,7 +24,8 @@ export type Extension = {
   changesOf: (pin: Pin) => string[];
   onPick: (pin: Pin) => void;
   onRemove: (pin: Pin) => void;
-  togglePanel: () => void;
+  /** S: the panel for the last pick, or away again. */
+  togglePanel: (lastPick: Pin | undefined) => void;
 };
 
 /** What the app gives the panel: a redraw, and a pin's number as the bundle shows it. */
@@ -41,8 +44,8 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
   style.textContent = CSS;
   const layer = document.createElement("div");
   layer.className = "layer";
-  const toast = Object.assign(document.createElement("div"), { className: "toast" });
-  toast.setAttribute("role", "status");
+  const toast = createToast();
+  const say = toast.say;
   root.append(style, layer);
   const hooks = ext(root, {
     rerender: () => render(),
@@ -57,7 +60,9 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
     copy,
     close,
   });
-  root.append(bar.el, toast);
+  root.append(bar.el, toast.el);
+  const drag = (down: PointerEvent, move: (p: Point, shift: boolean) => void, end: () => void) =>
+    dragOn(layer, down, move, end);
 
   const layout = liveLayout;
   let frame = 0;
@@ -73,15 +78,6 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
   function update(change: () => void) {
     change();
     render();
-  }
-
-  let toastTimer = 0;
-  function say(message: string, kind: "ok" | "error" = "ok") {
-    toast.textContent = message;
-    toast.dataset.kind = kind;
-    toast.setAttribute("data-show", "");
-    clearTimeout(toastTimer);
-    toastTimer = window.setTimeout(() => toast.removeAttribute("data-show"), kind === "error" ? 6000 : 2600);
   }
 
   function setTool(tool: Tool) {
@@ -108,7 +104,6 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
   async function addPin(kind: Pin["kind"], el: Element, at: Point) {
     const pin: Pin = { kind, color: state.color, el, at, note: "" };
     update(() => state.marks.push(pin));
-    if (kind === "pick") hooks.onPick(pin);
     const view = { x: at.x - scrollX, y: at.y - scrollY };
     const note = await openBubble(root, {
       at: view,
@@ -136,18 +131,30 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
     return hit ? pins[hit.n - 1] : undefined;
   }
 
-  function drag(down: PointerEvent, move: (p: Point, shift: boolean) => void, end: () => void) {
-    layer.setPointerCapture(down.pointerId);
-    const onMove = (e: PointerEvent) => move({ x: e.clientX + scrollX, y: e.clientY + scrollY }, e.shiftKey);
-    const onUp = () => {
-      layer.removeEventListener("pointermove", onMove);
-      layer.removeEventListener("pointerup", onUp);
-      layer.removeEventListener("pointercancel", onUp);
-      end();
-    };
-    layer.addEventListener("pointermove", onMove);
-    layer.addEventListener("pointerup", onUp);
-    layer.addEventListener("pointercancel", onUp);
+  /** A crop of the component's box (followed live), its page rect kept for when it leaves. */
+  function cropElement(el: Element) {
+    const r = viewRect(el);
+    update(() => state.marks.push({ kind: "crop", el, rect: { ...r, x: r.x + scrollX, y: r.y + scrollY } }));
+  }
+
+  /** Crop tool: a click takes the component under the cursor, a drag draws a free frame. */
+  function startCrop(e: PointerEvent, page: Point, under: Element | null) {
+    let moved = false;
+    drag(
+      e,
+      (p) => {
+        if (!moved && near(p, page, 4)) return;
+        moved = true;
+        update(() => (state.framing = dragRect(page, p, false)));
+      },
+      () => {
+        const frame = state.framing;
+        state.framing = null;
+        if (!moved) return under ? cropElement(under) : render();
+        if (frame && frame.w >= 8 && frame.h >= 8) state.marks.push({ kind: "crop", el: null, rect: frame });
+        render();
+      },
+    );
   }
 
   function onDown(e: PointerEvent) {
@@ -178,6 +185,8 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
     if (tool === "pick") {
       const el = state.hover?.el ?? elementAt(view.x, view.y, host);
       if (el) void addPin("pick", el, page);
+    } else if (tool === "crop") {
+      startCrop(e, page, state.hover?.el ?? elementAt(view.x, view.y, host));
     } else if (tool === "comment") {
       const el = elementAt(view.x, view.y, host);
       if (el) void addPin("comment", el, page);
@@ -206,7 +215,7 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
     if (e.buttons !== 0 || state.draft) return;
     const onNumber = pinAt({ x: e.clientX, y: e.clientY }) !== undefined;
     layer.style.cursor = onNumber ? "pointer" : "";
-    if (state.tool === "pick") setHover(onNumber ? null : elementAt(e.clientX, e.clientY, host));
+    if (targetsElements(state.tool)) setHover(onNumber ? null : elementAt(e.clientX, e.clientY, host));
   }
 
   const trail: Element[] = [];
@@ -239,14 +248,14 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
         return;
       case "pick-hover": {
         const el = state.hover?.el;
-        if (el) {
-          const r = viewRect(el);
-          void addPin("pick", el, { x: r.x + scrollX, y: r.y + scrollY });
-        }
+        if (!el) return;
+        if (state.tool === "crop") return cropElement(el);
+        const r = viewRect(el);
+        void addPin("pick", el, { x: r.x + scrollX, y: r.y + scrollY });
         return;
       }
       case "panel":
-        return hooks.togglePanel();
+        return hooks.togglePanel(pinsOf(state.marks).findLast((p) => p.kind === "pick"));
     }
   }
 

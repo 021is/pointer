@@ -36,6 +36,8 @@ After a rebuild, press reload on the extension's card and reload the page.
 | Alt+Shift+P | on / off for this tab (the toolbar icon does the same) |
 | P | pick: hover an element (the rest dims), ↑ parent, ↓ back down, ← → siblings, click or Enter picks, then a note |
 | C | comment: click anywhere, type, Enter. Click any number to edit its note (a pick's also reopens its panel); drag a comment's number to move it |
+| X | crop: click a component (↑ ↓ walk, Enter takes it) or drag a frame; several frames A, B… make one picture, stacked; draw and comment inside them |
+| S | the style panel for the last pick (again: away) |
 | D A B E T | pen, arrow, box, ellipse, text. **Shift**: straight line, 45° arrow, square, circle |
 | 1 2 3 | red, blue, yellow |
 | V | use the page (clicks go through, marks stay) |
@@ -45,14 +47,15 @@ After a rebuild, press reload on the extension's card and reload the page.
 
 ### The style panel
 
-Picking an element opens a panel at the top right (it floats; the page's width never changes).
+A pick opens only its note. The panel comes when asked: S (the last pick) or a click on a pick's
+number. It sits at the top right and floats: the page's width never changes.
 It lists the CSS that reaches the element (its own rules, resets that hit every element left
 out) and its classes. Click a value to change it, ↑/↓ nudge the first number (Shift ×10, Alt
 ×0.1), Enter applies; the checkbox turns a property off, × removes it, `+ add` takes
 `gap: 12px`. A class chip's × removes the class; `+ class` adds one (marked "not built yet" when
 the page's CSS has no rule for it, as with a Tailwind class the code never used). ⊕ before /
 after puts a dashed placeholder next to the element: type its label right away. ↺ Reset puts the
-element back. S collapses the panel; clicking a pick's number opens its panel again.
+element back. − collapses the panel, ✕ or S closes it.
 
 Edits are live, on that element only, and Copy adds them under `changed:`:
 

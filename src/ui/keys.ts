@@ -3,7 +3,7 @@
 
 import type { Color } from "../marks/types";
 import type { WalkKey } from "../pick/walk";
-import type { Tool } from "./state";
+import { type Tool, targetsElements } from "./state";
 import { COLOR_KEYS, TOOLS } from "./toolbar";
 
 export type Command =
@@ -31,8 +31,8 @@ export function commandFor(e: KeyInput, tool: Tool): Command | null {
   }
   if (mod || e.altKey) return null;
   if (e.key === "Escape") return { type: "escape" };
-  if (tool === "pick" && WALK.has(e.key)) return { type: "walk", key: e.key as WalkKey };
-  if (tool === "pick" && e.key === "Enter") return { type: "pick-hover" };
+  if (targetsElements(tool) && WALK.has(e.key)) return { type: "walk", key: e.key as WalkKey };
+  if (targetsElements(tool) && e.key === "Enter") return { type: "pick-hover" };
   const k = e.key.toUpperCase();
   const entry = TOOLS.find((t) => t.key === k);
   if (entry) return { type: "tool", tool: entry.tool };

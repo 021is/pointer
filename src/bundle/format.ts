@@ -2,7 +2,7 @@
 // Every line earns its place: what is unknown says why, what is empty is left out.
 
 import { imageTokens } from "../shared/geometry";
-import type { Bundle, DrawingSummary, PinInfo, Source } from "./types";
+import type { Bundle, CropInfo, DrawingSummary, PinInfo, Source } from "./types";
 
 /** The page's address without query or hash: a URL can carry a token, and this goes into a chat. */
 export function safeUrl(href: string): string {
@@ -60,10 +60,19 @@ function formatPin(p: PinInfo): string[] {
   return lines;
 }
 
+/** "crop A · ProfileHeader ← ProfilePage · src/…/Header.tsx:42 · 320×180", or "crop B · frame 400×300". */
+export function formatCrop(c: CropInfo): string {
+  const size = `${c.size.w}×${c.size.h}`;
+  const info = c.component;
+  if (!info) return `crop ${c.label} · frame ${size}`;
+  const who = info.chain.length ? `${info.chain.join(" ← ")} · ` : "";
+  const file = info.where.kind === "found" ? `${formatSource(info.where.source)} · ` : "";
+  return `crop ${c.label} · ${who}${file}${size}`;
+}
+
 export function formatBundle(b: Bundle): string {
-  const frameworks = [...new Set(b.pins.map((p) => p.component.framework))].filter(
-    (f) => f !== "none",
-  );
+  const components = [...b.pins.map((p) => p.component), ...b.crops.flatMap((c) => (c.component ? [c.component] : []))];
+  const frameworks = [...new Set(components.map((c) => c.framework))].filter((f) => f !== "none");
   const head = [`Pointer · ${b.url} · viewport ${b.viewport.w}×${b.viewport.h}`, ...frameworks];
   const lines = [head.join(" · ")];
   if (b.image) {
@@ -71,6 +80,7 @@ export function formatBundle(b: Bundle): string {
       `image: ${b.image.w}×${b.image.h} (≈${imageTokens(b.image)} tokens), numbers on it match [n] below`,
     );
   }
+  for (const crop of b.crops) lines.push(formatCrop(crop));
   const drawn = formatDrawings(b.drawings);
   if (drawn) lines.push(drawn);
   for (const pin of b.pins) lines.push(...formatPin(pin));

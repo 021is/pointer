@@ -1,12 +1,12 @@
 // Pointer's state and the pure steps from it to a Scene (what svg.ts draws).
 
 import type { DrawingSummary } from "../bundle/types";
-import type { Scene, ScenePin } from "../marks/svg";
-import { type Color, type Mark, type Pin, type Shape, isPin } from "../marks/types";
+import type { Frame, Scene, ScenePin } from "../marks/svg";
+import { type Color, type Crop, type Mark, type Pin, type Shape, cropLabel, isCrop, isPin, isShape } from "../marks/types";
 import type { Point, Rect } from "../shared/geometry";
 import { boundsOf, dragRect, inflate } from "../shared/geometry";
 
-export type Tool = "page" | "pick" | "comment" | "pen" | "arrow" | "box" | "ellipse" | "text";
+export type Tool = "page" | "pick" | "comment" | "crop" | "pen" | "arrow" | "box" | "ellipse" | "text";
 
 export type State = {
   tool: Tool;
@@ -14,18 +14,23 @@ export type State = {
   marks: Mark[];
   /** The shape being drawn right now, in page coordinates. */
   draft: Shape | null;
+  /** The crop frame being dragged right now, in page coordinates. */
+  framing: Rect | null;
   hover: { el: Element; label: string } | null;
   /** Copy with a picture even when only picks and comments are on the page. */
   forceImage: boolean;
 };
 
 export function initialState(): State {
-  return { tool: "pick", color: "red", marks: [], draft: null, hover: null, forceImage: false };
+  return { tool: "pick", color: "red", marks: [], draft: null, framing: null, hover: null, forceImage: false };
 }
 
 export const pinsOf = (marks: readonly Mark[]): Pin[] => marks.filter(isPin);
-export const shapesOf = (marks: readonly Mark[]): Shape[] =>
-  marks.filter((m): m is Shape => !isPin(m));
+export const shapesOf = (marks: readonly Mark[]): Shape[] => marks.filter(isShape);
+export const cropsOf = (marks: readonly Mark[]): Crop[] => marks.filter(isCrop);
+
+/** Picking and cropping both hover elements, walk them with the arrows and take them with Enter. */
+export const targetsElements = (tool: Tool) => tool === "pick" || tool === "crop";
 
 /** A shape moved by (dx, dy): page ↔ viewport coordinates. */
 export function moveShape(s: Shape, dx: number, dy: number): Shape {
@@ -83,15 +88,35 @@ export function scenePins(marks: readonly Mark[], layout: Layout): ScenePin[] {
   });
 }
 
-/** What the overlay shows: marks, the draft, and in pick mode the hover with the rest dimmed. */
+/** Crop frames in the viewport: a component's box (with 4px of air), or the dragged rectangle. */
+export function sceneFrames(marks: readonly Mark[], layout: Layout): Frame[] {
+  return cropsOf(marks).map((c, i) => ({
+    label: cropLabel(i),
+    rect: c.el?.isConnected
+      ? inflate(layout.rectOf(c.el), 4)
+      : { ...c.rect, x: c.rect.x - layout.scroll.x, y: c.rect.y - layout.scroll.y },
+  }));
+}
+
+/**
+ * What the overlay shows: marks, the draft, the frames. Picking or cropping dims all but the
+ * hovered element; otherwise frames dim what lies outside them.
+ */
 export function liveScene(state: State, layout: Layout): Scene {
   const toView = (s: Shape) => moveShape(s, -layout.scroll.x, -layout.scroll.y);
   const shapes = shapesOf(state.marks).map(toView);
   if (state.draft) shapes.push(toView(state.draft));
   const pins = scenePins(state.marks, layout);
-  if (state.tool !== "pick" || !state.hover) return { shapes, pins };
-  const rect = layout.rectOf(state.hover.el);
-  return { shapes, pins, dim: { holes: [rect], alpha: 0.45 }, hover: { rect, label: state.hover.label } };
+  const frames = sceneFrames(state.marks, layout);
+  if (state.framing) {
+    const f = state.framing;
+    frames.push({ label: "", rect: { ...f, x: f.x - layout.scroll.x, y: f.y - layout.scroll.y } });
+  }
+  if (targetsElements(state.tool) && state.hover) {
+    const rect = layout.rectOf(state.hover.el);
+    return { shapes, pins, frames, dim: { holes: [rect], alpha: 0.45 }, hover: { rect, label: state.hover.label } };
+  }
+  return frames.length ? { shapes, pins, frames, dim: { holes: frames.map((f) => f.rect), alpha: 0.35 } } : { shapes, pins };
 }
 
 /** What the picture shows: the marks, with a light dim around picked elements. */
@@ -120,7 +145,12 @@ export function summarize(shapes: readonly Shape[]): DrawingSummary {
   };
 }
 
-/** The picture is sent when something is drawn, when asked for, or when nothing is marked. */
+/** The picture is sent when something is drawn or cropped, when asked for, or when nothing is marked. */
 export function wantsImage(state: State): boolean {
-  return state.forceImage || shapesOf(state.marks).length > 0 || pinsOf(state.marks).length === 0;
+  return (
+    state.forceImage ||
+    shapesOf(state.marks).length > 0 ||
+    cropsOf(state.marks).length > 0 ||
+    pinsOf(state.marks).length === 0
+  );
 }

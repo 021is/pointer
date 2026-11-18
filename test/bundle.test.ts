@@ -39,6 +39,7 @@ const comment: PinInfo = {
 const bundle: Bundle = {
   url: "https://live.danceclub.dev/events/42",
   viewport: { w: 1280, h: 800 },
+  crops: [],
   pins: [pick, comment],
   drawings: { arrows: 1, boxes: 2, ellipses: 0, pens: 0, texts: ["bigger"] },
   image: { w: 640, h: 380 },

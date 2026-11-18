@@ -7,10 +7,15 @@ import { COLORS, type Color, type Shape } from "./types";
 /** A pin as drawn: its number, its badge position and, for a pick, the element's outline. */
 export type ScenePin = { n: number; color: Color; badge: Point; outline?: Rect };
 
+/** A crop frame as drawn on the page: its letter and its box ("" while it is being dragged). */
+export type Frame = { label: string; rect: Rect };
+
 /** Everything to draw, in viewport coordinates. */
 export type Scene = {
   shapes: readonly Shape[];
   pins: readonly ScenePin[];
+  /** Crop frames, shown on the page only (the picture is cut to them instead). */
+  frames?: readonly Frame[];
   /** Darkens everything except the holes (the hovered or picked elements). */
   dim?: { holes: readonly Rect[]; alpha: number };
   /** The pick tool's hover: an outline and a label such as "ProfileCard · div.card 320×180". */
@@ -102,10 +107,24 @@ function hoverSvg(view: Rect, rect: Rect, label: string): string {
   );
 }
 
+/** The crop frames' green, on the page and on the picture's letter tabs. */
+export const FRAME_INK = "#2fd67b";
+const FRAME = FRAME_INK;
+
+function frameSvg(f: Frame): string {
+  const { x, y, w, h } = f.rect;
+  const tab = f.label
+    ? `<rect x="${n(x)}" y="${n(y - 20)}" width="${n(14 + f.label.length * 8)}" height="20" rx="4" fill="${FRAME}"/>` +
+      `<text x="${n(x + 7)}" y="${n(y - 10)}" fill="#08130d" font-family="system-ui,sans-serif" font-size="12" font-weight="700" dominant-baseline="central">${escapeXml(f.label)}</text>`
+    : "";
+  return `<rect x="${n(x)}" y="${n(y)}" width="${n(w)}" height="${n(h)}" fill="none" stroke="${FRAME}" stroke-width="2" stroke-dasharray="8 4"/>${tab}`;
+}
+
 /** The scene as one SVG document covering `view` (the viewport, or the picture's crop). */
 export function renderSvg(scene: Scene, view: Rect): string {
   const parts = [
     scene.dim ? dimSvg(view, scene.dim.holes, scene.dim.alpha) : "",
+    ...(scene.frames ?? []).map(frameSvg),
     ...scene.shapes.map(shapeSvg),
     scene.hover ? hoverSvg(view, scene.hover.rect, scene.hover.label) : "",
     ...scene.pins.map(pinSvg),
