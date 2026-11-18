@@ -16,6 +16,7 @@ A Chrome MV3 extension (TypeScript, esbuild, no framework). Born in flight TF146
 | `src/ui/` | the content script: shadow-rooted layer, toolbar, bubble, keys, state |
 | `src/draw/`, `src/pick/`, `src/marks/` | drawing gestures, element picking, marks → SVG |
 | `src/capture/` | screenshot, crop, compose, clipboard |
+| `src/panel/` | the style panel: matched CSS, live edits on one element, their diff |
 | `src/source/` | the page-world probe: framework, component chain, file:line via source maps |
 | `src/bundle/` | the bundle's data and its text format, key styles, colours |
 | `test/` | vitest, pure modules only |
