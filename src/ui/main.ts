@@ -1,0 +1,23 @@
+// The content script. Injected on every click of the icon (or Alt+Shift+P): the first time it
+// opens Pointer, after that it turns it on and off, keeping what was drawn.
+
+import { type App, createApp } from "./app";
+
+declare global {
+  interface Window {
+    __pointer?: App;
+  }
+}
+
+if (window.__pointer) {
+  window.__pointer.toggle();
+} else {
+  const app = createApp(() => ({
+    changesOf: () => [],
+    onPick: () => {},
+    onRemove: () => {},
+    togglePanel: () => {},
+  }));
+  window.__pointer = app;
+  app.open();
+}
