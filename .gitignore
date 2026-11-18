@@ -1,5 +1,6 @@
 /node_modules
 /dist
+/icon-options
 *.tsbuildinfo
 .env*
 .DS_Store
