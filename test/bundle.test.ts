@@ -50,7 +50,7 @@ describe("formatBundle", () => {
     expect(formatBundle(bundle)).toBe(
       [
         "Pointer · https://live.danceclub.dev/events/42 · viewport 1280×800 · react",
-        "How to read: [n] = an element the user marked (same number on the picture); file:line = where its JSX is written, (in X) = where that component is used; changed = live CSS edits the user made, to apply in the code; note = what the user wants.",
+        'Task: the user marked these elements on this page. For each [n] (its number is on the picture): open the file at that line ((in X) = where that component is used), do what its note says, and turn "changed" (the user\'s live CSS edits) into code. Then answer per [n] what you did.',
         "image: 640×380 (≈325 tokens), numbers on it match [n] below",
         'drawn: 1 arrow, 2 boxes, text "bigger"',
         "[1] pick · ProfileCard ← EventList ← EventsPage",
