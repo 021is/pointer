@@ -1,4 +1,4 @@
-// The service worker: the icon or Alt+P turns Pointer on or off in the current tab (that
+// The service worker: the icon or its shortcut turns Pointer on or off in the current tab (that
 // click is what grants activeTab: no access to any site before it), and it takes the screenshot
 // the picture is cropped from (only the extension may call captureVisibleTab). It also opens the
 // preview of what Copy would give in a tab of Pointer's own, and hands that page the result.
@@ -35,9 +35,10 @@ chrome.runtime.onMessage.addListener((message: unknown, _sender, reply: (r: Prev
   return false;
 });
 
-/** The shortcut as Chrome has it now: ⌥P on a Mac, a key the person changed in
- *  chrome://extensions/shortcuts, or none (Edvard, 2026-11-18, on a Mac). Chrome may refuse a
- *  suggested key: Chromium 157 on Linux left Alt+Shift+P unset, so the default is Alt+P. */
+/** The shortcut as Chrome has it now: the default (Alt+P; ⌃⇧P on a Mac), a key the person set in
+ *  chrome://extensions/shortcuts, or none. The defaults are keys Chrome binds on a fresh profile
+ *  and that type no character: Chromium 157 on Linux left Alt+Shift+P unset, and on a Mac an
+ *  Option key types one (⌥P is π), so the Mac's is Control+Shift+P (Edvard, 2026-11-19). */
 const currentKey = async () => shortcutOf(await chrome.commands.getAll());
 
 /** The icon's tooltip never names a key Chrome did not bind. */

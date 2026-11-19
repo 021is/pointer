@@ -8,7 +8,7 @@ export const ACTION_COMMAND = "_execute_action";
 /** Where a person sets or changes the key; an extension page may open it. */
 export const SHORTCUTS_URL = "chrome://extensions/shortcuts";
 
-/** The key bound now, as Chrome writes it ("⌥P" on a Mac), or null when none is set. */
+/** The key bound now, as Chrome writes it ("⌃⇧P" on a Mac), or null when none is set. */
 export function shortcutOf(commands: readonly chrome.commands.Command[]): string | null {
   return commands.find((c) => c.name === ACTION_COMMAND)?.shortcut || null;
 }

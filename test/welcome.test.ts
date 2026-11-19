@@ -5,7 +5,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const body = `
-  <span id="key-step">Press <kbd>Alt+P</kbd> (on a Mac <kbd>⌥P</kbd>), or click Pointer's icon.</span>
+  <span id="key-step">Press <kbd>Alt+P</kbd> (on a Mac <kbd>⌃⇧P</kbd>), or click Pointer's icon.</span>
   <section id="shortcut" hidden><button id="set-shortcut" type="button">Set a shortcut</button>
     <p id="set-shortcut-error"></p></section>`;
 
@@ -32,8 +32,8 @@ afterEach(() => {
 
 describe("the welcome page names the real shortcut", () => {
   it("shows the key Chrome bound, as Chrome writes it", async () => {
-    await open("⌥P");
-    expect(text("key-step")).toBe("Press ⌥P, or click Pointer's icon.");
+    await open("⌃⇧P");
+    expect(text("key-step")).toBe("Press ⌃⇧P, or click Pointer's icon.");
     expect(notice().hidden).toBe(true);
   });
 

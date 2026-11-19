@@ -1,4 +1,4 @@
-// The content script. Injected on every click of the icon (or Alt+P): the first time it
+// The content script. Injected on every click of the icon (or its shortcut): the first time it
 // opens Pointer, after that it turns it on and off, keeping what was drawn and edited.
 
 import { createPanel } from "../panel/panel";
