@@ -35,11 +35,13 @@ export const TOOLS: readonly Entry[] = [
   { tool: "move", key: "M", icon: "move", title: "Move marks and images · Delete removes" },
   { tool: "pick", key: "P", icon: "pick", title: "Pick: edit an element's CSS" },
   { tool: "comment", key: "C", icon: "comment", title: "Comment" },
+  { tool: "idea", key: "Q", icon: "idea", title: "Idea: ask your agent how to make it better" },
   { tool: "crop", key: "X", icon: "crop", title: "Crop a component or a frame" },
   { tool: "pen", key: "D", icon: "pen", title: "Pen · Shift: straight" },
   { tool: "arrow", key: "A", icon: "arrow", title: "Arrow · Shift: 45°" },
   { tool: "box", key: "B", icon: "box", title: "Box · Shift: square" },
   { tool: "ellipse", key: "E", icon: "ellipse", title: "Ellipse · Shift: circle" },
+  { tool: "gap", key: "G", icon: "gap", title: "Gap: drag from one element to another to measure the space" },
   { tool: "text", key: "T", icon: "text", title: "Text on the page" },
 ];
 

@@ -2,7 +2,7 @@
 // and commenting and then reload happen"). An element becomes the selector that finds it again; a
 // pasted image becomes its data URL. Pure: the page comes in as functions.
 
-import type { Mark, Pasted, Pin, Shape } from "../marks/types";
+import type { GapLine, Mark, Pasted, Pin, PointKind, Shape } from "../marks/types";
 import type { ElementEdits } from "../panel/edits";
 import type { Point, Rect } from "../shared/geometry";
 
@@ -11,7 +11,8 @@ export type Target = { selector: string; tag: string; label: string };
 
 export type SavedMark =
   | { kind: "shape"; shape: Shape }
-  | { kind: "pin"; pin: Pin["kind"]; color: Pin["color"]; at: Point; note: string; target: Target; edits: ElementEdits | null }
+  | { kind: "pin"; pin: PointKind; color: Pin["color"]; at: Point; note: string; target: Target; edits: ElementEdits | null }
+  | { kind: "gap"; color: Pin["color"]; at: Point; note: string; target: Target; other: Target; line: GapLine }
   | { kind: "crop"; target: Target | null; rect: Rect }
   | { kind: "image"; src: string; rect: Rect; opacity: number };
 
@@ -45,7 +46,11 @@ export function toSaved(marks: readonly Mark[], w: SaveWorld): { saved: Saved; p
         break;
       case "pick":
       case "comment":
+      case "idea":
         out.push({ kind: "pin", pin: m.kind, color: m.color, at: m.at, note: m.note, target: w.target(m.el), edits: w.editsOf(m) });
+        break;
+      case "gap":
+        out.push({ kind: "gap", color: m.color, at: m.at, note: m.note, target: w.target(m.el), other: w.target(m.other), line: m.line });
         break;
       case "crop":
         out.push({ kind: "crop", target: m.el ? w.target(m.el) : null, rect: m.rect });
@@ -95,8 +100,8 @@ export function fromSaved(saved: Saved, w: RestoreWorld): Restored {
         out.marks.push(m.shape);
         break;
       case "pin": {
-        // A comment marks a point: when its element is gone, the element now at that point.
-        const el = w.find(m.target) ?? (m.pin === "comment" ? w.at(m.at) : null);
+        // A comment or an idea marks a point: when its element is gone, the element now there.
+        const el = w.find(m.target) ?? (m.pin === "pick" ? null : w.at(m.at));
         if (!el) {
           out.lost.push(`${m.pin} ${m.target.label}`);
           break;
@@ -104,6 +109,16 @@ export function fromSaved(saved: Saved, w: RestoreWorld): Restored {
         const pin: Pin = { kind: m.pin, color: m.color, el, at: m.at, note: m.note };
         out.marks.push(pin);
         if (m.edits) out.replay.push({ pin, edits: m.edits });
+        break;
+      }
+      case "gap": {
+        const el = w.find(m.target);
+        const other = w.find(m.other);
+        if (!el || !other) {
+          out.lost.push(`gap ${m.target.label} – ${m.other.label}`);
+          break;
+        }
+        out.marks.push({ kind: "gap", color: m.color, el, other, at: m.at, note: m.note, line: m.line });
         break;
       }
       case "crop":

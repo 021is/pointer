@@ -6,6 +6,8 @@ const ICON_PATHS = {
   pick: '<circle cx="12" cy="12" r="6.5"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3"/>',
   comment: '<path d="M5 5.5h14a1.5 1.5 0 011.5 1.5v8a1.5 1.5 0 01-1.5 1.5H10l-4.5 3.5V16.5H5A1.5 1.5 0 013.5 15V7A1.5 1.5 0 015 5.5z"/>',
   crop: '<path d="M7 2.5V17h14.5"/><path d="M2.5 7H17v14.5"/>',
+  idea: '<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 00-3.6 10.8c.7.6 1.1 1.3 1.1 2.2h5c0-.9.4-1.6 1.1-2.2A6 6 0 0012 3z"/>',
+  gap: '<path d="M3.5 6v12M20.5 6v12"/><path d="M6 12h12"/><path d="M8.5 9.5L6 12l2.5 2.5M15.5 9.5L18 12l-2.5 2.5"/>',
   pen: '<path d="M15.5 4.5l4 4L9 19l-5 1 1-5z"/><path d="M13.5 6.5l4 4"/>',
   arrow: '<path d="M5 19L19 5"/><path d="M10 5h9v9"/>',
   box: '<rect x="4" y="6" width="16" height="12" rx="2.5"/>',

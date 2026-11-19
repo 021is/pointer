@@ -1,13 +1,18 @@
 // Pins and their notes, and drawn text: adding a pick or comment with its bubble, editing a
 // note or a text, removing a pin. A pick of an element already picked opens that pick: no twins.
 
-import type { Mark, Pin } from "../marks/types";
+import type { Mark, Pin, PointKind } from "../marks/types";
 import type { Point } from "../shared/geometry";
 import { openBubble } from "./bubble";
 import type { Extension } from "./extension";
 import { type State, pinsOf } from "./state";
 
 type TextMark = Extract<Mark, { kind: "text" }>;
+
+/** The element a comment or an idea belongs to: the one under it; an idea with nothing under it
+ *  is about the page itself. */
+export const pinTarget = (kind: "comment" | "idea", under: Element | null): Element | null =>
+  under ?? (kind === "idea" ? document.body : null);
 
 export type NotesHost = { root: ShadowRoot; state: State; update: (change: () => void) => void; hooks: () => Extension };
 
@@ -21,17 +26,19 @@ export function notes(host: NotesHost) {
   }
 
   /** A comment asks for its words; a pick is the CSS tool and opens its style box (Edvard,
-   *  2026-11-18). A note on a pick stays one click away: click its number. */
-  async function addPin(kind: Pin["kind"], el: Element, at: Point) {
+   *  2026-11-18). A note on a pick stays one click away: click its number. An idea's thought is
+   *  optional: the idea stays without one, the agent is asked anyway. */
+  async function addPin(kind: PointKind, el: Element, at: Point) {
     const pin: Pin = { kind, color: state.color, el, at, note: "" };
     update(() => state.marks.push(pin));
     if (kind === "pick") return host.hooks().onPick(pin);
+    const idea = kind === "idea";
     const note = await openBubble(root, {
       at: toView(at),
-      placeholder: "Comment",
-      hint: "Enter saves · Shift+Enter new line · Esc skips",
+      placeholder: idea ? "Your thought (optional)" : "Comment",
+      hint: idea ? "Enter keeps the idea · Esc keeps it without a thought" : "Enter saves · Shift+Enter new line · Esc skips",
     });
-    if (!note) return removePin(pin);
+    if (!note) return idea ? undefined : removePin(pin);
     update(() => (pin.note = note));
   }
 

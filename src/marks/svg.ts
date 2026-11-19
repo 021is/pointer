@@ -2,10 +2,15 @@
 // Pure (strings in, string out), so the copied image shows exactly what was on screen.
 
 import type { Point, Rect } from "../shared/geometry";
-import { COLORS, type Color, type Shape } from "./types";
+import { COLORS, type Color, type GapLine, type Shape } from "./types";
 
-/** A pin as drawn: its number, its badge position and, for a pick, the element's outline. */
-export type ScenePin = { n: number; color: Color; badge: Point; outline?: Rect };
+/** A pin as drawn: its number, its badge position and, for a pick, the element's outline. An idea
+ *  reads "n?"; a gap draws its measure |← 24px →| with the badge beside the label. */
+export type ScenePin = { n: number; color: Color; badge: Point; outline?: Rect } & (
+  | { look: "pin" }
+  | { look: "idea" }
+  | { look: "gap"; line: GapLine }
+);
 
 /** A crop frame as drawn on the page: its letter and its box ("" while it is being dragged). */
 export type Frame = { label: string; rect: Rect };
@@ -82,10 +87,34 @@ function pinSvg(p: ScenePin): string {
   const outline = p.outline
     ? `<rect x="${n(p.outline.x)}" y="${n(p.outline.y)}" width="${n(p.outline.w)}" height="${n(p.outline.h)}" fill="none" stroke="${c}" stroke-width="2" stroke-dasharray="6 4"/>`
     : "";
+  const label = p.look === "idea" ? `${p.n}?` : String(p.n);
+  // An idea's badge is a pill wide enough for its "?", the question it asks.
+  const half = p.look === "idea" ? BADGE_R + 4 : BADGE_R;
+  const badge =
+    `<rect x="${n(p.badge.x - half)}" y="${n(p.badge.y - BADGE_R)}" width="${n(half * 2)}" height="${BADGE_R * 2}" rx="${BADGE_R}" fill="${c}" stroke="#fff" stroke-width="2"/>` +
+    `<text x="${n(p.badge.x)}" y="${n(p.badge.y)}" fill="${ink}" font-family="system-ui,sans-serif" font-size="13" font-weight="700" text-anchor="middle" dominant-baseline="central">${label}</text>`;
+  return outline + (p.look === "gap" ? gapSvg(p.line, c) : "") + badge;
+}
+
+/** |← 24px →|: the measured line, its end ticks, small heads and the pixels on a white halo. */
+function gapSvg(l: GapLine, c: string): string {
+  const tick = 7;
+  const [dx, dy] = l.axis === "x" ? [0, tick] : [tick, 0];
+  const end = (p: Point) => `<line x1="${n(p.x - dx)}" y1="${n(p.y - dy)}" x2="${n(p.x + dx)}" y2="${n(p.y + dy)}"/>`;
+  const head = (from: Point, to: Point) => {
+    const [a, b] = arrowHead(from, to, 7);
+    return `<polygon fill="${c}" stroke="none" points="${n(to.x)},${n(to.y)} ${n(a.x)},${n(a.y)} ${n(b.x)},${n(b.y)}"/>`;
+  };
+  const mid = { x: (l.from.x + l.to.x) / 2, y: (l.from.y + l.to.y) / 2 };
+  const tx = l.axis === "x" ? mid.x : mid.x + 10;
+  const ty = l.axis === "x" ? mid.y - 12 : mid.y;
+  const anchor = l.axis === "x" ? "middle" : "start";
   return (
-    outline +
-    `<circle cx="${n(p.badge.x)}" cy="${n(p.badge.y)}" r="${BADGE_R}" fill="${c}" stroke="#fff" stroke-width="2"/>` +
-    `<text x="${n(p.badge.x)}" y="${n(p.badge.y)}" fill="${ink}" font-family="system-ui,sans-serif" font-size="13" font-weight="700" text-anchor="middle" dominant-baseline="central">${p.n}</text>`
+    `<g stroke="${c}" stroke-width="2" stroke-linecap="round">` +
+    `<line x1="${n(l.from.x)}" y1="${n(l.from.y)}" x2="${n(l.to.x)}" y2="${n(l.to.y)}"/>${end(l.from)}${end(l.to)}</g>` +
+    head(mid, l.from) +
+    head(mid, l.to) +
+    `<text x="${n(tx)}" y="${n(ty)}" fill="${c}" stroke="#fff" stroke-width="4" paint-order="stroke" font-family="system-ui,sans-serif" font-size="13" font-weight="700" text-anchor="${anchor}" dominant-baseline="central">${l.px}px</text>`
   );
 }
 

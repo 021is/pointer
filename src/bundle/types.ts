@@ -39,15 +39,19 @@ export type ElementInfo = {
   style?: string;
 };
 
-export type PinInfo = {
+type PinBaseInfo = {
   n: number;
-  kind: "pick" | "comment";
   component: ComponentInfo;
   el: ElementInfo;
   /** The style panel's edits, one per line ("font-size 15px → 17px"). */
   changes: string[];
   note: string;
 };
+
+/** A pin, as read at Copy; a gap also names its second element and what it measured. */
+export type PinInfo =
+  | (PinBaseInfo & { kind: "pick" | "comment" | "idea" })
+  | (PinBaseInfo & { kind: "gap"; px: number; axis: "x" | "y"; other: { component: ComponentInfo; el: ElementInfo } });
 
 export type DrawingSummary = {
   arrows: number;

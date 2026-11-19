@@ -35,14 +35,18 @@ export type CopyResult = { text: string; image: { w: number; h: number } | null 
 
 async function pinInfos(ctx: CopyContext): Promise<PinInfo[]> {
   return Promise.all(
-    pinsOf(ctx.state.marks).map(async (pin, i) => ({
-      n: i + 1,
-      kind: pin.kind,
-      component: await componentOf(pin.el),
-      el: describeElement(pin.el),
-      changes: ctx.changesOf(pin),
-      note: pin.note,
-    })),
+    pinsOf(ctx.state.marks).map(async (pin, i): Promise<PinInfo> => {
+      const base = {
+        n: i + 1,
+        component: await componentOf(pin.el),
+        el: describeElement(pin.el),
+        changes: ctx.changesOf(pin),
+        note: pin.note,
+      };
+      if (pin.kind !== "gap") return { ...base, kind: pin.kind };
+      const other = { component: await componentOf(pin.other), el: describeElement(pin.other) };
+      return { ...base, kind: "gap", px: pin.line.px, axis: pin.line.axis, other };
+    }),
   );
 }
 

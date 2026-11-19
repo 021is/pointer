@@ -14,15 +14,26 @@ export type Shape =
   | { kind: "ellipse"; color: Color; rect: Rect }
   | { kind: "text"; color: Color; at: Point; text: string };
 
-/** A pick marks a whole element; a comment marks a point (and remembers the element under it). */
-export type Pin = {
-  kind: "pick" | "comment";
+/**
+ * A pick marks a whole element; a comment marks a point (and remembers the element under it); an
+ * idea is a comment that asks the agent for ideas instead of a change (Edvard, 2026-11-19).
+ */
+export type PointKind = "pick" | "comment" | "idea";
+
+/** The gap between two elements' facing edges (or a child and its container's), page coordinates
+ *  and CSS pixels (Edvard, 2026-11-19: "the gap must be smaller or bigger"). */
+export type GapLine = { axis: "x" | "y"; from: Point; to: Point; px: number };
+
+type PinBase = {
   color: Color;
   el: Element;
-  /** Page coordinates of a comment's badge; a pick's badge follows its element. */
+  /** Page coordinates of the badge; a pick's badge follows its element instead. */
   at: Point;
   note: string;
 };
+
+/** Every numbered mark: [n] in the picture and in the text. */
+export type Pin = (PinBase & { kind: PointKind }) | (PinBase & { kind: "gap"; other: Element; line: GapLine });
 
 /**
  * A frame for the picture: a component (its box, followed live) or a dragged rectangle (page
@@ -40,7 +51,7 @@ export type Pasted = { kind: "image"; img: HTMLImageElement; rect: Rect; opacity
 export type Mark = Shape | Pin | Crop | Pasted;
 
 export function isPin(m: Mark): m is Pin {
-  return m.kind === "pick" || m.kind === "comment";
+  return m.kind === "pick" || m.kind === "comment" || m.kind === "idea" || m.kind === "gap";
 }
 
 export function isCrop(m: Mark): m is Crop {

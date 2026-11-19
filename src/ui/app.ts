@@ -13,11 +13,12 @@ import { componentOf } from "../source/client";
 import { isBubbleOpen, openBubble } from "./bubble";
 import { copyFlow } from "./copy-flow";
 import { cropGestures } from "./crop-gesture";
+import { gapGesture } from "./gap-gesture";
 import { CSS } from "./css";
 import { drag as dragOn } from "./drag";
 import type { Extension, ExtensionHost } from "./extension";
 import { keyHandler } from "./keyboard";
-import { notes } from "./notes";
+import { notes, pinTarget } from "./notes";
 import { handles, textAt } from "./handles";
 import { createHistory } from "./history";
 import { createKeeper } from "../keep/keep";
@@ -154,6 +155,7 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
   }
 
   const { cropElement, startCrop } = cropGestures({ state, update, render, say, drag });
+  const { startGap } = gapGesture({ state, root, host, update, say, drag });
   const { grabPin, grabText } = handles({
     state,
     update,
@@ -186,8 +188,11 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
       if (el) pick(el, page);
     } else if (tool === "crop") {
       startCrop(e, page, state.hover?.el ?? under);
-    } else if (tool === "comment") {
-      if (under) void addPin("comment", under, page);
+    } else if (tool === "comment" || tool === "idea") {
+      const el = pinTarget(tool, under);
+      if (el) void addPin(tool, el, page);
+    } else if (tool === "gap") {
+      startGap(e, page);
     } else if (tool === "text") {
       void openBubble(root, { at: view, placeholder: "Text on the page", hint: "Enter places it · Esc cancels" }).then(
         (text) => text && update(() => state.marks.push({ kind: "text", color: state.color, at: page, text })),
