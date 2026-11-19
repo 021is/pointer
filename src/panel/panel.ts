@@ -95,5 +95,28 @@ export function createPanel(root: ShadowRoot, host: ExtensionHost): Extension {
       return "opened";
     },
     panelFor: () => (panel.hidden ? null : showing),
+    editsOf: (pin) => (owner.get(pin.el) === pin ? (edited.get(pin.el)?.edits ?? null) : null),
+    // After a reload: the same edits on the element found again (placeholders are not kept).
+    replay(pin, edits) {
+      const e = edit(pin.el);
+      edited.set(pin.el, e);
+      owner.set(pin.el, pin);
+      for (const p of edits.props) {
+        switch (p.change.kind) {
+          case "set":
+            e.set(p.prop, p.change.value);
+            break;
+          case "off":
+            e.off(p.prop);
+            break;
+          case "removed":
+            e.remove(p.prop);
+            break;
+        }
+      }
+      for (const name of edits.removedClasses) e.removeClass(name);
+      for (const c of edits.addedClasses) e.addClass(c.name);
+      host.rerender();
+    },
   };
 }

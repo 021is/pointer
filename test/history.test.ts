@@ -30,6 +30,8 @@ function setup() {
     },
     togglePanel: () => "no-pick",
     panelFor: () => null,
+    editsOf: () => null,
+    replay: () => {},
   };
   const h = createHistory({ state, hooks: () => hooks, update: (c) => c(), say: (message, _k, action) => said.push({ message, action }) });
   return { state, edits, said, h };

@@ -20,6 +20,7 @@ import { keyHandler } from "./keyboard";
 import { notes } from "./notes";
 import { handles, textAt } from "./handles";
 import { createHistory } from "./history";
+import { createKeeper } from "../keep/keep";
 import { markAt, shifted } from "./move";
 import {
   type Output,
@@ -103,8 +104,17 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
       pasted.paint();
       marksView.innerHTML = renderSvg(liveScene(state, layout()), { x: 0, y: 0, w: innerWidth, h: innerHeight });
       bar.update(state, stylesLook(lastPick(), hooks.panelFor(), (el) => shortName(el, viewRect(el))));
+      keeper.schedule();
     });
   }
+
+  // Marks outlive a reload of the page (keep/): asked for once, when Pointer first opens on it.
+  const keeper = createKeeper({ marks: () => state.marks, editsOf: (pin) => hooks.editsOf(pin), say });
+  let asked = false;
+  const restore = () => {
+    asked = true;
+    void keeper.restore((marks) => update(() => (state.marks = marks)), hooks.replay);
+  };
   function update(change: () => void) {
     change();
     render();
@@ -273,10 +283,13 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
     document.documentElement.append(host);
     for (const [t, type, fn, opt] of listeners) t.addEventListener(type, fn, opt);
     render();
+    if (!asked) restore();
   }
+  /** Closing Pointer on purpose forgets the kept copy; the marks stay in memory until a reload. */
   function close() {
     for (const [t, type, fn, opt] of listeners) t.removeEventListener(type, fn, opt);
     host.remove();
+    keeper.forget();
   }
   return { open, close, toggle: () => (host.isConnected ? close() : open()) };
 }

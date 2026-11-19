@@ -16,7 +16,7 @@ function mockChrome(create: (props: { url: string }) => Promise<unknown>, shortc
       onMessage: noop,
       getURL: (path: string) => `chrome-extension://pointer-id/${path}`,
     },
-    tabs: { create },
+    tabs: { create, onRemoved: noop },
   });
   return Object.assign(installed, { setTitle });
 }

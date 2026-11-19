@@ -1,6 +1,8 @@
 // The messages between the content script, the service worker and the preview page: take the
-// screenshot; show a preview of what Copy would give; hand that preview to the page that asks.
+// screenshot; show a preview of what Copy would give; hand that preview to the page that asks;
+// keep a page's marks through its reload.
 
+import { type Saved, isSaved } from "../keep/saved";
 import type { Output } from "../ui/state";
 
 export type CaptureRequest = { type: "capture" };
@@ -33,4 +35,19 @@ export function isPreviewRequest(message: unknown): message is PreviewRequest {
 
 export function isPreviewAsk(message: unknown): message is PreviewAsk {
   return typeOf(message) === "preview:get";
+}
+
+/** Marks kept through a reload, per tab and page (keep/): save them, ask for them, forget them. */
+export type KeepRequest =
+  | { type: "keep:save"; page: string; saved: Saved }
+  | { type: "keep:load"; page: string }
+  | { type: "keep:clear"; page: string };
+export type KeepReply = { ok: true; saved: Saved | null } | { ok: false; error: string };
+
+/** A keep request from the content script, checked where it enters the service worker. */
+export function isKeepRequest(message: unknown): message is KeepRequest {
+  const m = message as Partial<{ type: string; page: unknown; saved: unknown }> | null;
+  if (typeof m?.page !== "string" || !/^(https?|file):\/\//.test(m.page)) return false;
+  if (m.type === "keep:save") return isSaved(m.saved);
+  return m.type === "keep:load" || m.type === "keep:clear";
 }

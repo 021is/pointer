@@ -21,6 +21,7 @@ dev-build information (React fibers, Vue and Svelte metadata, source maps).
 | `src/welcome.ts`, `src/shared/shortcut.ts` | the welcome page names the key Chrome really bound, or offers to set one |
 | `src/ui/` | the content script: shadow-rooted layer, toolbar, bubble, keys, state; `copy-flow.ts` (Copy, clear after copy, preview), `copy-menu.ts` (the split button), `move.ts` (the Move tool), `history.ts` (Undo, Redo, Clear everything: the one way), `styles.ts` (the Styles button: every press opens, closes or says why) |
 | `src/draw/`, `src/pick/`, `src/marks/` | drawing gestures, element picking, marks → SVG |
+| `src/keep/` | marks kept through a reload: `saved.ts` (marks ↔ plain data, pure), `keep.ts` (the content script's side), `store.ts` (the worker's `chrome.storage.session`) |
 | `src/capture/` | screenshot, crop, layout within the image budget, text strip, clipboard, cost estimate |
 | `src/preview.ts`, `preview.html` | the preview page: what Copy would give, from the service worker |
 | `pages.css`, `brand/` | the extension's pages in 021's look, and 021's logo, bundled (never fetched) |
@@ -34,11 +35,14 @@ dev-build information (React fibers, Vue and Svelte metadata, source maps).
 
 ## Rules
 
-- **Least permissions:** `activeTab` + `scripting`, nothing else, no host permissions. A feature
-  that would need more is discussed in an issue first, never a quiet manifest change.
+- **Least permissions:** `activeTab` + `scripting` + `storage`, nothing else, no host
+  permissions. A feature that would need more is discussed in an issue first, never a quiet
+  manifest change. `storage` is for marks kept through a reload (Edvard, 2026-11-19, TF153):
+  `chrome.storage.session` only, never `local` or `sync`.
 - **Nothing leaves the browser** except to the clipboard. No network calls of our own, apart from
   the page-world probe reading the page's own dev server (chunks, source maps, same origin only).
-  No analytics, no storage of what people mark.
+  No analytics. What people mark is kept only in session memory, per tab and page (`src/keep/`),
+  and forgotten on Clear, on closing Pointer, when the tab closes and when Chrome closes.
 - **Two worlds:** `src/source/probe.ts` runs in the page's MAIN world (fibers are only visible
   there) and talks to the content script by `CustomEvent` with JSON strings only
   (`src/source/protocol.ts`), checked where they enter. Nothing else runs in MAIN.
