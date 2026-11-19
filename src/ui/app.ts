@@ -25,6 +25,7 @@ import {
   type Output,
   type State,
   type Tool,
+  afterPaste,
   initialState,
   liveScene,
   chooseOutput,
@@ -55,7 +56,12 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
   const say = toast.say;
   const pasted = createPastedLayer({
     marks: () => state.marks,
-    add: (p) => update(() => state.marks.push(p)),
+    add: (p) =>
+      update(() => {
+        state.marks.push(p);
+        Object.assign(state, afterPaste(state));
+        state.hover = null;
+      }),
     update,
     say,
   });

@@ -2,7 +2,23 @@ import { describe, expect, it } from "vitest";
 import { formatStrip } from "../src/bundle/format";
 import type { Bundle, PinInfo } from "../src/bundle/types";
 import { dragged, gripAt, landing, stepOpacity } from "../src/paste/geometry";
+import { CSS } from "../src/ui/css";
 import { commandFor } from "../src/ui/keys";
+import { afterPaste } from "../src/ui/state";
+
+describe("a paste switches to Move (Edvard, 2026-11-19)", () => {
+  it("from Comment: Move, the output kept, the image under the mouse ready to drag", () => {
+    expect(afterPaste({ tool: "comment", output: "text" })).toEqual({ tool: "move", output: "text" });
+    expect(afterPaste({ tool: "pen", output: "picture" })).toEqual({ tool: "move", output: "picture" });
+    const mouse = { x: 500, y: 300 };
+    const rect = landing({ w: 400, h: 200 }, 1, mouse, { w: 1440, h: 900 });
+    expect(gripAt(rect, mouse)).toBe("move");
+  });
+
+  it("Move is a tool where a press reaches a pasted image", () => {
+    expect(CSS).toMatch(/\.layer\[data-tool="move"\] \.pimg[^{]*\{ pointer-events: auto/);
+  });
+});
 
 describe("a pasted image's first box", () => {
   it("is its size in CSS pixels (a 2× screenshot is half), centred on the mouse", () => {
