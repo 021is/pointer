@@ -132,6 +132,7 @@ describe("crops in the bundle", () => {
       viewport: { w: 1280, h: 800 },
       crops: [{ label: "A", component: null, size: { w: 10, h: 10 }, offScreen: false }],
       pins: [],
+      shapeNotes: [],
       drawings: { arrows: 1, boxes: 0, ellipses: 0, pens: 0, texts: [], pasted: 0 },
       image: null,
     });
@@ -145,6 +146,7 @@ describe("crops in the bundle", () => {
       url: "https://x.dev/",
       viewport: { w: 1280, h: 800 },
       pins: [],
+      shapeNotes: [],
       drawings: { arrows: 1, boxes: 0, ellipses: 0, pens: 0, texts: [], pasted: 0 },
       image: null,
     };

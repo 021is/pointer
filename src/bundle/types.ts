@@ -77,7 +77,11 @@ export type Bundle = {
   viewport: { w: number; h: number };
   crops: CropInfo[];
   pins: PinInfo[];
+  /** Boxes and ellipses with a note typed on them, numbered after the pins. */
+  shapeNotes: ShapeNote[];
   drawings: DrawingSummary;
   /** The picture's size in pixels, or null when the bundle is text only. */
   image: { w: number; h: number } | null;
 };
+
+export type ShapeNote = { n: number; kind: "box" | "ellipse"; note: string };

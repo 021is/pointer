@@ -10,8 +10,10 @@ export type Color = keyof typeof COLORS;
 export type Shape =
   | { kind: "pen"; color: Color; points: Point[] }
   | { kind: "arrow"; color: Color; from: Point; to: Point }
-  | { kind: "box"; color: Color; rect: Rect }
-  | { kind: "ellipse"; color: Color; rect: Rect }
+  /** A box or an ellipse may carry a note typed on it (a double-click), written under it, moving
+   *  with it, and numbered in the text: "[5] box: make this one card". */
+  | { kind: "box"; color: Color; rect: Rect; note?: string }
+  | { kind: "ellipse"; color: Color; rect: Rect; note?: string }
   | { kind: "text"; color: Color; at: Point; text: string };
 
 /**

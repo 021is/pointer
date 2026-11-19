@@ -17,6 +17,7 @@ import {
   pictureScene,
   pinsOf,
   sceneFrames,
+  shapeNotesOf,
   summarize,
   wantsImage,
 } from "../ui/state";
@@ -106,8 +107,9 @@ async function dataNow(ctx: CopyContext) {
   const off = split instanceof Error ? frames.map((f) => f.label) : split.off;
   const [pins, crops] = await Promise.all([pinInfos(ctx), cropInfos(cropsOf(ctx.state.marks), frames, off, componentOf)]);
   const drawings = summarize(ctx.state.marks);
+  const shapeNotes = shapeNotesOf(ctx.state.marks, pins.length);
   const viewport = { w: innerWidth, h: innerHeight };
-  return (image: CopyResult["image"]): Bundle => ({ url: safeUrl(location.href), viewport, crops, pins, drawings, image });
+  return (image: CopyResult["image"]): Bundle => ({ url: safeUrl(location.href), viewport, crops, pins, shapeNotes, drawings, image });
 }
 
 /** What each output would cost now, for Copy's menu. */

@@ -75,6 +75,7 @@ describe("formatStrip without a picture", () => {
       viewport: { w: 1, h: 1 },
       crops: [],
       pins: [],
+      shapeNotes: [],
       drawings: { arrows: 2, boxes: 1, ellipses: 0, pens: 0, texts: ["blue"], pasted: 1 },
       image: null,
     };
@@ -110,6 +111,7 @@ describe("formatStrip: the compact lines under the picture", () => {
       pin(8),
       pin(9, { component: { framework: "react", chain: [], where: { kind: "unknown", why: "prod" } } }),
     ],
+    shapeNotes: [],
     drawings: { arrows: 0, boxes: 0, ellipses: 0, pens: 0, texts: [], pasted: 0 },
     image: null,
   };

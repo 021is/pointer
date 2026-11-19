@@ -1,6 +1,6 @@
 // Pointer's state and the pure steps from it to a Scene (what svg.ts draws).
 
-import type { DrawingSummary } from "../bundle/types";
+import type { DrawingSummary, ShapeNote } from "../bundle/types";
 import type { Frame, Scene, ScenePin } from "../marks/svg";
 import {
   type Color,
@@ -82,6 +82,22 @@ export const shapesOf = (marks: readonly Mark[]): Shape[] => marks.filter(isShap
 export const cropsOf = (marks: readonly Mark[]): Crop[] => marks.filter(isCrop);
 export const pastedOf = (marks: readonly Mark[]): Pasted[] => marks.filter(isPasted);
 
+/** A box or an ellipse, the shapes that take a note (Edvard, 2026-11-19). */
+export type Framed = Extract<Shape, { kind: "box" | "ellipse" }>;
+const isFramed = (s: Shape): s is Framed => s.kind === "box" || s.kind === "ellipse";
+
+/** The boxes and ellipses with a note: numbered after the pins, "[5] box: make this one card". */
+export const notedOf = (marks: readonly Mark[]): Framed[] => shapesOf(marks).filter((s): s is Framed => isFramed(s) && !!s.note?.trim());
+
+/** The noted shapes as the text names them, numbered after the `pins` pins. */
+export const shapeNotesOf = (marks: readonly Mark[], pins: number): ShapeNote[] =>
+  notedOf(marks).map((s, i) => ({ n: pins + i + 1, kind: s.kind, note: s.note?.trim() ?? "" }));
+
+/** The topmost box or ellipse whose area holds a page point: a double-click there types on it. */
+export function framedAt(marks: readonly Mark[], p: Point): Framed | undefined {
+  return shapesOf(marks).findLast((s): s is Framed => isFramed(s) && p.x >= s.rect.x && p.x <= s.rect.x + s.rect.w && p.y >= s.rect.y && p.y <= s.rect.y + s.rect.h);
+}
+
 /** Picking and cropping both hover elements, walk them with the arrows and take them with Enter. */
 export const targetsElements = (tool: Tool) => tool === "pick" || tool === "crop";
 
@@ -109,8 +125,13 @@ export function shapeBox(s: Shape): Rect {
     case "arrow":
       return inflate(dragRect(s.from, s.to, false), 10);
     case "box":
-    case "ellipse":
-      return s.rect;
+    case "ellipse": {
+      // A note is written under its shape: the picture holds it too.
+      const lines = s.note?.trim() ? s.note.trim().split("\n") : [];
+      if (!lines.length) return s.rect;
+      const longest = Math.max(...lines.map((l) => l.length));
+      return { ...s.rect, w: Math.max(s.rect.w, longest * 8.5), h: s.rect.h + 8 + lines.length * 19 };
+    }
     case "text": {
       const lines = s.text.split("\n");
       const longest = Math.max(...lines.map((l) => l.length));
@@ -129,7 +150,12 @@ export type Layout = {
 /** Pins as drawn: a pick's badge sits on its element's top-left corner and follows it; a gap's
  *  line stays where it was measured, its badge beside the label. */
 export function scenePins(marks: readonly Mark[], layout: Layout): ScenePin[] {
-  return pinsOf(marks).map((pin, i) => scenePin(pin, i + 1, layout));
+  const pins = pinsOf(marks).map((pin, i) => scenePin(pin, i + 1, layout));
+  // A box's or an ellipse's note is numbered after the pins, its badge on the shape's corner.
+  const noted = notedOf(marks).map(
+    (s, i): ScenePin => ({ n: pins.length + i + 1, color: s.color, badge: { x: s.rect.x - layout.scroll.x, y: s.rect.y - layout.scroll.y }, look: "pin" }),
+  );
+  return [...pins, ...noted];
 }
 
 function scenePin(pin: Pin, n: number, layout: Layout): ScenePin {

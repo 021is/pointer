@@ -62,6 +62,7 @@ const bundle = (pins: PinInfo[]): Bundle => ({
   viewport: { w: 1440, h: 900 },
   crops: [],
   pins,
+  shapeNotes: [],
   drawings: { arrows: 0, boxes: 0, ellipses: 0, pens: 0, texts: [], pasted: 0 },
   image: null,
 });
