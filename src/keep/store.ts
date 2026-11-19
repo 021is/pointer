@@ -3,7 +3,7 @@
 // when Chrome closes, and Pointer drops a tab's keys when the tab closes.
 
 import { type KeepReply, isKeepRequest } from "../shared/messages";
-import { isSaved } from "./saved";
+import { isSaved } from "./check";
 
 const PREFIX = "keep:";
 const keyOf = (tabId: number, page: string) => `${PREFIX}${tabId}:${page}`;
@@ -17,7 +17,9 @@ async function answer(tabId: number, message: unknown): Promise<KeepReply> {
       return { ok: true, saved: null };
     case "keep:load": {
       const value = (await chrome.storage.session.get(key))[key];
-      return { ok: true, saved: isSaved(value) ? value : null };
+      if (value === undefined) return { ok: true, saved: null };
+      // Never a silent null: kept data this version cannot read is said, and the page starts empty.
+      return isSaved(value) ? { ok: true, saved: value } : { ok: false, error: "saved marks unreadable" };
     }
     case "keep:clear":
       await chrome.storage.session.remove(key);

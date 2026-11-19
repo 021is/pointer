@@ -29,13 +29,19 @@ const world = {
   editsOf: (p: Pin) => (p.kind === "pick" ? edits : null),
   imageSrc: (p: Pasted) => p.img.src,
 };
-const restoreWorld = { find, at: () => null, image: (src: string) => Object.assign(new Image(), { src }), page: document.body };
+const restoreWorld = {
+  find,
+  at: () => null,
+  image: (src: string) => Object.assign(new Image(), { src }),
+  iconSvg: () => null,
+  page: document.body,
+};
 
 afterEach(() => vi.unstubAllGlobals());
 
 describe("save and restore", () => {
   it("every mark comes back on the reloaded page, the pick's CSS edits with it", () => {
-    const { saved } = toSaved(marksOn(page()), world);
+    const saved = toSaved(marksOn(page()), world);
     const json = JSON.parse(JSON.stringify(saved));
     const fresh = page(); // the reload: new elements, same page
     const back = fromSaved(json, restoreWorld);
@@ -49,7 +55,7 @@ describe("save and restore", () => {
   });
 
   it("a pick whose element is gone is named as lost, never dropped silently", () => {
-    const { saved } = toSaved(marksOn(page()), world);
+    const saved = toSaved(marksOn(page()), world);
     document.body.innerHTML = `<main><p class="lead">Hi</p></main>`;
     const back = fromSaved(saved, restoreWorld);
     expect(back.lost).toEqual(["pick button"]);
@@ -65,13 +71,12 @@ describe("save and restore", () => {
   });
 
   it("an image still being read waits for the next save", () => {
-    const { saved, pending } = toSaved(marksOn(page()), { ...world, imageSrc: () => null });
-    expect(pending).toBe(1);
+    const saved = toSaved(marksOn(page()), { ...world, imageSrc: () => null });
     expect(saved.marks.some((m) => m.kind === "image")).toBe(false);
   });
 
   it("over the budget, pasted images go first and the marks stay", () => {
-    const { saved } = toSaved(marksOn(page()), world);
+    const saved = toSaved(marksOn(page()), world);
     const { saved: fit, dropped } = fitBudget(saved, 200);
     expect(dropped).toBe(1);
     expect(fit.marks.map((m) => m.kind)).toEqual(["pin", "pin", "shape", "crop"]);

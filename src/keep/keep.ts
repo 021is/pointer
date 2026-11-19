@@ -5,23 +5,28 @@
 // synced, never sent anywhere.
 
 import type { Mark, Pasted, Pin } from "../marks/types";
+import { loadLucide } from "../icons/data";
 import type { ElementEdits } from "../panel/edits";
 import { selectorOf, shortName, viewRect } from "../pick/describe";
 import type { KeepReply, KeepRequest } from "../shared/messages";
+import { isSaved } from "./check";
 import {
   type Restored,
   type Saved,
   type Target,
   fitBudget,
   fromSaved,
-  isSaved,
   pageKey,
   restoredMessage,
   toSaved,
 } from "./saved";
 
-/** chrome.storage.session holds 10 MB for the whole extension; one page keeps at most 4. */
-export const PAGE_BUDGET = 4_000_000;
+/** chrome.storage.session's quota: 10 MB (QUOTA_BYTES, 10 485 760 in Chromium 157) for the whole
+ *  extension, every tab together. The worker owns the API; the content script sizes by it. */
+export const SESSION_QUOTA = 10 * 1024 * 1024;
+
+/** One page keeps at most 40% of it in UTF-8 bytes, so a few tabs fit beside each other. */
+export const PAGE_BUDGET = Math.floor(SESSION_QUOTA * 0.4);
 
 export type KeepHost = {
   marks: () => readonly Mark[];
@@ -95,7 +100,7 @@ export function createKeeper(host: KeepHost) {
   }
 
   async function save() {
-    const { saved: whole } = toSaved(host.marks(), { target, editsOf: host.editsOf, imageSrc });
+    const whole = toSaved(host.marks(), { target, editsOf: host.editsOf, imageSrc });
     const { saved, dropped } = fitBudget(whole, PAGE_BUDGET);
     const json = JSON.stringify(saved);
     if (json === last) return;
@@ -116,17 +121,21 @@ export function createKeeper(host: KeepHost) {
     try {
       const reply = await ask({ type: "keep:load", page });
       if (!reply.ok) throw new Error(reply.error);
-      const saved: Saved | null = isSaved(reply.saved) ? reply.saved : null;
-      if (!saved) return null;
+      if (reply.saved === null) return null;
+      if (!isSaved(reply.saved)) throw new Error("saved marks unreadable");
+      const saved: Saved = reply.saved;
       last = JSON.stringify(saved);
+      // Icons come back by their Lucide name, drawn from the bundled data, never from stored markup.
+      const lucide = saved.marks.some((m) => m.kind === "icon") ? await loadLucide() : null;
       return fromSaved(saved, {
         find,
         at: (p) => document.elementFromPoint(p.x - scrollX, p.y - scrollY),
         image: (src) => Object.assign(new Image(), { src, draggable: false }),
+        iconSvg: (name) => lucide?.svg[name] ?? null,
         page: document.body,
       });
     } catch (err) {
-      warn(`Your marks from before the reload could not be read: ${String(err)}`);
+      warn(`Your marks from before the reload could not be read: ${err instanceof Error ? err.message : String(err)}.`);
       return null;
     } finally {
       ready = true;

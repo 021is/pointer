@@ -4,13 +4,8 @@
 
 import { lucideSvg } from "../marks/svg";
 import type { Point } from "../shared/geometry";
-import type { IconsLoad, IconsLoaded } from "../shared/messages";
+import { loadLucide } from "./data";
 import { type LucideData, searchIcons } from "./search";
-
-declare global {
-  // Set by dist/lucide.js in the content script's world.
-  var __pointerLucide: LucideData | undefined;
-}
 
 export type PickerHost = {
   /** Lay the icon on the page: at a viewport point (a drop), or null for the last point. */
@@ -19,15 +14,6 @@ export type PickerHost = {
 };
 
 const SVG = (inner: string) => lucideSvg(inner, "currentColor");
-
-async function lucide(): Promise<LucideData> {
-  if (globalThis.__pointerLucide) return globalThis.__pointerLucide;
-  const ask: IconsLoad = { type: "icons:load" };
-  const reply = (await chrome.runtime.sendMessage(ask)) as IconsLoaded | undefined;
-  if (!reply?.ok) throw new Error(reply?.error ?? "the extension did not answer (reload it in chrome://extensions)");
-  if (!globalThis.__pointerLucide) throw new Error("Lucide's icons did not load");
-  return globalThis.__pointerLucide;
-}
 
 export function createIconPicker(h: PickerHost) {
   const el = Object.assign(document.createElement("div"), { className: "iconpicker", hidden: true });
@@ -94,7 +80,7 @@ export function createIconPicker(h: PickerHost) {
     el.hidden = false;
     input.focus();
     try {
-      data ??= await lucide();
+      data ??= await loadLucide();
       foot.textContent = `Lucide ${data.version} (ISC) · click to add, or drag onto the page.`;
       show();
     } catch (err) {
@@ -105,5 +91,5 @@ export function createIconPicker(h: PickerHost) {
     el.hidden = true;
   }
 
-  return { el, toggle: () => (el.hidden ? void open() : close()), isOpen: () => !el.hidden };
+  return { el, toggle: () => (el.hidden ? void open() : close()) };
 }

@@ -18,7 +18,7 @@ export type DrawMenuParts = {
   choose: (tool: Tool) => void;
 };
 
-export type DrawMenu = { el: HTMLElement; update: (tool: Tool) => void; isOpen: () => boolean };
+export type DrawMenu = { el: HTMLElement; update: (tool: Tool) => void };
 
 /** The menu's word for a tool: its title's first word ("Gap: drag from…" → "Gap"). */
 export const shortName = (title: string) => title.split(/[\s:·]/)[0] ?? title;
@@ -109,7 +109,6 @@ export function createDrawMenu(parts: DrawMenuParts): DrawMenu {
 
   return {
     el: wrap,
-    isOpen: () => !menu.hidden,
     update(tool) {
       current = tool;
       const next = shownTool(parts.entries, tool, shown);

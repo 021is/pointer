@@ -21,13 +21,13 @@ dev-build information (React fibers, Vue and Svelte metadata, source maps).
 | `src/welcome.ts`, `src/shared/shortcut.ts` | the welcome page names the key Chrome really bound, or offers to set one |
 | `src/ui/` | the content script: shadow-rooted layer, toolbar, bubble, keys, state; `copy-flow.ts` (Copy, clear after copy, preview), `copy-menu.ts` (the split button), `move.ts` (the Move tool), `history.ts` (Undo, Redo, Clear everything: the one way), `styles.ts` (the Styles button: every press opens, closes or says why) |
 | `src/draw/`, `src/pick/`, `src/marks/` | drawing gestures, element picking, marks → SVG |
-| `src/keep/` | marks kept through a reload: `saved.ts` (marks ↔ plain data, pure), `keep.ts` (the content script's side), `store.ts` (the worker's `chrome.storage.session`) |
+| `src/keep/` | marks kept through a reload: `saved.ts` (marks ↔ plain data, pure; icons by Lucide name only), `check.ts` (every kept mark checked field by field), `keep.ts` (the content script's side), `store.ts` (the worker's `chrome.storage.session`) |
 | `src/capture/` | screenshot, crop, layout within the image budget, text strip, clipboard, cost estimate |
 | `src/preview.ts`, `preview.html` | the preview page: what Copy would give, from the service worker |
 | `pages.css`, `brand/` | the extension's pages in 021's look, and 021's logo, bundled (never fetched) |
 | `src/panel/` | the style panel: matched CSS, live edits on one element, their diff |
 | `src/icons/` | the icon picker: Lucide (lucide-static, pinned to the version DanceClub web and 021.is use) built into `dist/lucide.js`, injected by the worker only when the picker opens; search, place, move, resize. Notices: `THIRD-PARTY-NOTICES.md` |
-| `src/paste/` | images pasted onto the page: landing, move/resize, see-through, until reload |
+| `src/paste/` | images pasted onto the page: landing, move/resize, see-through; kept through a reload with the marks (`src/keep/`) |
 | `src/source/` | the page-world probe: framework, component chain, file:line via source maps |
 | `src/bundle/` | the bundle's data and its text format, key styles, colours |
 | `icons/`, `store/`, `welcome.html` | the icon (SVG master + PNGs), the store listing and tile, the first-run page |
