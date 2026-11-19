@@ -2,7 +2,7 @@
 // Marks kept through a reload: save → restore on a fresh DOM, a pick that is gone says "lost",
 // big pasted images go first, Clear and closing forget, and the worker keeps one key per tab+page.
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { find, target } from "../src/keep/keep";
+import { createKeeper, find, target } from "../src/keep/keep";
 import { fitBudget, fromSaved, pageKey, restoredMessage, toSaved } from "../src/keep/saved";
 import type { Mark, Pasted, Pin } from "../src/marks/types";
 import { isKeepRequest } from "../src/shared/messages";
@@ -128,5 +128,47 @@ describe("the worker's store", () => {
     expect(isKeepRequest({ type: "keep:save", page: at, saved: { v: 2, marks: [] } })).toBe(false);
     expect(isKeepRequest({ type: "keep:load", page: "chrome://extensions" })).toBe(false);
     expect(isKeepRequest({ type: "keep:clear", page: at })).toBe(true);
+  });
+
+  it("a null or typeless message is not the store's, and throws nothing", async () => {
+    let onMessage: ((m: unknown, s: object, r: () => void) => boolean) | undefined;
+    vi.stubGlobal("chrome", {
+      runtime: { onMessage: { addListener: (fn: typeof onMessage) => (onMessage = fn) } },
+      tabs: { onRemoved: { addListener: () => {} } },
+    });
+    vi.resetModules();
+    (await import("../src/keep/store")).listenKeep();
+    expect(onMessage?.(null, {}, () => {})).toBe(false);
+    expect(onMessage?.({ type: 7 }, {}, () => {})).toBe(false);
+  });
+});
+
+describe("what does not read", () => {
+  it("an unknown or damaged mark is named as lost, the others come back", () => {
+    page();
+    const box = { kind: "shape", shape: { kind: "box", color: "red", rect: { x: 0, y: 0, w: 1, h: 1 } } };
+    const back = fromSaved({ v: 1, marks: [{ kind: "star" }, box, { kind: "pin", pin: "pick" }] } as never, restoreWorld);
+    expect(back.marks).toHaveLength(1);
+    expect(back.lost).toEqual(["a mark this version of Pointer cannot read", "a mark this version of Pointer cannot read"]);
+  });
+
+  it("a saved page whose marks are not objects with a kind is refused whole", () => {
+    expect(isKeepRequest({ type: "keep:save", page: "http://x/", saved: { v: 1, marks: [null] } })).toBe(false);
+    expect(isKeepRequest({ type: "keep:save", page: "http://x/", saved: { v: 1, marks: [{ kind: "shape" }] } })).toBe(true);
+  });
+
+  it("a refused message (the extension reloaded under the page) is said, never thrown", async () => {
+    vi.stubGlobal("chrome", { runtime: { sendMessage: () => Promise.reject(new Error("Extension context invalidated.")) } });
+    const said: string[] = [];
+    const keeper = createKeeper({ marks: () => [], editsOf: () => null, say: (m) => said.push(m) });
+    await keeper.restore(
+      () => {},
+      () => {},
+    );
+    keeper.forget();
+    keeper.forget();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(said[0]).toContain("Extension context invalidated.");
+    expect(new Set(said).size).toBe(said.length);
   });
 });

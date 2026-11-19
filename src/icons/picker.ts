@@ -2,6 +2,7 @@
 // drag it onto the page. Lucide's data (dist/lucide.js) is injected by the service worker the
 // first time the panel opens: nothing loads before, nothing is fetched from the network.
 
+import { lucideSvg } from "../marks/svg";
 import type { Point } from "../shared/geometry";
 import type { IconsLoad, IconsLoaded } from "../shared/messages";
 import { type LucideData, searchIcons } from "./search";
@@ -17,8 +18,7 @@ export type PickerHost = {
   say: (message: string, kind?: "ok" | "error") => void;
 };
 
-const SVG = (inner: string) =>
-  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${inner}</svg>`;
+const SVG = (inner: string) => lucideSvg(inner, "currentColor");
 
 async function lucide(): Promise<LucideData> {
   if (globalThis.__pointerLucide) return globalThis.__pointerLucide;

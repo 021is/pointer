@@ -45,9 +45,15 @@ export function find(t: Target): Element | null {
   }
 }
 
+/** Never rejects: a refused message (the extension reloaded under the page: "Extension context
+ *  invalidated") comes back as an answer with its cause, which the caller says once. */
 async function ask(request: KeepRequest): Promise<KeepReply> {
-  const reply = (await chrome.runtime.sendMessage(request)) as KeepReply | undefined;
-  return reply ?? { ok: false, error: "the extension did not answer (reload it in chrome://extensions)" };
+  try {
+    const reply = (await chrome.runtime.sendMessage(request)) as KeepReply | undefined;
+    return reply ?? { ok: false, error: "the extension did not answer (reload it in chrome://extensions)" };
+  } catch (err) {
+    return { ok: false, error: `${err instanceof Error ? err.message : String(err)} (reload the page)` };
+  }
 }
 
 export function createKeeper(host: KeepHost) {

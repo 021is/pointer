@@ -27,7 +27,8 @@ async function answer(tabId: number, message: unknown): Promise<KeepReply> {
 
 export function listenKeep(): void {
   chrome.runtime.onMessage.addListener((message: unknown, sender, reply: (r: KeepReply) => void) => {
-    if (!(typeof message === "object" && String((message as { type?: unknown }).type).startsWith(PREFIX))) return false;
+    const type = typeof message === "object" && message !== null ? (message as { type?: unknown }).type : undefined;
+    if (!(typeof type === "string" && type.startsWith(PREFIX))) return false;
     const tabId = sender.tab?.id;
     if (tabId === undefined) {
       reply({ ok: false, error: "asked from outside a tab" });

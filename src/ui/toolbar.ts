@@ -1,10 +1,12 @@
 // The floating bar. The 021 mark drags it; every button shows its name and key on hover. Its
 // groups (Edvard, 2026-11-19: "group them"): [Page Move] | [Pick Comment Idea Crop] | [draw ▾]
-// (draw-menu.ts) | colours, image | Styles Undo Redo Clear | Picture|Text | Copy ▾. Crops, colours
-// and image upload only matter for a picture, so Text hides them; a drawing tool chosen in Text
-// switches back to Picture. Copy is a split button (copy-menu.ts) whose menu also offers Picture only.
+// (draw-menu.ts) Icons | colours, image | Styles Undo Redo Clear | Picture|Text | Copy ▾. Crops, the
+// drawing tools, icons, colours and image upload are for a picture, so Text hides them (Gap stays
+// on its key G, its text says enough); a drawing key pressed in Text switches back to Picture.
+// Copy is a split button (copy-menu.ts) whose menu also offers Picture only.
 
 import { COLORS, type Color } from "../marks/types";
+import { IS_MAC } from "../shared/platform";
 import { type CopyMenu, createCopyMenu } from "./copy-menu";
 import { type IconName, icon } from "./icons";
 import type { Costs } from "../capture/estimate";
@@ -51,9 +53,8 @@ export const TOOLS: readonly Entry[] = [
 
 export const COLOR_KEYS: readonly Color[] = ["red", "blue", "yellow"];
 
-const MAC = /Mac|iPhone|iPad/.test(navigator.platform);
-const MOD = MAC ? "⌘" : "Ctrl+";
-const CLEAR_KEY = MAC ? "⇧⌫" : "Shift+Delete";
+const MOD = IS_MAC ? "⌘" : "Ctrl+";
+const CLEAR_KEY = IS_MAC ? "⇧⌫" : "Shift+Delete";
 
 /** A button's hover tip and its accessible name, with its key. */
 function tip(b: HTMLElement, text: string, key: string) {
@@ -133,7 +134,7 @@ export function createToolbar(act: BarActions): Toolbar {
     tip,
     choose: act.tool,
   });
-  const drawing = group();
+  const drawing = group("picture");
   drawing.append(draw.el, button("icons", "Icons: search Lucide, click one or drag it onto the page", "", act.icons));
 
   const colors = new Map<Color, HTMLButtonElement>();

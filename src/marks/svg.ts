@@ -111,10 +111,14 @@ function pinSvg(p: ScenePin): string {
   return outline + mark + badge;
 }
 
-/** Lucide's own drawing rules (24 grid, 2 stroke, round caps), in the mark's colour. */
-function iconSvg(i: { svg: string; at: Point; size: number }, c: string): string {
-  return `<svg x="${n(i.at.x)}" y="${n(i.at.y)}" width="${n(i.size)}" height="${n(i.size)}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${i.svg}</svg>`;
+/** A Lucide icon by Lucide's own drawing rules (24 grid, 2 stroke, round caps): placed in a box
+ *  on the page, or sized by its container (the picker's grid). One wrapper for both. */
+export function lucideSvg(inner: string, stroke: string, box?: { at: Point; size: number }): string {
+  const place = box ? ` x="${n(box.at.x)}" y="${n(box.at.y)}" width="${n(box.size)}" height="${n(box.size)}"` : ' aria-hidden="true"';
+  return `<svg${place} viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
 }
+
+const iconSvg = (i: { svg: string; at: Point; size: number }, c: string) => lucideSvg(i.svg, c, i);
 
 /** |← 24px →|: the measured line, its end ticks, small heads and the pixels on a white halo. */
 function gapSvg(l: GapLine, c: string): string {
