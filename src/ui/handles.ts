@@ -45,7 +45,9 @@ export function handles(host: HandleHost) {
 
   function grabPin(e: PointerEvent, pin: Pin, view: Point, page: Point) {
     const start = { ...pin.at };
-    const move = pin.kind === "comment" ? (dx: number, dy: number) => (pin.at = { x: start.x + dx, y: start.y + dy }) : null;
+    // A comment's and an idea's badge drag; a pick's follows its element, a gap's its measure.
+    const free = pin.kind === "comment" || pin.kind === "idea";
+    const move = free ? (dx: number, dy: number) => (pin.at = { x: start.x + dx, y: start.y + dy }) : null;
     press(e, page, move, () => {
       if (pin.kind === "pick") host.onPick(pin);
       host.editNote(pin, view);

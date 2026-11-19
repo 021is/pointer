@@ -17,8 +17,21 @@ import {
 } from "../marks/types";
 import type { Point, Rect } from "../shared/geometry";
 import { boundsOf, dragRect, inflate } from "../shared/geometry";
+import { shiftLine } from "../draw/gap";
 
-export type Tool = "page" | "move" | "pick" | "comment" | "crop" | "pen" | "arrow" | "box" | "ellipse" | "text";
+export type Tool =
+  | "page"
+  | "move"
+  | "pick"
+  | "comment"
+  | "idea"
+  | "crop"
+  | "pen"
+  | "arrow"
+  | "box"
+  | "ellipse"
+  | "gap"
+  | "text";
 
 export type State = {
   tool: Tool;
@@ -113,19 +126,26 @@ export type Layout = {
   rectOf: (el: Element) => Rect;
 };
 
-/** Pins as drawn: a pick's badge sits on its element's top-left corner and follows it. */
+/** Pins as drawn: a pick's badge sits on its element's top-left corner and follows it; a gap's
+ *  line stays where it was measured, its badge beside the label. */
 export function scenePins(marks: readonly Mark[], layout: Layout): ScenePin[] {
-  return pinsOf(marks).map((pin, i) => {
-    if (pin.kind === "pick") {
+  return pinsOf(marks).map((pin, i) => scenePin(pin, i + 1, layout));
+}
+
+function scenePin(pin: Pin, n: number, layout: Layout): ScenePin {
+  const badge = { x: pin.at.x - layout.scroll.x, y: pin.at.y - layout.scroll.y };
+  switch (pin.kind) {
+    case "pick": {
       const outline = layout.rectOf(pin.el);
-      return { n: i + 1, color: pin.color, badge: { x: outline.x, y: outline.y }, outline };
+      return { n, color: pin.color, badge: { x: outline.x, y: outline.y }, outline, look: "pin" };
     }
-    return {
-      n: i + 1,
-      color: pin.color,
-      badge: { x: pin.at.x - layout.scroll.x, y: pin.at.y - layout.scroll.y },
-    };
-  });
+    case "comment":
+      return { n, color: pin.color, badge, look: "pin" };
+    case "idea":
+      return { n, color: pin.color, badge, look: "idea" };
+    case "gap":
+      return { n, color: pin.color, badge, look: "gap", line: shiftLine(pin.line, -layout.scroll.x, -layout.scroll.y) };
+  }
 }
 
 /** Crop frames in the viewport: a component's box (with 4px of air), or the dragged rectangle. */
@@ -210,11 +230,14 @@ const PICTURE_ONLY: Record<Tool, boolean> = {
   move: false,
   pick: false,
   comment: false,
+  idea: false,
   crop: true,
   pen: true,
   arrow: true,
   box: true,
   ellipse: true,
+  // A gap's text names both elements and the pixels: it says enough without a picture.
+  gap: false,
   text: true,
 };
 

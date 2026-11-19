@@ -100,7 +100,7 @@ describe("the SVG renderer", () => {
 
   it("renders a view-boxed document with a numbered pin", () => {
     const svg = renderSvg(
-      { shapes: [], pins: [{ n: 2, color: "yellow", badge: { x: 30, y: 40 } }] },
+      { shapes: [], pins: [{ n: 2, color: "yellow", badge: { x: 30, y: 40 }, look: "pin" }] },
       { x: 10, y: 20, w: 300, h: 200 },
     );
     expect(svg).toContain('viewBox="10 20 300 200"');

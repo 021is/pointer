@@ -84,7 +84,7 @@ describe("formatStrip without a picture", () => {
 });
 
 describe("formatStrip: the compact lines under the picture", () => {
-  const pin = (n: number, over: Partial<PinInfo> = {}): PinInfo => ({
+  const pin = (n: number, over: Partial<Pick<PinInfo, "changes" | "note" | "component">> = {}): PinInfo => ({
     n,
     kind: "pick",
     component: {

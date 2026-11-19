@@ -2,7 +2,7 @@
 // Every line earns its place: what is unknown says why, what is empty is left out.
 
 import { imageTokens } from "../shared/geometry";
-import type { Bundle, CropInfo, DrawingSummary, PinInfo, Source } from "./types";
+import type { Bundle, ComponentInfo, CropInfo, DrawingSummary, ElementInfo, PinInfo, Source } from "./types";
 
 /** The page's address without query or hash: a URL can carry a token, and this goes into a chat. */
 export function safeUrl(href: string): string {
@@ -38,7 +38,37 @@ export function formatDrawings(d: DrawingSummary): string | null {
   return parts.length ? `drawn: ${parts.join(", ")}` : null;
 }
 
+/** Who and where, on one line: "EventCard (src/…/EventCard.tsx:27)", or its selector with no file. */
+function named(component: ComponentInfo, el: ElementInfo): string {
+  const w = component.where;
+  const where = w.kind === "found" ? formatSource(w.source) + (w.usedAt ? `, in ${fileOnly(w.usedAt)}` : "") : el.selector;
+  return `${component.chain[0] ?? el.tag} (${where})`;
+}
+
+/**
+ * What an idea asks, the same words every time: the rule that answers it keys on "idea?"
+ * (021is/code-rules PRINCIPLES § Messages from Pointer; Edvard, 2026-11-19).
+ */
+export const IDEA_ASK =
+  "→ as a UI/UX expert and design critic: what's wrong here and why, then 2–3 fixes, your recommendation first; ask before building";
+
+/** An idea and a gap are one line each, in the full form and the compact one alike. */
+function oneLine(p: PinInfo): string | null {
+  const note = p.note.trim();
+  switch (p.kind) {
+    case "idea":
+      return `[${p.n}] idea? ${named(p.component, p.el)}${note ? ` · your thought: "${note}"` : ""} ${IDEA_ASK}`;
+    case "gap":
+      return `[${p.n}] gap: ${p.px}px between ${named(p.component, p.el)} and ${named(p.other.component, p.other.el)}${note ? `; note: ${note}` : ""}`;
+    case "pick":
+    case "comment":
+      return null;
+  }
+}
+
 function formatPin(p: PinInfo): string[] {
+  const line = oneLine(p);
+  if (line) return [line];
   const c = p.component;
   const who = c.chain.length ? c.chain.join(" ← ") : p.el.tag;
   const lines = [`[${p.n}] ${p.kind} · ${who}`];
@@ -86,6 +116,8 @@ const fileOnly = (s: Source): string => formatSource({ ...s, file: s.file.split(
  * buttons was meant even without a picture) and where on one line, then its changes and note.
  */
 function stripPin(p: PinInfo): string[] {
+  const line = oneLine(p);
+  if (line) return [line];
   const w = p.component.where;
   const who = p.component.chain[0] ?? p.el.tag;
   const text = p.el.text ? ` "${clip(p.el.text, 30)}"` : "";
@@ -117,7 +149,8 @@ export function task(b: Bundle, onPicture: boolean): string | null {
   const find = components.some((c) => c.where.kind === "found")
     ? "open the file at that line ((in X) = where that component is used)"
     : "find the element in the code by its quoted text, selector and class";
-  return `Task: the user marked these elements on this page. For each [n]${numbers}: ${find}, do what its note says, and turn "changed" (the user's live CSS edits) into code. Then answer per [n] what you did.`;
+  const ideas = b.pins.some((p) => p.kind === "idea") ? " An idea? [n] is a question, not a change: answer it and build nothing for it until the user picks." : "";
+  return `Task: the user marked these elements on this page. For each [n]${numbers}: ${find}, do what its note says, and turn "changed" (the user's live CSS edits) into code. Then answer per [n] what you did.${ideas}`;
 }
 
 /**

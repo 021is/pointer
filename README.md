@@ -97,7 +97,9 @@ Still stuck? [Open an issue](https://github.com/021is/pointer/issues) and say wh
 |---|---|---|
 | C | **Comment** (the default) | Click anywhere, type, Enter. Click a number to edit it, drag it to move it. |
 | P | **Pick** | Edit an element's CSS live: click it and its style box opens. ↑ parent, ↓ child, ← → siblings, Enter takes it. |
+| Q | **Idea** | Click what could be better, add your thought if you like. Your agent answers as a UI/UX expert and design critic: what is wrong and why, 2–3 fixes, and it asks before building. |
 | X | **Crop** | Click a component, or drag a frame. Several frames (A, B…) make one picture. Draw and comment inside them. |
+| G | **Gap** | Drag from one element to another (or to its container): it snaps to their edges and measures the space, \|← 24px →\|. Its note: smaller, bigger or the gap you want. |
 | D A B E T | **Draw** | Pen, arrow, box, ellipse, text. Shift: straight line, 45° arrow, square, circle. 1 2 3: red, blue, yellow. |
 | M | **Move** | Drag any mark or pasted image. Delete removes the one under the mouse. |
 | V | **Page** | Use the page as usual. Clicks go through and the marks stay. |
