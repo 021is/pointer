@@ -8,10 +8,14 @@ Your agent gets one picture and the source <strong>file:line</strong> of everyth
 
 <p align="center">
   <a href="https://github.com/021is/pointer/releases/latest">Download</a> ·
+  <a href="https://www.youtube.com/watch?v=mjzsXVzJk3o">Watch the demo</a> ·
   <a href="#start-in-four-steps">Start</a> ·
   <a href="#nothing-happens">Help</a> ·
   <a href="https://021.is/plugins/pointer">021.is/plugins/pointer</a>
 </p>
+
+<p align="center"><a href="https://www.youtube.com/watch?v=mjzsXVzJk3o"><img src="https://img.youtube.com/vi/mjzsXVzJk3o/maxresdefault.jpg" width="800" alt="Watch the 40-second demo of Pointer on YouTube"></a><br>
+<sub>▶ Watch the 40-second demo</sub></p>
 
 <p align="center"><img src="store/screenshot-2-mark.png" width="800" alt="Pointer's bar on a web app: two crop frames, an arrow, an ellipse and a comment"></p>
 
