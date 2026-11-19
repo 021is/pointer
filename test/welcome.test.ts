@@ -55,4 +55,15 @@ describe("the welcome page names the real shortcut", () => {
     (document.getElementById("set-shortcut") as HTMLButtonElement).click();
     await vi.waitFor(() => expect(text("set-shortcut-error")).toContain("type chrome://extensions/shortcuts"));
   });
+
+  it("names no key when Chrome will not say which one, and says why", async () => {
+    document.body.innerHTML = body;
+    vi.stubGlobal("chrome", { commands: { getAll: async () => Promise.reject(new Error("no commands")) }, tabs: { create: vi.fn() } });
+    vi.resetModules();
+    await import("../src/welcome");
+    await new Promise((r) => setTimeout(r, 0));
+    expect(text("key-step")).toBe(
+      "Click Pointer's icon (Chrome did not say which key Pointer has: no commands; see chrome://extensions/shortcuts).",
+    );
+  });
 });

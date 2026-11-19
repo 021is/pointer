@@ -4,6 +4,7 @@
 // picks' CSS edits. Any other change to the marks after an undo starts a new story: Redo empties.
 
 import { type Mark, isPin } from "../marks/types";
+import { IS_MAC } from "../shared/platform";
 import type { Extension } from "./extension";
 import { type State, pinsOf } from "./state";
 import type { ToastAction } from "./toast";
@@ -18,9 +19,8 @@ export type HistoryHost = {
 /** What Redo puts back: one mark (and its edits), or a Clear everything done again. */
 type Step = { kind: "mark"; mark: Mark; restore: () => void } | { kind: "clear" };
 
-const MAC = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
-export const UNDO_KEY = MAC ? "⌘Z" : "Ctrl+Z";
-export const REDO_KEY = MAC ? "⌘⇧Z" : "Ctrl+Shift+Z";
+export const UNDO_KEY = IS_MAC ? "⌘Z" : "Ctrl+Z";
+export const REDO_KEY = IS_MAC ? "⌘⇧Z" : "Ctrl+Shift+Z";
 
 /** The same marks, one by one: a move replaces its mark, so it counts as a change. */
 export const sameMarks = (a: readonly Mark[], b: readonly Mark[]) => a.length === b.length && a.every((m, i) => m === b[i]);

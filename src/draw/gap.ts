@@ -32,7 +32,8 @@ export function measureGap(a: Rect, b: Rect, start: Point, end: Point): GapAnswe
   const outer = contains(a, b) ? a : contains(b, a) ? b : null;
   if (outer) {
     const inner = outer === a ? b : a;
-    if (inner === outer || (a.x === b.x && a.y === b.y && a.w === b.w && a.h === b.h)) {
+    // The same box twice (one element, or a child exactly as big as its parent): no gap to measure.
+    if (a.x === b.x && a.y === b.y && a.w === b.w && a.h === b.h) {
       return { kind: "none", why: "drag from one element to another (or from an element to its container)" };
     }
     const toward = outer === a ? start : end;

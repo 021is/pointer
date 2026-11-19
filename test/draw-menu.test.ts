@@ -47,6 +47,20 @@ describe("the draw button", () => {
     expect(tb.el.querySelector('.group > button[aria-label^="Box"]')).toBeNull();
   });
 
+  it("Text hides what only a picture needs: crop, the drawing button, icons, colours, image", () => {
+    const { tb } = bar();
+    const hidden = (el: Element | null) => el?.closest('[data-only="picture"]') !== null;
+    const q = (sel: string) => tb.el.querySelector(sel);
+    expect(hidden(q("button.draw"))).toBe(true);
+    expect(hidden(q('button[aria-label^="Icons"]'))).toBe(true);
+    expect(hidden(q('button[aria-label^="Crop"]'))).toBe(true);
+    expect(hidden(q('button[aria-label^="Add an image"]'))).toBe(true);
+    expect(hidden(q("button.swatch"))).toBe(true);
+    for (const label of ["Use the page", "Move", "Pick", "Comment", "Idea", "Undo", "Copy for the agent"]) {
+      expect(hidden(q(`button[aria-label^="${label}"]`))).toBe(false);
+    }
+  });
+
   it("a key's tool shows on the button, and stays there as the last one used", () => {
     const { show, main } = bar();
     show("box");

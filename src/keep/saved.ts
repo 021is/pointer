@@ -2,7 +2,7 @@
 // and commenting and then reload happen"). An element becomes the selector that finds it again; a
 // pasted image becomes its data URL. Pure: the page comes in as functions.
 
-import type { GapLine, Mark, Pasted, Pin, PointKind, Shape } from "../marks/types";
+import { COLORS, type GapLine, type Mark, type Pasted, type Pin, type PointKind, type Shape } from "../marks/types";
 import type { ElementEdits } from "../panel/edits";
 import type { Point, Rect } from "../shared/geometry";
 
@@ -100,7 +100,12 @@ export type Restored = {
 
 export function fromSaved(saved: Saved, w: RestoreWorld): Restored {
   const out: Restored = { marks: [], replay: [], lost: [] };
-  for (const m of saved.marks) {
+  for (const m of saved.marks as readonly unknown[]) {
+    // A mark this version cannot read (another version's kind, a damaged entry) is named, not dropped.
+    if (!isSavedMark(m)) {
+      out.lost.push("a mark this version of Pointer cannot read");
+      continue;
+    }
     switch (m.kind) {
       case "shape":
         out.marks.push(m.shape);
@@ -153,8 +158,40 @@ export function restoredMessage(r: Restored): string {
   return (back + lost).trim();
 }
 
-/** Checked where it enters the service worker or comes back from the store. */
+/** Checked where it enters the service worker or comes back from the store: the envelope, and
+ *  every mark an object with a kind; each mark's fields are checked as it is restored. */
 export function isSaved(value: unknown): value is Saved {
   const s = value as Partial<Saved> | null;
-  return s?.v === 1 && Array.isArray(s.marks);
+  return s?.v === 1 && Array.isArray(s.marks) && s.marks.every((m) => typeof (m as { kind?: unknown } | null)?.kind === "string");
+}
+
+const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null;
+const isNum = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
+const isPoint = (v: unknown) => isObj(v) && isNum(v.x) && isNum(v.y);
+const isRect = (v: unknown) => isPoint(v) && isObj(v) && isNum(v.w) && isNum(v.h);
+const isTarget = (v: unknown) => isObj(v) && typeof v.selector === "string" && typeof v.tag === "string" && typeof v.label === "string";
+const COLORS_OK = new Set(Object.keys(COLORS));
+const SHAPES = new Set(["pen", "arrow", "box", "ellipse", "text"]);
+const isPinish = (m: Record<string, unknown>) =>
+  COLORS_OK.has(String(m.color)) && isPoint(m.at) && typeof m.note === "string" && isTarget(m.target);
+
+/** One saved mark, field by field: a kind this version knows, with the fields it needs. */
+export function isSavedMark(v: unknown): v is SavedMark {
+  if (!isObj(v)) return false;
+  switch (v.kind) {
+    case "shape":
+      return isObj(v.shape) && SHAPES.has(String(v.shape.kind)) && COLORS_OK.has(String(v.shape.color));
+    case "pin":
+      return ["pick", "comment", "idea"].includes(String(v.pin)) && isPinish(v);
+    case "gap":
+      return isPinish(v) && isTarget(v.other) && isObj(v.line) && isPoint(v.line.from) && isPoint(v.line.to) && isNum(v.line.px);
+    case "icon":
+      return isPinish(v) && typeof v.name === "string" && typeof v.svg === "string" && isNum(v.size);
+    case "crop":
+      return isRect(v.rect) && (v.target === null || isTarget(v.target));
+    case "image":
+      return typeof v.src === "string" && v.src.startsWith("data:image/") && isRect(v.rect) && isNum(v.opacity);
+    default:
+      return false;
+  }
 }

@@ -29,8 +29,9 @@ async function start() {
   try {
     showShortcut(shortcutOf(await chrome.commands.getAll()));
   } catch (err) {
-    // The page's static words stay (Alt+P, ⌃⇧P), and the reason is in the page's console.
-    console.error("Pointer: the shortcut was not read:", err);
+    // Never a key Chrome may not have bound: the step names the icon and says why, and where to look.
+    const why = err instanceof Error ? err.message : String(err);
+    $("key-step").replaceChildren(`Click Pointer's icon (Chrome did not say which key Pointer has: ${why}; see ${SHORTCUTS_URL}).`);
   }
 }
 
