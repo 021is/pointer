@@ -228,6 +228,10 @@ export function chooseTool(mode: Mode, tool: Tool): Mode {
   return { tool, output: pictureOnly(tool) ? "picture" : mode.output };
 }
 
+/** An image pasted or added: Move at once, whatever the tool, so the next drag moves it (Edvard,
+ *  2026-11-19: "I could be on comment"). Comment and the drawing tools let no press reach it. */
+export const afterPaste = (mode: Mode): Mode => chooseTool(mode, "move");
+
 /** Switching the output: Text puts a picture-only tool down for pick. */
 export function chooseOutput(mode: Mode, output: Output): Mode {
   return { output, tool: output === "text" && pictureOnly(mode.tool) ? "pick" : mode.tool };
