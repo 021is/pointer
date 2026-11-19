@@ -2,8 +2,9 @@
 // edits (a note, the text), a drag past 4 px moves (a comment, a text; a pick follows its
 // element). Edvard, 2026-11-18: "I cant move text".
 
-import { type Pin, type Shape, isShape } from "../marks/types";
+import { type Mark, type Pin, type Shape, isShape } from "../marks/types";
 import { type Point, near } from "../shared/geometry";
+import { markAt, shifted } from "./move";
 import { type State, moveShape, shapeBox } from "./state";
 
 type TextShape = Extract<Shape, { kind: "text" }>;
@@ -67,5 +68,25 @@ export function handles(host: HandleHost) {
     );
   }
 
-  return { grabPin, grabText };
+  /** Move tool: drag the mark under the pointer (a drawing, a text, a free crop frame). */
+  function grabMark(e: PointerEvent, page: Point) {
+    const { state } = host;
+    const start = markAt(state.marks, page);
+    if (!start) return;
+    // Followed by identity: an Undo or Delete during the drag can never make it move another mark.
+    let current: Mark = start;
+    host.drag(
+      e,
+      (p) => {
+        const index = state.marks.indexOf(current);
+        if (index < 0) return;
+        const next = shifted(start, p.x - page.x, p.y - page.y);
+        host.update(() => (state.marks[index] = next));
+        current = next;
+      },
+      () => host.update(() => {}),
+    );
+  }
+
+  return { grabPin, grabText, grabMark };
 }
