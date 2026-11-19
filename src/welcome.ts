@@ -29,7 +29,7 @@ async function start() {
   try {
     showShortcut(shortcutOf(await chrome.commands.getAll()));
   } catch (err) {
-    // The page's static words stay (Alt+P, ⌥P), and the reason is in the page's console.
+    // The page's static words stay (Alt+P, ⌃⇧P), and the reason is in the page's console.
     console.error("Pointer: the shortcut was not read:", err);
   }
 }

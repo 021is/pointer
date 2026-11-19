@@ -65,8 +65,9 @@ Then do steps 3 to 5 above, and choose the `dist` folder inside `pointer`. After
 
 1. **Open your app.** Open the page you are building in Chrome. In development mode
    (`npm run dev`) your agent also gets the file and line.
-2. **Turn Pointer on.** Press **Alt+P** (on a Mac **⌥P**), or click Pointer's icon. A dark bar
-   appears at the bottom of the page: it is on.
+2. **Turn Pointer on.** Press **Alt+P** (on a Mac **⌃⇧P**, Control+Shift+P), or click Pointer's
+   icon. A dark bar appears at the bottom of the page: it is on. Any other key: set your own in
+   `chrome://extensions/shortcuts`.
 3. **Show what you mean.** Click where something should change, type what you want, press Enter.
    A numbered pin marks it. Add as many as you like.
 4. **Copy and paste.** Click **Copy**, then paste into your agent's chat: Ctrl+V in Claude Code's

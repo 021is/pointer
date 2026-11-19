@@ -74,9 +74,9 @@ describe("install opens the welcome page", () => {
 
 describe("the icon's tooltip names the shortcut Chrome has now", () => {
   it("as Chrome writes it on a Mac", async () => {
-    const { setTitle } = mockChrome(async () => ({}), "⌥P");
+    const { setTitle } = mockChrome(async () => ({}), "⌃⇧P");
     await loadWorker();
-    await vi.waitFor(() => expect(setTitle).toHaveBeenCalledWith({ title: "Pointer (⌥P)" }));
+    await vi.waitFor(() => expect(setTitle).toHaveBeenCalledWith({ title: "Pointer (⌃⇧P)" }));
   });
 
   it("says where to set one when none is set", async () => {
