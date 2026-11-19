@@ -171,6 +171,9 @@ function scenePin(pin: Pin, n: number, layout: Layout): ScenePin {
       return { n, color: pin.color, badge, look: "idea" };
     case "gap":
       return { n, color: pin.color, badge, look: "gap", line: shiftLine(pin.line, -layout.scroll.x, -layout.scroll.y) };
+    case "icon":
+      // The badge sits on the icon's top-right corner, clear of the drawing.
+      return { n, color: pin.color, badge: { x: badge.x + pin.size, y: badge.y }, look: "icon", icon: { svg: pin.svg, at: badge, size: pin.size } };
   }
 }
 

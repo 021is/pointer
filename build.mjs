@@ -1,7 +1,22 @@
 // Bundles the scripts Chrome loads and copies the manifest, the pages, the icons and 021's logo
-// into dist/, the folder that is loaded unpacked. `--watch` rebuilds on every save.
-import { copyFile, mkdir, readdir } from "node:fs/promises";
+// into dist/, the folder that is loaded unpacked. `--watch` rebuilds on every save. It also writes
+// dist/lucide.js, Lucide's icons and tags (lucide-static, pinned to the version DanceClub web and
+// 021.is use), which the icon picker injects only when it opens.
+import { copyFile, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import * as esbuild from "esbuild";
+
+/** Lucide's icons as their inner SVG markup, with their tags: one global, read by src/icons/. */
+async function lucide() {
+  const dir = "node_modules/lucide-static";
+  const nodes = JSON.parse(await readFile(`${dir}/icon-nodes.json`, "utf8"));
+  const tags = JSON.parse(await readFile(`${dir}/tags.json`, "utf8"));
+  const { version } = JSON.parse(await readFile(`${dir}/package.json`, "utf8"));
+  const attrs = (a) => Object.entries(a).map(([k, v]) => ` ${k}="${String(v).replace(/"/g, "&quot;")}"`).join("");
+  const svg = Object.fromEntries(Object.entries(nodes).map(([name, parts]) => [name, parts.map(([tag, a]) => `<${tag}${attrs(a)}/>`).join("")]));
+  const data = { version, svg, tags: Object.fromEntries(Object.keys(svg).map((name) => [name, tags[name] ?? []])) };
+  await writeFile("dist/lucide.js", `globalThis.__pointerLucide=${JSON.stringify(data)};`);
+  await copyFile(`${dir}/LICENSE`, "dist/LUCIDE-LICENSE.txt");
+}
 
 const watch = process.argv.includes("--watch");
 
@@ -29,6 +44,7 @@ for (const name of await readdir("icons")) {
   if (name.endsWith(".png")) await copyFile(`icons/${name}`, `dist/icons/${name}`);
 }
 for (const name of await readdir("brand")) await copyFile(`brand/${name}`, `dist/brand/${name}`);
+await lucide();
 
 if (watch) {
   const ctx = await esbuild.context(options);

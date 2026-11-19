@@ -13,6 +13,7 @@ const ICON_PATHS = {
   box: '<rect x="4" y="6" width="16" height="12" rx="2.5"/>',
   ellipse: '<ellipse cx="12" cy="12" rx="8.5" ry="6.5"/>',
   text: '<path d="M5 7V5h14v2"/><path d="M12 5v14"/><path d="M9 19h6"/>',
+  icons: '<circle cx="7.5" cy="7.5" r="3.5"/><path d="M14 4h6v6h-6z"/><path d="M7.5 13.5l4 7h-8z"/><path d="M17 14v6M14 17h6"/>',
   upload: '<rect x="3" y="5" width="13" height="14" rx="2.5"/><path d="M3 15.5l3.5-3.5 3 3 2-2 4.5 4.5"/><path d="M19.5 3v7M16.5 6l3-3 3 3"/>',
   styles: '<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>',
   undo: '<path d="M9 14.5L4 9.5l5-5"/><path d="M4 9.5h10a5.5 5.5 0 010 11h-3"/>',

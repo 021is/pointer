@@ -163,4 +163,26 @@ export const CSS = `
 .toast button { all: unset; cursor: pointer; padding: 4px 10px; border-radius: 8px; background: rgba(255, 255, 255, 0.12); font-weight: 700; }
 .toast button:hover { background: rgba(255, 255, 255, 0.2); }
 @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
+
+/* The icon picker: above the bar, the bar's glass; a search, a grid of Lucide icons, a note. */
+.iconpicker {
+  position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); width: min(380px, 92vw);
+  padding: 10px; border-radius: 14px; pointer-events: auto; color: #ece9fb;
+  background: #120f1d; border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 18px 44px rgba(5, 3, 15, 0.6);
+  font: 13px/1.4 ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+.iconpicker[hidden] { display: none; }
+.iconpicker input {
+  all: unset; box-sizing: border-box; width: 100%; padding: 9px 11px; border-radius: 10px; color: #fff;
+  background: rgba(0, 0, 0, 0.28); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08); font-size: 14px;
+}
+.iconpicker input:focus { box-shadow: inset 0 0 0 1.5px #8a6dff; }
+.iconpicker .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(40px, 1fr)); gap: 4px;
+  max-height: 220px; overflow: auto; margin-top: 8px; color: rgba(236, 233, 251, 0.6); }
+.iconpicker .icon-result { all: unset; display: grid; place-items: center; height: 40px; border-radius: 8px; cursor: grab; color: #ece9fb; }
+.iconpicker .icon-result:hover, .iconpicker .icon-result:focus-visible { background: rgba(255, 255, 255, 0.09); }
+.iconpicker .icon-result svg, .icon-ghost svg { width: 22px; height: 22px; }
+.iconpicker .foot { margin: 8px 2px 0; font-size: 11.5px; color: rgba(236, 233, 251, 0.55); }
+.icon-ghost { position: fixed; left: 0; top: 0; width: 32px; height: 32px; display: grid; place-items: center;
+  color: #fff; pointer-events: none; border-radius: 8px; background: rgba(124, 92, 255, 0.35); }
 `;

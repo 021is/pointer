@@ -26,6 +26,7 @@ dev-build information (React fibers, Vue and Svelte metadata, source maps).
 | `src/preview.ts`, `preview.html` | the preview page: what Copy would give, from the service worker |
 | `pages.css`, `brand/` | the extension's pages in 021's look, and 021's logo, bundled (never fetched) |
 | `src/panel/` | the style panel: matched CSS, live edits on one element, their diff |
+| `src/icons/` | the icon picker: Lucide (lucide-static, pinned to the version DanceClub web and 021.is use) built into `dist/lucide.js`, injected by the worker only when the picker opens; search, place, move, resize. Notices: `THIRD-PARTY-NOTICES.md` |
 | `src/paste/` | images pasted onto the page: landing, move/resize, see-through, until reload |
 | `src/source/` | the page-world probe: framework, component chain, file:line via source maps |
 | `src/bundle/` | the bundle's data and its text format, key styles, colours |

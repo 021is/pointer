@@ -35,7 +35,11 @@ type PinBase = {
 };
 
 /** Every numbered mark: [n] in the picture and in the text. */
-export type Pin = (PinBase & { kind: PointKind }) | (PinBase & { kind: "gap"; other: Element; line: GapLine });
+export type Pin =
+  | (PinBase & { kind: PointKind })
+  | (PinBase & { kind: "gap"; other: Element; line: GapLine })
+  /** A Lucide icon laid on the page (`at` is its top-left, `el` the element under it). */
+  | (PinBase & { kind: "icon"; name: string; svg: string; size: number });
 
 /**
  * A frame for the picture: a component (its box, followed live) or a dragged rectangle (page
@@ -53,7 +57,7 @@ export type Pasted = { kind: "image"; img: HTMLImageElement; rect: Rect; opacity
 export type Mark = Shape | Pin | Crop | Pasted;
 
 export function isPin(m: Mark): m is Pin {
-  return m.kind === "pick" || m.kind === "comment" || m.kind === "idea" || m.kind === "gap";
+  return m.kind === "pick" || m.kind === "comment" || m.kind === "idea" || m.kind === "gap" || m.kind === "icon";
 }
 
 export function isCrop(m: Mark): m is Crop {

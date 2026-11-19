@@ -60,6 +60,8 @@ function oneLine(p: PinInfo): string | null {
       return `[${p.n}] idea? ${named(p.component, p.el)}${note ? ` · your thought: "${note}"` : ""} ${IDEA_ASK}`;
     case "gap":
       return `[${p.n}] gap: ${p.px}px between ${named(p.component, p.el)} and ${named(p.other.component, p.other.el)}${note ? `; note: ${note}` : ""}`;
+    case "icon":
+      return `[${p.n}] icon: lucide ${p.name} on ${named(p.component, p.el)}${note ? `; note: ${note}` : ""}`;
     case "pick":
     case "comment":
       return null;

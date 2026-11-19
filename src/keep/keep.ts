@@ -117,6 +117,7 @@ export function createKeeper(host: KeepHost) {
         find,
         at: (p) => document.elementFromPoint(p.x - scrollX, p.y - scrollY),
         image: (src) => Object.assign(new Image(), { src, draggable: false }),
+        page: document.body,
       });
     } catch (err) {
       warn(`Your marks from before the reload could not be read: ${String(err)}`);

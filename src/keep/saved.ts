@@ -13,6 +13,7 @@ export type SavedMark =
   | { kind: "shape"; shape: Shape }
   | { kind: "pin"; pin: PointKind; color: Pin["color"]; at: Point; note: string; target: Target; edits: ElementEdits | null }
   | { kind: "gap"; color: Pin["color"]; at: Point; note: string; target: Target; other: Target; line: GapLine }
+  | { kind: "icon"; color: Pin["color"]; at: Point; note: string; target: Target; name: string; svg: string; size: number }
   | { kind: "crop"; target: Target | null; rect: Rect }
   | { kind: "image"; src: string; rect: Rect; opacity: number };
 
@@ -52,6 +53,9 @@ export function toSaved(marks: readonly Mark[], w: SaveWorld): { saved: Saved; p
       case "gap":
         out.push({ kind: "gap", color: m.color, at: m.at, note: m.note, target: w.target(m.el), other: w.target(m.other), line: m.line });
         break;
+      case "icon":
+        out.push({ kind: "icon", color: m.color, at: m.at, note: m.note, target: w.target(m.el), name: m.name, svg: m.svg, size: m.size });
+        break;
       case "crop":
         out.push({ kind: "crop", target: m.el ? w.target(m.el) : null, rect: m.rect });
         break;
@@ -82,6 +86,8 @@ export type RestoreWorld = {
   /** The element at a page point, for a comment whose own element is gone. */
   at: (p: Point) => Element | null;
   image: (src: string) => HTMLImageElement;
+  /** The page itself, for a mark with nothing else under it. */
+  page: Element;
 };
 
 export type Restored = {
@@ -119,6 +125,12 @@ export function fromSaved(saved: Saved, w: RestoreWorld): Restored {
           break;
         }
         out.marks.push({ kind: "gap", color: m.color, el, other, at: m.at, note: m.note, line: m.line });
+        break;
+      }
+      case "icon": {
+        // An icon lies on the page whatever is under it: the element now there, else the page.
+        const el = w.find(m.target) ?? w.at({ x: m.at.x + m.size / 2, y: m.at.y + m.size / 2 }) ?? w.page;
+        out.marks.push({ kind: "icon", color: m.color, el, at: m.at, note: m.note, name: m.name, svg: m.svg, size: m.size });
         break;
       }
       case "crop":
