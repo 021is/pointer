@@ -37,6 +37,8 @@ figure { margin: 28px 0 0; } figure img { display: block; max-width: 100%; borde
 .btn + .btn { background: transparent; color: var(--fg); }
 .btn:hover { opacity: 0.85; }
 .note { color: var(--muted-fg); font-size: 13px; }
+.notice { margin-top: 24px; padding: 4px 16px 12px; border: 1px solid var(--fg); border-radius: var(--radius); }
+.notice[hidden] { display: none; }
 a { color: inherit; text-underline-offset: 3px; }
 .foot { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted-fg); font-size: 13px;
   display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }

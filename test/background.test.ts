@@ -44,12 +44,21 @@ describe("install opens the welcome page", () => {
     expect(create).toHaveBeenCalledWith({ url: "chrome-extension://pointer-id/welcome.html" });
   });
 
-  it("stays quiet on an update or a reload", async () => {
+  it("stays quiet on an update or a reload that kept a shortcut", async () => {
     const create = vi.fn(async () => ({}));
     const installed = mockChrome(create);
     await loadWorker();
     for (const fn of installed) fn({ reason: "update" });
+    await new Promise((r) => setTimeout(r, 0));
     expect(create).not.toHaveBeenCalled();
+  });
+
+  it("opens the shortcut part of the welcome page when an update left no shortcut", async () => {
+    const create = vi.fn(async () => ({}));
+    const installed = mockChrome(create, "");
+    await loadWorker();
+    for (const fn of installed) fn({ reason: "update" });
+    await vi.waitFor(() => expect(create).toHaveBeenCalledWith({ url: "chrome-extension://pointer-id/welcome.html#shortcut" }));
   });
 
   it("logs why when the page cannot open", async () => {

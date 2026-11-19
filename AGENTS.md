@@ -17,7 +17,8 @@ dev-build information (React fibers, Vue and Svelte metadata, source maps).
 
 | Folder | What |
 |---|---|
-| `src/background.ts` | service worker: icon/shortcut → inject; `captureVisibleTab`; the welcome page on install; the preview tab |
+| `src/background.ts` | service worker: icon/shortcut → inject; `captureVisibleTab`; the welcome page on install (and on an update that left no shortcut); the preview tab |
+| `src/welcome.ts`, `src/shared/shortcut.ts` | the welcome page names the key Chrome really bound, or offers to set one |
 | `src/ui/` | the content script: shadow-rooted layer, toolbar, bubble, keys, state; `copy-flow.ts` (Copy, clear after copy, preview), `copy-menu.ts` (the split button), `move.ts` (the Move tool), `clear.ts` (Clear everything + Undo, the one way) |
 | `src/draw/`, `src/pick/`, `src/marks/` | drawing gestures, element picking, marks → SVG |
 | `src/capture/` | screenshot, crop, layout within the image budget, text strip, clipboard, cost estimate |

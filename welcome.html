@@ -24,8 +24,8 @@
   <ol>
     <li><strong>Open your app.</strong> Open the page you are building in Chrome. In development mode
       (<code>npm run dev</code>) your agent also gets the file and line.</li>
-    <li><strong>Turn Pointer on.</strong> Press <kbd>Alt+P</kbd> (on a Mac <kbd>⌥P</kbd>), or click
-      Pointer's icon. A dark bar appears at the bottom of the page: it is on.</li>
+    <li><strong>Turn Pointer on.</strong> <span id="key-step">Press <kbd>Alt+P</kbd> (on a Mac <kbd>⌥P</kbd>),
+      or click Pointer's icon.</span> A dark bar appears at the bottom of the page: it is on.</li>
     <li><strong>Show what you mean.</strong> Click where something should change, type what you want, press
       <kbd>Enter</kbd>. A numbered pin marks it. Add as many as you like.</li>
     <li><strong>Copy and paste.</strong> Click <strong>Copy</strong>, then paste into your agent's chat:
@@ -33,6 +33,15 @@
       and VS Code.</li>
   </ol>
   <p class="note">No icon in the toolbar? Click the puzzle piece next to the address bar and pin Pointer.</p>
+
+  <section id="shortcut" class="notice" hidden>
+    <p><strong>Pointer has no keyboard shortcut.</strong> Chrome gives an extension its key only when
+      nothing else uses it: another extension, or one of Chrome's own keys. Choose one yourself: click the
+      button, find Pointer, click the pencil and press the keys you want (for example <kbd>Alt+P</kbd>, on a
+      Mac <kbd>⌥P</kbd>).</p>
+    <div class="actions"><button id="set-shortcut" class="btn" type="button">Set a shortcut</button></div>
+    <p id="set-shortcut-error" class="note" role="status"></p>
+  </section>
 
   <p class="eyebrow">Is it working?</p>
   <table>
@@ -46,8 +55,9 @@
   <table>
     <tr><td>A red <strong>!</strong> on the icon</td><td>Chrome lets no extension run on this page (chrome://
       pages, the Web Store, the PDF viewer). Try it on your app's tab.</td></tr>
-    <tr><td>The shortcut does nothing</td><td>Another app may use it. Open <code>chrome://extensions/shortcuts</code>
-      and give Pointer a key of your own, or click the icon.</td></tr>
+    <tr><td>The shortcut does nothing</td><td>Hold the mouse over Pointer's icon: it names the key Chrome
+      gave Pointer, or says none is set. Another app may use the key too. Open
+      <code>chrome://extensions/shortcuts</code> and give Pointer a key of your own, or click the icon.</td></tr>
     <tr><td>No file and line</td><td>Your app is not in development mode, or its framework has no source
       information. Your agent still gets each element's text and selector, which is enough to find it.</td></tr>
     <tr><td>A file:// page</td><td>Open <code>chrome://extensions</code>, then Pointer's <strong>Details</strong>, and
@@ -98,5 +108,6 @@ Task: the user marked these elements on this page. For each [n]: open the file a
     <a href="https://021.is/contact">Contact</a>
   </footer>
 </main>
+<script src="welcome.js"></script>
 </body>
 </html>

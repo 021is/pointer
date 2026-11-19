@@ -12,6 +12,7 @@ const options = {
     content: "src/ui/main.ts",
     probe: "src/source/probe.ts",
     preview: "src/preview.ts",
+    welcome: "src/welcome.ts",
   },
   outdir: "dist",
   bundle: true,

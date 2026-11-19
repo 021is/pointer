@@ -81,7 +81,7 @@ twice, or click the ✕ at the right end of the bar.
 | What you see | What to do |
 |---|---|
 | A red **!** on Pointer's icon | Chrome lets no extension run on that page (`chrome://` pages, the Web Store, the PDF viewer). Use it on your app's tab. |
-| The shortcut does nothing | Another app may use it. Set your own key in `chrome://extensions/shortcuts`, or click the icon. |
+| The shortcut does nothing | Hold the mouse over Pointer's icon: it names the key Chrome gave Pointer, or says none is set (Chrome gives the key only when nothing else uses it; Pointer then opens its welcome page with a **Set a shortcut** button). Set your own key in `chrome://extensions/shortcuts`, or click the icon. |
 | No file and line in the copy | Your app is not running in development mode, or its framework gives no source information (see [below](#where-the-file-and-line-come-from)). Your agent still gets each element's text and selector, which is enough to find it. |
 | It doesn't run on a `file://` page | In `chrome://extensions`, open Pointer's **Details** and turn on **Allow access to file URLs**. |
 | Paste gives only the picture | That's expected in Claude Code: its chat keeps only the image. The picture has the file:line lines printed under it, so nothing is lost. |
