@@ -31,9 +31,12 @@ export type KeyActions = {
 export const isEditable = (t: EventTarget | null | undefined) =>
   t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || (t instanceof HTMLElement && t.isContentEditable);
 
+/** A part of Pointer's own UI that handles its keys itself (the draw menu: arrows, Enter, Esc). */
+const ownsKeys = (e: KeyboardEvent) => e.composedPath().some((n) => n instanceof HTMLElement && n.hasAttribute("data-own-keys"));
+
 export function keyHandler(tool: () => Tool, run: KeyActions): (e: KeyboardEvent) => void {
   return (e) => {
-    if (isEditable(e.composedPath()[0])) return;
+    if (isEditable(e.composedPath()[0]) || ownsKeys(e)) return;
     if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === "v") return run.beforePaste();
     const cmd = commandFor(e, tool());
     if (!cmd) return;

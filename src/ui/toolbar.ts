@@ -1,13 +1,15 @@
 // The floating bar. The 021 mark drags it; every button shows its name and key on hover. Its
-// groups follow the Picture | Text switch (Edvard, 2026-11-18: kept beside the Copy menu):
-// drawing, crops, colours and image upload only matter for a picture, so Text hides them. Copy is
-// a split button (copy-menu.ts) whose menu also offers Picture only.
+// groups (Edvard, 2026-11-19: "group them"): [Page Move] | [Pick Comment Idea Crop] | [draw ▾]
+// (draw-menu.ts) | colours, image | Styles Undo Redo Clear | Picture|Text | Copy ▾. Crops, colours
+// and image upload only matter for a picture, so Text hides them; a drawing tool chosen in Text
+// switches back to Picture. Copy is a split button (copy-menu.ts) whose menu also offers Picture only.
 
 import { COLORS, type Color } from "../marks/types";
 import { type CopyMenu, createCopyMenu } from "./copy-menu";
 import { type IconName, icon } from "./icons";
 import type { Costs } from "../capture/estimate";
 import { type Output, type State, type Tool, pictureOnly } from "./state";
+import { type DrawEntry, createDrawMenu } from "./draw-menu";
 import { REDO_KEY, UNDO_KEY } from "./history";
 import type { StylesLook } from "./styles";
 
@@ -28,21 +30,22 @@ export type BarActions = {
   close: () => void;
 };
 
-type Entry = { tool: Tool; key: string; icon: IconName; title: string };
+/** Where a tool sits on the bar: its own button in "use" or "mark", or inside the draw button. */
+type Entry = DrawEntry & { group: "use" | "mark" | "draw" };
 
 export const TOOLS: readonly Entry[] = [
-  { tool: "page", key: "V", icon: "page", title: "Use the page" },
-  { tool: "move", key: "M", icon: "move", title: "Move marks and images · Delete removes" },
-  { tool: "pick", key: "P", icon: "pick", title: "Pick: edit an element's CSS" },
-  { tool: "comment", key: "C", icon: "comment", title: "Comment" },
-  { tool: "idea", key: "Q", icon: "idea", title: "Idea: ask your agent how to make it better" },
-  { tool: "crop", key: "X", icon: "crop", title: "Crop a component or a frame" },
-  { tool: "pen", key: "D", icon: "pen", title: "Pen · Shift: straight" },
-  { tool: "arrow", key: "A", icon: "arrow", title: "Arrow · Shift: 45°" },
-  { tool: "box", key: "B", icon: "box", title: "Box · Shift: square" },
-  { tool: "ellipse", key: "E", icon: "ellipse", title: "Ellipse · Shift: circle" },
-  { tool: "gap", key: "G", icon: "gap", title: "Gap: drag from one element to another to measure the space" },
-  { tool: "text", key: "T", icon: "text", title: "Text on the page" },
+  { group: "use", tool: "page", key: "V", icon: "page", title: "Use the page" },
+  { group: "use", tool: "move", key: "M", icon: "move", title: "Move marks and images · Delete removes" },
+  { group: "mark", tool: "pick", key: "P", icon: "pick", title: "Pick: edit an element's CSS" },
+  { group: "mark", tool: "comment", key: "C", icon: "comment", title: "Comment" },
+  { group: "mark", tool: "idea", key: "Q", icon: "idea", title: "Idea: ask your agent how to make it better" },
+  { group: "mark", tool: "crop", key: "X", icon: "crop", title: "Crop a component or a frame" },
+  { group: "draw", tool: "pen", key: "D", icon: "pen", title: "Pen · Shift: straight" },
+  { group: "draw", tool: "arrow", key: "A", icon: "arrow", title: "Arrow · Shift: 45°" },
+  { group: "draw", tool: "box", key: "B", icon: "box", title: "Box · Shift: square" },
+  { group: "draw", tool: "ellipse", key: "E", icon: "ellipse", title: "Ellipse · Shift: circle" },
+  { group: "draw", tool: "gap", key: "G", icon: "gap", title: "Gap: drag from one element to another to measure the space" },
+  { group: "draw", tool: "text", key: "T", icon: "text", title: "Text on the page" },
 ];
 
 export const COLOR_KEYS: readonly Color[] = ["red", "blue", "yellow"];
@@ -114,14 +117,23 @@ export function createToolbar(act: BarActions): Toolbar {
   const tools = new Map<Tool, HTMLButtonElement>();
   const toolButton = (t: Entry) => {
     const b = button(t.icon, t.title, t.key, () => act.tool(t.tool));
+    if (pictureOnly(t.tool)) b.dataset.only = "picture";
     tools.set(t.tool, b);
     return b;
   };
+  const using = group();
+  using.append(...TOOLS.filter((t) => t.group === "use").map(toolButton));
   const marking = group();
-  const markingTools = TOOLS.filter((t) => !pictureOnly(t.tool));
-  marking.append(...markingTools.map(toolButton));
-  const drawing = group("picture");
-  drawing.append(...TOOLS.filter((t) => pictureOnly(t.tool)).map(toolButton));
+  marking.append(...TOOLS.filter((t) => t.group === "mark").map(toolButton));
+  const draw = createDrawMenu({
+    entries: TOOLS.filter((t) => t.group === "draw"),
+    button: (e, onClick) => button(e.icon, e.title, e.key, onClick),
+    caret: (onClick) => button(null, "More drawing tools", "", onClick, "▾"),
+    tip,
+    choose: act.tool,
+  });
+  const drawing = group();
+  drawing.append(draw.el);
 
   const colors = new Map<Color, HTMLButtonElement>();
   const swatches = group("picture");
@@ -162,7 +174,7 @@ export function createToolbar(act: BarActions): Toolbar {
   const close = button("close", "Close", "Esc Esc", act.close);
   close.classList.add("close");
 
-  bar.append(grip(bar), marking, drawing, swatches, upload, edit, toggle, menu.el, close);
+  bar.append(grip(bar), using, marking, drawing, swatches, upload, edit, toggle, menu.el, close);
 
   return {
     el: bar,
@@ -173,6 +185,7 @@ export function createToolbar(act: BarActions): Toolbar {
       styles.setAttribute("aria-pressed", String(look.state === "open"));
       tip(styles, look.tip, "S");
       for (const [t, b] of tools) b.setAttribute("aria-pressed", String(t === s.tool));
+      draw.update(s.tool);
       for (const [c, b] of colors) b.setAttribute("aria-pressed", String(c === s.color));
       const lit = s.output === "text" ? "text" : "picture";
       for (const [o, b] of outputs) b.setAttribute("aria-pressed", String(o === lit));
