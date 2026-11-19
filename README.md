@@ -104,7 +104,7 @@ Still stuck? [Open an issue](https://github.com/021is/pointer/issues) and say wh
 | M | **Move** | Drag any mark or pasted image. Delete removes the one under the mouse. |
 |   | **Icons** | The icon button next to the drawing tools: search [Lucide](https://lucide.dev) by name or tag, click one to add it where your mouse was, or drag it onto the page. Drag it to move it, its corner resizes it, Delete removes it. Your agent reads "[6] icon: lucide calendar-heart on EventCard (EventCard.tsx:27)". |
 | V | **Page** | Use the page as usual. Clicks go through and the marks stay. |
-| ⌘V / Ctrl+V | **Paste an image** | Puts a screenshot or mockup on the page at the mouse (or use the bar's image button). Drag it, resize it from its corner (Shift: free), `[` `]` make it see-through. It stays until the page reloads. |
+| ⌘V / Ctrl+V | **Paste an image** | Puts a screenshot or mockup on the page at the mouse (or use the bar's image button). Drag it, resize it from its corner (Shift: free), `[` `]` make it see-through. The bar switches to Move, so you can drag it right away. It is kept through a reload with your other marks. |
 | S | **Styles** | The style box of the last pick, and away again. |
 | I | **Picture \| Text** | The switch next to Copy: what Copy gives. Text hides the tools that only make sense in a picture. |
 | ⌘C / Ctrl+C | **Copy** | Copies for your agent. The ▾ next to Copy shows each choice's cost and opens a preview. |
@@ -126,7 +126,8 @@ changes. It lists the CSS that reaches the element and its classes.
 - ↺ Reset puts the element back. − collapses the box, and ✕ or S closes it.
 
 Edits are live, on that element only, and Copy adds them under `changed:`. Undoing a pick undoes
-its edits, and so does reloading the page.
+its edits (Redo brings them back). A reload keeps them: open Pointer again and they are back on
+the element.
 
 ```
    changed: font-size 96px → 72px
