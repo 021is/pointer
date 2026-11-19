@@ -11,6 +11,7 @@ import {
   isPreviewAsk,
   isPreviewRequest,
 } from "./shared/messages";
+import { shortcutOf, titleFor } from "./shared/shortcut";
 
 /** The last preview, held only until its page has taken it (in memory, never stored). */
 let preview: Preview | null = null;
@@ -34,18 +35,15 @@ chrome.runtime.onMessage.addListener((message: unknown, _sender, reply: (r: Prev
   return false;
 });
 
-/** The icon's tooltip names the shortcut as Chrome has it now: ⌥P on a Mac, a key the person
- *  changed in chrome://extensions/shortcuts, or none set (Edvard, 2026-11-18, on a Mac). Chrome
- *  may refuse a suggested key: Chromium 157 on Linux left Alt+Shift+P unset, so the default is
- *  Alt+P (Edvard, 2026-11-18), and the tooltip never names a key Chrome did not bind. */
-async function title(): Promise<string> {
-  const commands = await chrome.commands.getAll();
-  const key = commands.find((c) => c.name === "_execute_action")?.shortcut;
-  return key ? `Pointer (${key})` : "Pointer (no shortcut: set one in chrome://extensions/shortcuts)";
-}
+/** The shortcut as Chrome has it now: ⌥P on a Mac, a key the person changed in
+ *  chrome://extensions/shortcuts, or none (Edvard, 2026-11-18, on a Mac). Chrome may refuse a
+ *  suggested key: Chromium 157 on Linux left Alt+Shift+P unset, so the default is Alt+P. */
+const currentKey = async () => shortcutOf(await chrome.commands.getAll());
 
+/** The icon's tooltip never names a key Chrome did not bind. */
 const setTitle = (tabId?: number) =>
-  title()
+  currentKey()
+    .then(titleFor)
     .then((t) => chrome.action.setTitle(tabId === undefined ? { title: t } : { tabId, title: t }))
     .catch((err: unknown) => console.error("Pointer: the icon's title was not set:", err));
 
@@ -71,13 +69,21 @@ chrome.action.onClicked.addListener((tab) => {
   void toggle(tab);
 });
 
-// The first install opens the welcome page (the extension's own page: no permission needed).
-// Updates and reloads do not; a page that fails to open says why in the service worker's log.
-chrome.runtime.onInstalled.addListener(({ reason }) => {
-  if (reason !== "install") return;
+const openWelcome = (hash = "") =>
   chrome.tabs
-    .create({ url: chrome.runtime.getURL("welcome.html") })
+    .create({ url: chrome.runtime.getURL(`welcome.html${hash}`) })
     .catch((err: unknown) => console.error("Pointer: the welcome page did not open:", err));
+
+// The first install opens the welcome page (the extension's own page: no permission needed). An
+// update or a reload opens it only when it left Pointer with no shortcut, at the part that says
+// how to set one: a key that silently stops working is worse than a tab (Edvard, 2026-11-19, on
+// a Mac: "the shortcut is gone"). A page that fails to open says why in the service worker's log.
+chrome.runtime.onInstalled.addListener(({ reason }) => {
+  if (reason === "install") return void openWelcome();
+  if (reason !== "update") return;
+  currentKey()
+    .then((key) => (key ? undefined : openWelcome("#shortcut")))
+    .catch((err: unknown) => console.error("Pointer: the shortcut was not read:", err));
 });
 
 chrome.runtime.onMessage.addListener((message: unknown, sender, reply: (r: CaptureReply) => void) => {
