@@ -51,3 +51,11 @@ export function isKeepRequest(message: unknown): message is KeepRequest {
   if (m.type === "keep:save") return isSaved(m.saved);
   return m.type === "keep:load" || m.type === "keep:clear";
 }
+
+/** The icon picker opened: inject Lucide's data (dist/lucide.js) into the asking tab. */
+export type IconsLoad = { type: "icons:load" };
+export type IconsLoaded = { ok: true } | { ok: false; error: string };
+
+export function isIconsLoad(message: unknown): message is IconsLoad {
+  return typeOf(message) === "icons:load";
+}

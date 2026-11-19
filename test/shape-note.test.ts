@@ -40,7 +40,7 @@ describe("a note on a box or an ellipse", () => {
 
   it("survives a reload with the shape", () => {
     const { saved } = toSaved([box("one card")], { target: () => ({ selector: "", tag: "", label: "" }), editsOf: () => null, imageSrc: () => null });
-    const back = fromSaved(JSON.parse(JSON.stringify(saved)), { find: () => null, at: () => null, image: () => new Image() });
+    const back = fromSaved(JSON.parse(JSON.stringify(saved)), { find: () => null, at: () => null, image: () => new Image(), page: document.body });
     expect(back.marks[0]).toMatchObject({ kind: "box", note: "one card" });
   });
 });

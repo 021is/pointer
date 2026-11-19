@@ -29,7 +29,7 @@ const world = {
   editsOf: (p: Pin) => (p.kind === "pick" ? edits : null),
   imageSrc: (p: Pasted) => p.img.src,
 };
-const restoreWorld = { find, at: () => null, image: (src: string) => Object.assign(new Image(), { src }) };
+const restoreWorld = { find, at: () => null, image: (src: string) => Object.assign(new Image(), { src }), page: document.body };
 
 afterEach(() => vi.unstubAllGlobals());
 

@@ -22,6 +22,7 @@ import { notes, pinTarget } from "./notes";
 import { handles, textAt } from "./handles";
 import { createHistory } from "./history";
 import { createKeeper } from "../keep/keep";
+import { createIcons, iconAt } from "../icons/icons";
 import { markAt } from "./move";
 import {
   type Output,
@@ -80,6 +81,7 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
     color: (c) => update(() => (state.color = c)),
     output: (o) => setOutput(o),
     upload: () => pasted.upload(),
+    icons: () => icons.toggle(),
     styles: () => pressStyles(hooks, lastPick(), say),
     undo: hist.undo,
     redo: hist.redo,
@@ -92,9 +94,10 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
     close,
   });
   const flow = copyFlow({ state, host, hooks: () => hooks, say, flash: bar.flash, update, setOutput, clear: hist.clear });
-  root.append(bar.el, toast.el);
   const drag = (down: PointerEvent, move: (p: Point, shift: boolean) => void, end: () => void) =>
     dragOn(layer, down, move, end);
+  const icons = createIcons({ state, host, update, drag, say, last: () => (mouse.x || mouse.y ? mouse : null) });
+  root.append(bar.el, icons.el, toast.el);
 
   const layout = liveLayout;
   let frame = 0;
@@ -180,7 +183,7 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
     // A press on Pointer's layer never starts a text selection on the page.
     e.preventDefault();
     if (pin) return grabPin(e, pin, view, page);
-    if (pasted.onDown(e)) return;
+    if (pasted.onDown(e) || icons.grab(e, page)) return;
     if (tool === "move") return grabMark(e, page);
     // Drawing tools draw over everything; the others grab a drawn text first.
     const text = DRAW.has(tool) ? undefined : textAt(state.marks, page);
@@ -253,13 +256,14 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
     panel: () => pressStyles(hooks, lastPick(), say),
     beforePaste: () => pasted.catchPaste(),
     overPasted: () => pasted.hovered() !== undefined,
-    canRemove: () => pasted.hovered() !== undefined || (state.tool === "move" && markAt(state.marks, mouse) !== undefined),
+    canRemove: () =>
+      pasted.hovered() !== undefined || iconAt(state.marks, mouse) !== undefined || (state.tool === "move" && markAt(state.marks, mouse) !== undefined),
     see: (direction) => {
       const p = pasted.hovered();
       if (p) pasted.see(p, direction);
     },
     remove: () => {
-      const gone = pasted.hovered() ?? (state.tool === "move" ? markAt(state.marks, mouse) : undefined);
+      const gone = pasted.hovered() ?? iconAt(state.marks, mouse) ?? (state.tool === "move" ? markAt(state.marks, mouse) : undefined);
       if (gone) update(() => (state.marks = state.marks.filter((m) => m !== gone)));
     },
     clear,

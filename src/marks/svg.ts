@@ -10,6 +10,8 @@ export type ScenePin = { n: number; color: Color; badge: Point; outline?: Rect }
   | { look: "pin" }
   | { look: "idea" }
   | { look: "gap"; line: GapLine }
+  /** A Lucide icon: its markup (bundled, never from the page) drawn in a size×size box at `at`. */
+  | { look: "icon"; icon: { svg: string; at: Point; size: number } }
 );
 
 /** A crop frame as drawn on the page: its letter and its box ("" while it is being dragged). */
@@ -105,7 +107,13 @@ function pinSvg(p: ScenePin): string {
   const badge =
     `<rect x="${n(p.badge.x - half)}" y="${n(p.badge.y - BADGE_R)}" width="${n(half * 2)}" height="${BADGE_R * 2}" rx="${BADGE_R}" fill="${c}" stroke="#fff" stroke-width="2"/>` +
     `<text x="${n(p.badge.x)}" y="${n(p.badge.y)}" fill="${ink}" font-family="system-ui,sans-serif" font-size="13" font-weight="700" text-anchor="middle" dominant-baseline="central">${label}</text>`;
-  return outline + (p.look === "gap" ? gapSvg(p.line, c) : "") + badge;
+  const mark = p.look === "gap" ? gapSvg(p.line, c) : p.look === "icon" ? iconSvg(p.icon, c) : "";
+  return outline + mark + badge;
+}
+
+/** Lucide's own drawing rules (24 grid, 2 stroke, round caps), in the mark's colour. */
+function iconSvg(i: { svg: string; at: Point; size: number }, c: string): string {
+  return `<svg x="${n(i.at.x)}" y="${n(i.at.y)}" width="${n(i.size)}" height="${n(i.size)}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${i.svg}</svg>`;
 }
 
 /** |← 24px →|: the measured line, its end ticks, small heads and the pixels on a white halo. */

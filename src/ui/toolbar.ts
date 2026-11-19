@@ -18,6 +18,7 @@ export type BarActions = {
   color: (c: Color) => void;
   output: (o: Output) => void;
   upload: () => void;
+  icons: () => void;
   styles: () => void;
   undo: () => void;
   redo: () => void;
@@ -133,7 +134,7 @@ export function createToolbar(act: BarActions): Toolbar {
     choose: act.tool,
   });
   const drawing = group();
-  drawing.append(draw.el);
+  drawing.append(draw.el, button("icons", "Icons: search Lucide, click one or drag it onto the page", "", act.icons));
 
   const colors = new Map<Color, HTMLButtonElement>();
   const swatches = group("picture");

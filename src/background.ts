@@ -12,9 +12,11 @@ import {
   isPreviewRequest,
 } from "./shared/messages";
 import { shortcutOf, titleFor } from "./shared/shortcut";
+import { listenIcons } from "./icons/worker";
 import { listenKeep } from "./keep/store";
 
 listenKeep();
+listenIcons();
 
 /** The last preview, held only until its page has taken it (in memory, never stored). */
 let preview: Preview | null = null;

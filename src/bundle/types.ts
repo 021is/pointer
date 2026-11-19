@@ -51,7 +51,8 @@ type PinBaseInfo = {
 /** A pin, as read at Copy; a gap also names its second element and what it measured. */
 export type PinInfo =
   | (PinBaseInfo & { kind: "pick" | "comment" | "idea" })
-  | (PinBaseInfo & { kind: "gap"; px: number; axis: "x" | "y"; other: { component: ComponentInfo; el: ElementInfo } });
+  | (PinBaseInfo & { kind: "gap"; px: number; axis: "x" | "y"; other: { component: ComponentInfo; el: ElementInfo } })
+  | (PinBaseInfo & { kind: "icon"; name: string });
 
 export type DrawingSummary = {
   arrows: number;

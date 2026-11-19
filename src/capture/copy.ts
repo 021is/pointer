@@ -44,6 +44,7 @@ async function pinInfos(ctx: CopyContext): Promise<PinInfo[]> {
         changes: ctx.changesOf(pin),
         note: pin.note,
       };
+      if (pin.kind === "icon") return { ...base, kind: "icon", name: pin.name };
       if (pin.kind !== "gap") return { ...base, kind: pin.kind };
       const other = { component: await componentOf(pin.other), el: describeElement(pin.other) };
       return { ...base, kind: "gap", px: pin.line.px, axis: pin.line.axis, other };
