@@ -1,5 +1,5 @@
 // The short message at the top of the view: what happened, or why it failed (errors stay longer),
-// with one optional action (Undo after a clear).
+// with one optional action (Undo after a clear, Redo after that Undo).
 
 export type ToastAction = { label: string; run: () => void };
 

@@ -104,8 +104,9 @@ Still stuck? [Open an issue](https://github.com/021is/pointer/issues) and say wh
 | S | **Styles** | The style box of the last pick, and away again. |
 | I | **Picture \| Text** | The switch next to Copy: what Copy gives. Text hides the tools that only make sense in a picture. |
 | ⌘C / Ctrl+C | **Copy** | Copies for your agent. The ▾ next to Copy shows each choice's cost and opens a preview. |
-| ⌘Z / Ctrl+Z | **Undo** | Takes back the last mark. |
-| ⇧⌫ / Shift+Delete | **Clear everything** | Clears all marks and style edits. **Undo** in the message brings them back. |
+| ⌘Z / Ctrl+Z | **Undo** | Takes back the last mark, or the last Clear everything. |
+| ⌘⇧Z / Ctrl+Shift+Z or Ctrl+Y | **Redo** | Puts back what Undo took, style edits too. A new mark after an Undo starts afresh. |
+| ⇧⌫ / Shift+Delete | **Clear everything** | Clears all marks and style edits. **Undo** in the message (or ⌘Z) brings them back. |
 | Esc | | Back to the page tool. Press it again to close Pointer. |
 
 ### The style box

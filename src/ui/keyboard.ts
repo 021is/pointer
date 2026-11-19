@@ -11,6 +11,7 @@ export type KeyActions = {
   color: (c: Color) => void;
   image: () => void;
   undo: () => void;
+  redo: () => void;
   copy: () => void;
   escape: () => void;
   walk: (key: WalkKey) => void;
@@ -50,6 +51,8 @@ export function keyHandler(tool: () => Tool, run: KeyActions): (e: KeyboardEvent
         return run.image();
       case "undo":
         return run.undo();
+      case "redo":
+        return run.redo();
       case "copy":
         return run.copy();
       case "escape":

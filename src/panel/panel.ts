@@ -26,6 +26,7 @@ export function createPanel(root: ShadowRoot, host: ExtensionHost): Extension {
   const hide = () => {
     panel.hidden = true;
     showing = null;
+    host.rerender();
   };
 
   function show(pin: Pin) {
@@ -43,6 +44,7 @@ export function createPanel(root: ShadowRoot, host: ExtensionHost): Extension {
     panel.removeAttribute("data-collapsed");
     panel.setAttribute("aria-label", "Styles of the picked element");
     paint(null);
+    host.rerender();
     // componentOf never rejects: every failure resolves as unknown(why), which the panel shows.
     void componentOf(pin.el).then((info) => {
       if (showing === pin) paint(info);
@@ -79,10 +81,19 @@ export function createPanel(root: ShadowRoot, host: ExtensionHost): Extension {
         host.rerender();
       };
     },
-    // S or the 🎨 button: the style box for the last pick, and away again.
+    // S or the 🎨 button: the style box for the last pick, and away again. A collapsed box, or
+    // one open for another pick, opens for the last pick instead of closing; a pick whose element
+    // left the page (a re-render, a hot reload) says so instead of opening on nothing.
     togglePanel(lastPick) {
-      if (!panel.hidden) return hide();
-      if (lastPick) show(lastPick);
+      if (!lastPick) return "no-pick";
+      if (!panel.hidden && showing === lastPick && !panel.hasAttribute("data-collapsed")) {
+        hide();
+        return "closed";
+      }
+      if (!lastPick.el.isConnected) return "gone";
+      show(lastPick);
+      return "opened";
     },
+    panelFor: () => (panel.hidden ? null : showing),
   };
 }

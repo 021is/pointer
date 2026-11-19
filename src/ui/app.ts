@@ -11,7 +11,6 @@ import { type Point, near } from "../shared/geometry";
 import { editPlaceholder, placeholderAt } from "../shared/placeholder";
 import { componentOf } from "../source/client";
 import { isBubbleOpen, openBubble } from "./bubble";
-import { clearAll } from "./clear";
 import { copyFlow } from "./copy-flow";
 import { cropGestures } from "./crop-gesture";
 import { CSS } from "./css";
@@ -20,6 +19,7 @@ import type { Extension, ExtensionHost } from "./extension";
 import { keyHandler } from "./keyboard";
 import { notes } from "./notes";
 import { handles, textAt } from "./handles";
+import { createHistory } from "./history";
 import { markAt, shifted } from "./move";
 import {
   type Output,
@@ -35,6 +35,7 @@ import {
   scenePins,
   targetsElements,
 } from "./state";
+import { pressStyles, stylesLook } from "./styles";
 import { createToast } from "./toast";
 import { createToolbar } from "./toolbar";
 
@@ -69,13 +70,16 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
   root.append(style, layer);
   const hooks = ext(root, { rerender: () => render(), numberOf: (pin) => pinsOf(state.marks).indexOf(pin) + 1 });
   const lastPick = () => pinsOf(state.marks).findLast((p) => p.kind === "pick");
+  const hist = createHistory({ state, hooks: () => hooks, update, say });
+  const clear = () => hist.clear("Cleared everything.");
   const bar = createToolbar({
     tool: setTool,
     color: (c) => update(() => (state.color = c)),
     output: (o) => setOutput(o),
     upload: () => pasted.upload(),
-    styles: () => hooks.togglePanel(lastPick()),
-    undo,
+    styles: () => pressStyles(hooks, lastPick(), say),
+    undo: hist.undo,
+    redo: hist.redo,
     clear,
     copy: () => flow.copy(),
     copyAs: (o) => flow.copyAs(o),
@@ -84,7 +88,7 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
     estimate: () => flow.estimate(),
     close,
   });
-  const flow = copyFlow({ state, host, hooks: () => hooks, say, flash: bar.flash, update, setOutput });
+  const flow = copyFlow({ state, host, hooks: () => hooks, say, flash: bar.flash, update, setOutput, clear: hist.clear });
   root.append(bar.el, toast.el);
   const drag = (down: PointerEvent, move: (p: Point, shift: boolean) => void, end: () => void) =>
     dragOn(layer, down, move, end);
@@ -98,7 +102,7 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
       layer.dataset.tool = state.tool;
       pasted.paint();
       marksView.innerHTML = renderSvg(liveScene(state, layout()), { x: 0, y: 0, w: innerWidth, h: innerHeight });
-      bar.update(state);
+      bar.update(state, stylesLook(lastPick(), hooks.panelFor(), (el) => shortName(el, viewRect(el))));
     });
   }
   function update(change: () => void) {
@@ -131,7 +135,7 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
     });
   }
 
-  const { addPin, pick, removePin, editNote, editText } = notes({ root, state, update, hooks: () => hooks });
+  const { addPin, pick, editNote, editText } = notes({ root, state, update, hooks: () => hooks });
 
   function pinAt(view: Point): Pin | undefined {
     const drawn = scenePins(state.marks, layout());
@@ -223,7 +227,8 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
     tool: setTool,
     color: (c) => update(() => (state.color = c)),
     image: () => setOutput(otherOutput(state.output)),
-    undo,
+    undo: hist.undo,
+    redo: hist.redo,
     copy: () => flow.copy(),
     escape: () => (state.tool === "page" ? close() : setTool("page")),
     walk: (key) => {
@@ -239,7 +244,7 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
       const r = viewRect(el);
       pick(el, { x: r.x + scrollX, y: r.y + scrollY });
     },
-    panel: () => hooks.togglePanel(lastPick()),
+    panel: () => pressStyles(hooks, lastPick(), say),
     beforePaste: () => pasted.catchPaste(),
     overPasted: () => pasted.hovered() !== undefined,
     canRemove: () => pasted.hovered() !== undefined || (state.tool === "move" && markAt(state.marks, mouse) !== undefined),
@@ -251,19 +256,8 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
       const gone = pasted.hovered() ?? (state.tool === "move" ? markAt(state.marks, mouse) : undefined);
       if (gone) update(() => (state.marks = state.marks.filter((m) => m !== gone)));
     },
-    clear: () => clear(),
+    clear,
   });
-
-  function undo() {
-    const last = state.marks.at(-1);
-    if (!last) return;
-    if (last.kind === "pick" || last.kind === "comment") return removePin(last);
-    update(() => state.marks.pop());
-  }
-
-  function clear() {
-    clearAll({ state, hooks: () => hooks, update, say }, "Cleared everything.");
-  }
 
   const listeners: [EventTarget, string, EventListener, AddEventListenerOptions?][] = [
     [layer, "pointerdown", onDown as EventListener],

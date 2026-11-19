@@ -7,6 +7,7 @@ const actions = (overPasted: boolean): KeyActions => ({
   color: vi.fn(),
   image: vi.fn(),
   undo: vi.fn(),
+  redo: vi.fn(),
   copy: vi.fn(),
   escape: vi.fn(),
   walk: vi.fn(),
