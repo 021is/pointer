@@ -6,7 +6,7 @@
   "description": "Pick an element, draw, crop, comment, then paste one picture + its source file:line into Claude Code, Cursor or any AI agent.",
   "homepage_url": "https://021.is/plugins/pointer",
   "minimum_chrome_version": "116",
-  "permissions": ["activeTab", "scripting"],
+  "permissions": ["activeTab", "scripting", "storage"],
   "background": { "service_worker": "background.js" },
   "options_ui": { "page": "welcome.html", "open_in_tab": true },
   "icons": { "16": "icons/icon-16.png", "32": "icons/icon-32.png", "48": "icons/icon-48.png", "128": "icons/icon-128.png" },

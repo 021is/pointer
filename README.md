@@ -162,9 +162,12 @@ Only a **development build** has them:
 
 ## Privacy
 
-Pointer asks for `activeTab` and `scripting` only. It has no access to any site until you press
-its icon or shortcut on that tab, and only until you turn it off. It stores nothing and sends
-nothing: what you mark goes to your clipboard, and you decide where to paste it. The only reads
+Pointer asks for `activeTab`, `scripting` and `storage` only. It has no access to any site until
+you press its icon or shortcut on that tab, and only until you turn it off. It sends nothing: what
+you mark goes to your clipboard, and you decide where to paste it. So that a reload does not wipe
+your marks, it keeps them in Chrome's session memory for that tab and page only
+(`chrome.storage.session`: never written to disk, never synced, gone when the tab or Chrome
+closes, and forgotten when you clear everything or close Pointer). The only reads
 beyond the page are its own dev server's source maps (same origin), to find the file and line. The
 picture is drawn on a canvas, so it carries no metadata.
 Full policy: [021.is/plugins/pointer/privacy](https://021.is/plugins/pointer/privacy)

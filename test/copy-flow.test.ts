@@ -75,6 +75,8 @@ describe("copyFlow", () => {
       park: () => () => {},
       togglePanel: () => "no-pick" as const,
       panelFor: () => null,
+      editsOf: () => null,
+      replay: () => {},
     });
     const say = (message: string, _kind?: "ok" | "error", action?: { label: string; run: () => void }) =>
       said.push({ message, action });

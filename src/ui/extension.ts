@@ -1,6 +1,7 @@
 // The seam between the app and the style panel: what the panel hooks into, and what it gets.
 
 import type { Pin } from "../marks/types";
+import type { ElementEdits } from "../panel/edits";
 
 export type Extension = {
   changesOf: (pin: Pin) => string[];
@@ -12,6 +13,9 @@ export type Extension = {
   togglePanel: (lastPick: Pin | undefined) => PanelAnswer;
   /** The pick whose style box is open (collapsed or not), for the bar's button. */
   panelFor: () => Pin | null;
+  /** A pick's CSS edits as data, kept through a reload (keep/), and put back after it. */
+  editsOf: (pin: Pin) => ElementEdits | null;
+  replay: (pin: Pin, edits: ElementEdits) => void;
 };
 
 /** What a press on Styles did: every press does something the person sees (Edvard, 2026-11-19:

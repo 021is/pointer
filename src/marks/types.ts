@@ -32,7 +32,8 @@ export type Crop = { kind: "crop"; el: Element | null; rect: Rect };
 
 /**
  * An image Edvard pasted onto the page (a reference, a mockup): page coordinates, so it scrolls
- * with the page; `opacity` lets a mockup lie see-through over the real thing. Lives until reload.
+ * with the page; `opacity` lets a mockup lie see-through over the real thing. Kept through a reload
+ * like every mark (keep/), within the session store's room.
  */
 export type Pasted = { kind: "image"; img: HTMLImageElement; rect: Rect; opacity: number };
 

@@ -1,7 +1,8 @@
 // Pasted images on the page (Edvard, 2026-11-18: "sometimes I screenshot and paste from buffer
 // and I want to be able to move it around and it must get attached to the same page"). Ctrl+V
 // drops the image at the mouse; it scrolls with the page; drag moves, the corner resizes, [ ]
-// make it see-through. It is drawn into Copy's picture (picture.ts) and lives until reload.
+// make it see-through. It is drawn into Copy's picture (picture.ts) and is kept
+// through a reload with the other marks (keep/). A paste switches to Move (state.ts afterPaste).
 
 import { type Mark, type Pasted, isPasted } from "../marks/types";
 import type { Point } from "../shared/geometry";

@@ -50,6 +50,9 @@ Made by Edvard Grei at 021.
 - **scripting:** On that user action, Pointer injects its overlay (the toolbar and the marks) into
   that tab, and a small script that reads the page's own development-build information (the
   component name, the source file and the line) of the elements the user marks.
+- **storage:** Pointer keeps the user's marks on a page through a reload of that page, in
+  `chrome.storage.session` (memory only, that tab and page, never synced), and forgets them when
+  the user clears them, closes Pointer, closes the tab or closes Chrome.
 - **Remote code:** No. All code ships in the extension package.
 - **Data usage:** Pointer collects no user data, of any category. Nothing is sent to 021 or to
   anyone. The copy goes only to the user's clipboard. (Tick no data type. Certify all three
@@ -58,15 +61,17 @@ Made by Edvard Grei at 021.
 
 ## The facts the privacy page must say (021.is/plugins/pointer/privacy)
 
-1. Pointer collects, stores and transmits no personal or usage data. No analytics, no accounts,
-   no servers of its own.
+1. Pointer collects and transmits no personal or usage data. No analytics, no accounts, no
+   servers of its own.
 2. It runs only on the tab where you turn it on (`activeTab`), and only until you turn it off.
 3. What it reads there stays in your browser: the page's elements and styles you mark, a
    screenshot of the visible tab (`captureVisibleTab`) when you copy a picture, and, from your
    app's own development server, the source maps that turn a stack frame into a file and line
    (same origin only).
 4. Copy writes to your clipboard; Pointer never pastes or sends it anywhere.
-5. Images you paste onto a page stay in that tab until it reloads; nothing is saved.
-6. Permissions: `activeTab` (the tab you turn it on), `scripting` (to draw the overlay there).
-   No host permissions, no remote code.
+5. Your marks, style edits and pasted images on a page are kept through a reload of that page,
+   in Chrome's session memory (`chrome.storage.session`) for that tab only: never written to
+   disk, never synced, gone when you clear them, close Pointer, close the tab or close Chrome.
+6. Permissions: `activeTab` (the tab you turn it on), `scripting` (to draw the overlay there),
+   `storage` (the session memory of point 5). No host permissions, no remote code.
 7. Contact: the repository's issues, https://github.com/021is/pointer/issues.
