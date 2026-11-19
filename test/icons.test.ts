@@ -54,10 +54,14 @@ describe("placing", () => {
     expect(iconAt([icon], { x: 120, y: 120 })).toBe(icon);
     expect(iconAt([icon], { x: 90, y: 90 })).toBeUndefined();
     const t = { selector: "body", tag: "BODY", label: "body" };
-    const { saved } = toSaved([icon], { target: () => t, editsOf: () => null, imageSrc: () => null });
-    const back = fromSaved(JSON.parse(JSON.stringify(saved)), { find: () => null, at: () => null, image: () => new Image(), page: document.body });
-    expect(back.marks[0]).toMatchObject({ kind: "icon", name: "bell", size: 32, el: document.body });
+    const saved = toSaved([icon], { target: () => t, editsOf: () => null, imageSrc: () => null });
+    // Only the name is kept; the drawing comes back from the bundled data, never from the store.
+    expect(JSON.stringify(saved)).not.toContain("<path");
+    const world = { find: () => null, at: () => null, image: () => new Image(), page: document.body };
+    const back = fromSaved(JSON.parse(JSON.stringify(saved)), { ...world, iconSvg: (n: string) => data.svg[n] ?? null });
+    expect(back.marks[0]).toMatchObject({ kind: "icon", name: "bell", svg: "<path/>", size: 32, el: document.body });
     expect(back.lost).toEqual([]);
+    expect(fromSaved(saved, { ...world, iconSvg: () => null }).lost).toEqual(["icon bell"]);
   });
 });
 

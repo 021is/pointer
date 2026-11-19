@@ -2,7 +2,8 @@
 // screenshot; show a preview of what Copy would give; hand that preview to the page that asks;
 // keep a page's marks through its reload.
 
-import { type Saved, isSaved } from "../keep/saved";
+import { isSaved } from "../keep/check";
+import type { Saved } from "../keep/saved";
 import type { Output } from "../ui/state";
 
 export type CaptureRequest = { type: "capture" };

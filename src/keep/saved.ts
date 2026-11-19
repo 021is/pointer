@@ -2,9 +2,10 @@
 // and commenting and then reload happen"). An element becomes the selector that finds it again; a
 // pasted image becomes its data URL. Pure: the page comes in as functions.
 
-import { COLORS, type GapLine, type Mark, type Pasted, type Pin, type PointKind, type Shape } from "../marks/types";
+import type { GapLine, Mark, Pasted, Pin, PointKind, Shape } from "../marks/types";
 import type { ElementEdits } from "../panel/edits";
 import type { Point, Rect } from "../shared/geometry";
+import { isSavedMark } from "./check";
 
 /** How an element is found again after a reload: its selector, checked against its tag. */
 export type Target = { selector: string; tag: string; label: string };
@@ -13,7 +14,8 @@ export type SavedMark =
   | { kind: "shape"; shape: Shape }
   | { kind: "pin"; pin: PointKind; color: Pin["color"]; at: Point; note: string; target: Target; edits: ElementEdits | null }
   | { kind: "gap"; color: Pin["color"]; at: Point; note: string; target: Target; other: Target; line: GapLine }
-  | { kind: "icon"; color: Pin["color"]; at: Point; note: string; target: Target; name: string; svg: string; size: number }
+  /** An icon by its Lucide name only: its drawing comes from the bundled data when it returns. */
+  | { kind: "icon"; color: Pin["color"]; at: Point; note: string; target: Target; name: string; size: number }
   | { kind: "crop"; target: Target | null; rect: Rect }
   | { kind: "image"; src: string; rect: Rect; opacity: number };
 
@@ -32,9 +34,8 @@ export function pageKey(url: string): string {
   return `${u.origin}${u.pathname}`;
 }
 
-/** The marks as data. `pending` counts the images not saved yet (their data URL is not read). */
-export function toSaved(marks: readonly Mark[], w: SaveWorld): { saved: Saved; pending: number } {
-  let pending = 0;
+/** The marks as data. An image whose data URL is still being read waits for the next save. */
+export function toSaved(marks: readonly Mark[], w: SaveWorld): Saved {
   const out: SavedMark[] = [];
   for (const m of marks) {
     switch (m.kind) {
@@ -54,7 +55,7 @@ export function toSaved(marks: readonly Mark[], w: SaveWorld): { saved: Saved; p
         out.push({ kind: "gap", color: m.color, at: m.at, note: m.note, target: w.target(m.el), other: w.target(m.other), line: m.line });
         break;
       case "icon":
-        out.push({ kind: "icon", color: m.color, at: m.at, note: m.note, target: w.target(m.el), name: m.name, svg: m.svg, size: m.size });
+        out.push({ kind: "icon", color: m.color, at: m.at, note: m.note, target: w.target(m.el), name: m.name, size: m.size });
         break;
       case "crop":
         out.push({ kind: "crop", target: m.el ? w.target(m.el) : null, rect: m.rect });
@@ -62,20 +63,22 @@ export function toSaved(marks: readonly Mark[], w: SaveWorld): { saved: Saved; p
       case "image": {
         const src = w.imageSrc(m);
         if (src) out.push({ kind: "image", src, rect: m.rect, opacity: m.opacity });
-        else pending++;
         break;
       }
     }
   }
-  return { saved: { v: 1, marks: out }, pending };
+  return { v: 1, marks: out };
 }
 
+/** What the session store counts: the JSON's UTF-8 bytes. */
+export const savedBytes = (saved: Saved) => new TextEncoder().encode(JSON.stringify(saved)).length;
+
 /**
- * Within the session store's room: when the whole is over `budget` characters, the pasted images
- * go first (the marks and words are what matter), and the answer says how many went.
+ * Within the session store's room: when the whole is over `budget` bytes, the pasted images go
+ * first (the marks and words are what matter), and the answer says how many went.
  */
 export function fitBudget(saved: Saved, budget: number): { saved: Saved; dropped: number } {
-  if (JSON.stringify(saved).length <= budget) return { saved, dropped: 0 };
+  if (savedBytes(saved) <= budget) return { saved, dropped: 0 };
   const marks = saved.marks.filter((m) => m.kind !== "image");
   return { saved: { v: 1, marks }, dropped: saved.marks.length - marks.length };
 }
@@ -86,6 +89,8 @@ export type RestoreWorld = {
   /** The element at a page point, for a comment whose own element is gone. */
   at: (p: Point) => Element | null;
   image: (src: string) => HTMLImageElement;
+  /** An icon's markup from the bundled Lucide data, by name; null when this build has no such icon. */
+  iconSvg: (name: string) => string | null;
   /** The page itself, for a mark with nothing else under it. */
   page: Element;
 };
@@ -133,9 +138,15 @@ export function fromSaved(saved: Saved, w: RestoreWorld): Restored {
         break;
       }
       case "icon": {
+        // Drawn from the bundled Lucide data by its name; a name this build lacks is named as lost.
+        const svg = w.iconSvg(m.name);
+        if (svg === null) {
+          out.lost.push(`icon ${m.name}`);
+          break;
+        }
         // An icon lies on the page whatever is under it: the element now there, else the page.
         const el = w.find(m.target) ?? w.at({ x: m.at.x + m.size / 2, y: m.at.y + m.size / 2 }) ?? w.page;
-        out.marks.push({ kind: "icon", color: m.color, el, at: m.at, note: m.note, name: m.name, svg: m.svg, size: m.size });
+        out.marks.push({ kind: "icon", color: m.color, el, at: m.at, note: m.note, name: m.name, svg, size: m.size });
         break;
       }
       case "crop":
@@ -158,40 +169,3 @@ export function restoredMessage(r: Restored): string {
   return (back + lost).trim();
 }
 
-/** Checked where it enters the service worker or comes back from the store: the envelope, and
- *  every mark an object with a kind; each mark's fields are checked as it is restored. */
-export function isSaved(value: unknown): value is Saved {
-  const s = value as Partial<Saved> | null;
-  return s?.v === 1 && Array.isArray(s.marks) && s.marks.every((m) => typeof (m as { kind?: unknown } | null)?.kind === "string");
-}
-
-const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null;
-const isNum = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
-const isPoint = (v: unknown) => isObj(v) && isNum(v.x) && isNum(v.y);
-const isRect = (v: unknown) => isPoint(v) && isObj(v) && isNum(v.w) && isNum(v.h);
-const isTarget = (v: unknown) => isObj(v) && typeof v.selector === "string" && typeof v.tag === "string" && typeof v.label === "string";
-const COLORS_OK = new Set(Object.keys(COLORS));
-const SHAPES = new Set(["pen", "arrow", "box", "ellipse", "text"]);
-const isPinish = (m: Record<string, unknown>) =>
-  COLORS_OK.has(String(m.color)) && isPoint(m.at) && typeof m.note === "string" && isTarget(m.target);
-
-/** One saved mark, field by field: a kind this version knows, with the fields it needs. */
-export function isSavedMark(v: unknown): v is SavedMark {
-  if (!isObj(v)) return false;
-  switch (v.kind) {
-    case "shape":
-      return isObj(v.shape) && SHAPES.has(String(v.shape.kind)) && COLORS_OK.has(String(v.shape.color));
-    case "pin":
-      return ["pick", "comment", "idea"].includes(String(v.pin)) && isPinish(v);
-    case "gap":
-      return isPinish(v) && isTarget(v.other) && isObj(v.line) && isPoint(v.line.from) && isPoint(v.line.to) && isNum(v.line.px);
-    case "icon":
-      return isPinish(v) && typeof v.name === "string" && typeof v.svg === "string" && isNum(v.size);
-    case "crop":
-      return isRect(v.rect) && (v.target === null || isTarget(v.target));
-    case "image":
-      return typeof v.src === "string" && v.src.startsWith("data:image/") && isRect(v.rect) && isNum(v.opacity);
-    default:
-      return false;
-  }
-}
