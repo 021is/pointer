@@ -65,21 +65,33 @@ function shapeSvg(s: Shape): string {
       );
     }
     case "box":
-      return `<rect ${line} x="${n(s.rect.x)}" y="${n(s.rect.y)}" width="${n(s.rect.w)}" height="${n(s.rect.h)}" rx="4"/>`;
+      return (
+        `<rect ${line} x="${n(s.rect.x)}" y="${n(s.rect.y)}" width="${n(s.rect.w)}" height="${n(s.rect.h)}" rx="4"/>` +
+        noteSvg(s.note, s.rect, c)
+      );
     case "ellipse": {
       const { x, y, w, h } = s.rect;
-      return `<ellipse ${line} cx="${n(x + w / 2)}" cy="${n(y + h / 2)}" rx="${n(w / 2)}" ry="${n(h / 2)}"/>`;
+      return `<ellipse ${line} cx="${n(x + w / 2)}" cy="${n(y + h / 2)}" rx="${n(w / 2)}" ry="${n(h / 2)}"/>${noteSvg(s.note, s.rect, c)}`;
     }
     case "text":
-      return s.text
-        .split("\n")
-        .map(
-          (t, i) =>
-            `<text x="${n(s.at.x)}" y="${n(s.at.y + i * 22)}" fill="${c}" stroke="#fff" stroke-width="4" paint-order="stroke" font-family="system-ui,sans-serif" font-size="18" font-weight="700" dominant-baseline="hanging">${escapeXml(t)}</text>`,
-        )
-        .join("");
+      return words(s.text, s.at, c, 18, 22);
   }
 }
+
+/** Words on the page, white-haloed so they read on any background. */
+function words(text: string, at: Point, c: string, size: number, step: number): string {
+  return text
+    .split("\n")
+    .map(
+      (t, i) =>
+        `<text x="${n(at.x)}" y="${n(at.y + i * step)}" fill="${c}" stroke="#fff" stroke-width="4" paint-order="stroke" font-family="system-ui,sans-serif" font-size="${size}" font-weight="700" dominant-baseline="hanging">${escapeXml(t)}</text>`,
+    )
+    .join("");
+}
+
+/** A box's or an ellipse's note, written just under it. */
+const noteSvg = (note: string | undefined, r: Rect, c: string) =>
+  note?.trim() ? words(note.trim(), { x: r.x, y: r.y + r.h + 8 }, c, 15, 19) : "";
 
 function pinSvg(p: ScenePin): string {
   const c = COLORS[p.color];

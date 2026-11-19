@@ -5,7 +5,7 @@ import type { Mark, Pin, PointKind } from "../marks/types";
 import type { Point } from "../shared/geometry";
 import { openBubble } from "./bubble";
 import type { Extension } from "./extension";
-import { type State, pinsOf } from "./state";
+import { type Framed, type State, pinsOf } from "./state";
 
 type TextMark = Extract<Mark, { kind: "text" }>;
 
@@ -63,5 +63,21 @@ export function notes(host: NotesHost) {
     });
   }
 
-  return { addPin, pick, editNote, editText };
+  /** A box or an ellipse, double-clicked: type on it. Its note moves with it; emptied, it goes;
+   *  Esc keeps what it had (Edvard, 2026-11-19). */
+  async function editShapeNote(s: Framed, view: Point) {
+    const value = await openBubble(root, {
+      at: view,
+      placeholder: `Text on this ${s.kind}`,
+      value: s.note ?? "",
+      hint: "Enter saves · empty removes it · Esc keeps it",
+    });
+    if (value === null) return;
+    update(() => {
+      if (value) s.note = value;
+      else delete s.note;
+    });
+  }
+
+  return { addPin, pick, editNote, editText, editShapeNote };
 }

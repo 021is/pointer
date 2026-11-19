@@ -2,7 +2,7 @@
 // Every line earns its place: what is unknown says why, what is empty is left out.
 
 import { imageTokens } from "../shared/geometry";
-import type { Bundle, ComponentInfo, CropInfo, DrawingSummary, ElementInfo, PinInfo, Source } from "./types";
+import type { Bundle, ComponentInfo, CropInfo, DrawingSummary, ElementInfo, PinInfo, ShapeNote, Source } from "./types";
 
 /** The page's address without query or hash: a URL can carry a token, and this goes into a chat. */
 export function safeUrl(href: string): string {
@@ -137,9 +137,10 @@ function stripPin(p: PinInfo): string[] {
  * dont get confused"). Only when something is marked.
  */
 export function task(b: Bundle, onPicture: boolean): string | null {
-  if (!b.pins.length && !b.crops.length) return null;
+  const numbered = b.pins.length + b.shapeNotes.length;
+  if (!numbered && !b.crops.length) return null;
   // Only frames, no pins: the parts of the screen and what is drawn on them are the request.
-  if (!b.pins.length) {
+  if (!numbered) {
     const where = b.crops.some((c) => c.component?.where.kind === "found") ? " (a crop's file:line, when given, is where it is written)" : "";
     return `Task: the user framed these parts of the page (crop A, B…) and marked them up on the picture${where}. Read each crop and what is drawn or written on it, make that change in the code, then answer per crop what you did.`;
   }
@@ -168,8 +169,12 @@ export function formatStrip(b: Bundle, onPicture: boolean): string {
   const drawn = formatDrawings(shown);
   if (drawn) lines.push(drawn);
   for (const pin of b.pins) lines.push(...stripPin(pin));
+  lines.push(...b.shapeNotes.map(shapeNoteLine));
   return lines.join("\n");
 }
+
+/** "[5] box: make this one card": a note typed on a box or an ellipse, one line. */
+export const shapeNoteLine = (s: ShapeNote) => `[${s.n}] ${s.kind}: ${s.note.replace(/\s*\n\s*/g, "; ")}`;
 
 export function formatBundle(b: Bundle): string {
   const lines = [headLine(b)];
@@ -184,5 +189,6 @@ export function formatBundle(b: Bundle): string {
   const drawn = formatDrawings(b.drawings);
   if (drawn) lines.push(drawn);
   for (const pin of b.pins) lines.push(...formatPin(pin));
+  lines.push(...b.shapeNotes.map(shapeNoteLine));
   return lines.join("\n");
 }

@@ -41,6 +41,7 @@ const bundle: Bundle = {
   viewport: { w: 1280, h: 800 },
   crops: [],
   pins: [pick, comment],
+  shapeNotes: [],
   drawings: { arrows: 1, boxes: 2, ellipses: 0, pens: 0, texts: ["bigger"], pasted: 0 },
   image: { w: 640, h: 380 },
 };

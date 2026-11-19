@@ -28,6 +28,7 @@ import {
   type State,
   type Tool,
   afterPaste,
+  framedAt,
   initialState,
   liveScene,
   chooseOutput,
@@ -146,7 +147,12 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
     });
   }
 
-  const { addPin, pick, editNote, editText } = notes({ root, state, update, hooks: () => hooks });
+  const { addPin, pick, editNote, editText, editShapeNote } = notes({ root, state, update, hooks: () => hooks });
+  /** A double-click on a box or an ellipse types on it, whatever the tool. */
+  function onDouble(e: MouseEvent) {
+    const s = framedAt(state.marks, { x: e.clientX + scrollX, y: e.clientY + scrollY });
+    if (s) void editShapeNote(s, { x: e.clientX, y: e.clientY });
+  }
 
   function pinAt(view: Point): Pin | undefined {
     const drawn = scenePins(state.marks, layout());
@@ -262,6 +268,7 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
   const listeners: [EventTarget, string, EventListener, AddEventListenerOptions?][] = [
     [layer, "pointerdown", onDown as EventListener],
     [layer, "pointermove", onHoverMove as EventListener],
+    [layer, "dblclick", onDouble as EventListener],
     [window, "pointermove", pasted.track as EventListener, { passive: true }],
     [window, "paste", pasted.onPaste as EventListener, { capture: true }],
     [window, "keydown", onKey as EventListener, { capture: true }],

@@ -5,7 +5,11 @@ import type { Point } from "../shared/geometry";
 
 export type BubbleOptions = { at: Point; placeholder: string; value?: string; hint: string };
 
+/** The open bubble's way out: a new bubble cancels it (as Esc would), so no caller waits forever. */
+let cancelOpen: (() => void) | null = null;
+
 export function openBubble(root: ShadowRoot, options: BubbleOptions): Promise<string | null> {
+  cancelOpen?.();
   root.querySelector(".bubble")?.remove();
   const box = document.createElement("div");
   box.className = "bubble";
@@ -31,9 +35,12 @@ export function openBubble(root: ShadowRoot, options: BubbleOptions): Promise<st
     const finish = (value: string | null) => {
       if (settled) return;
       settled = true;
+      if (cancelOpen === cancel) cancelOpen = null;
       box.remove();
       resolve(value);
     };
+    const cancel = () => finish(null);
+    cancelOpen = cancel;
     input.addEventListener("keydown", (e) => {
       e.stopPropagation();
       if (e.key === "Escape") {
