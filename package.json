@@ -1,6 +1,6 @@
 {
   "name": "pointer",
-  "version": "0.1.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Chrome extension: draw on any page or pick an element, copy a small bundle (picture + where the code lives) for a coding agent.",
   "type": "module",
