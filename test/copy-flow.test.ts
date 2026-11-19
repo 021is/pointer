@@ -17,6 +17,7 @@ vi.mock("../src/source/client", () => ({
 const { buildBundle } = await import("../src/capture/copy");
 const { picture } = await import("../src/capture/picture");
 const { copyFlow } = await import("../src/ui/copy-flow");
+const { createHistory } = await import("../src/ui/history");
 const { initialState } = await import("../src/ui/state");
 
 function setup(output: "picture" | "text" | "image") {
@@ -67,20 +68,27 @@ describe("copyFlow", () => {
   });
 
   function flow(ctx: ReturnType<typeof setup>) {
+    const hooks = () => ({
+      changesOf: () => [],
+      onPick: () => {},
+      onRemove: () => {},
+      park: () => () => {},
+      togglePanel: () => "no-pick" as const,
+      panelFor: () => null,
+    });
+    const say = (message: string, _kind?: "ok" | "error", action?: { label: string; run: () => void }) =>
+      said.push({ message, action });
+    const update = (change: () => void) => change();
+    const { clear } = createHistory({ state: ctx.state, hooks, say, update });
     return copyFlow({
       state: ctx.state,
       host: ctx.host,
-      hooks: () => ({
-        changesOf: () => [],
-        onPick: () => {},
-        onRemove: () => {},
-        park: () => () => {},
-        togglePanel: () => {},
-      }),
-      say: (message, _kind, action) => said.push({ message, action }),
+      hooks,
+      say,
       flash: (m) => flashed.push(m),
-      update: (change) => change(),
+      update,
       setOutput: (o) => (ctx.state.output = o),
+      clear,
     });
   }
 

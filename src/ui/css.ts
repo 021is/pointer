@@ -62,6 +62,8 @@ export const CSS = `
   color: #fff; background: linear-gradient(180deg, #8a6dff, #6a4cf0);
   box-shadow: 0 0 0 1px rgba(173, 152, 255, 0.55), 0 6px 18px rgba(106, 76, 240, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
+/* Styles with nothing to open: dim, but a press still says why. */
+.bar button[data-state="empty"] { color: rgba(201, 195, 230, 0.42); }
 .bar button.swatch { min-width: 28px; padding: 0; }
 .bar button.swatch::after {
   content: ""; width: 14px; height: 14px; border-radius: 50%; background: var(--swatch);

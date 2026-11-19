@@ -14,6 +14,7 @@ const ICON_PATHS = {
   upload: '<rect x="3" y="5" width="13" height="14" rx="2.5"/><path d="M3 15.5l3.5-3.5 3 3 2-2 4.5 4.5"/><path d="M19.5 3v7M16.5 6l3-3 3 3"/>',
   styles: '<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>',
   undo: '<path d="M9 14.5L4 9.5l5-5"/><path d="M4 9.5h10a5.5 5.5 0 010 11h-3"/>',
+  redo: '<path d="M15 14.5l5-5-5-5"/><path d="M20 9.5H10a5.5 5.5 0 000 11h3"/>',
   clear: '<path d="M4 7h16"/><path d="M9.5 7V4.5h5V7"/><path d="M6.5 7l1 12.5h9l1-12.5"/>',
   picture: '<rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><circle cx="9" cy="10" r="1.8"/><path d="M20.5 16l-4.5-4.5-9 8"/>',
   textOnly: '<path d="M4 6.5h16M4 12h16M4 17.5h10"/>',

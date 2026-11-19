@@ -6,7 +6,6 @@ import { buildBundle, copyBundle, estimateCosts } from "../capture/copy";
 import { textTokens } from "../capture/estimate";
 import { imageTokens } from "../shared/geometry";
 import type { PreviewReply, PreviewRequest } from "../shared/messages";
-import { clearAll } from "./clear";
 import type { Extension } from "./extension";
 import { type Output, type State, isEmpty } from "./state";
 import type { Toast } from "./toast";
@@ -19,6 +18,8 @@ export type CopyHost = {
   flash: (message: string) => void;
   update: (change: () => void) => void;
   setOutput: (o: Output) => void;
+  /** Clear everything with Undo (history.ts). */
+  clear: (message: string) => void;
 };
 
 const errorText = (err: unknown) => (err instanceof Error ? err.message : String(err));
@@ -39,7 +40,7 @@ export function copyFlow(h: CopyHost) {
     copyBundle(ctx()).then(
       ({ text, image }) => {
         h.flash(copiedLabel(marks, image ? imageTokens(image) : textTokens(text)));
-        if (h.state.clearAfterCopy) clearAll(h, "Cleared for the next round.");
+        if (h.state.clearAfterCopy) h.clear("Cleared for the next round.");
       },
       (err: unknown) => h.say(`Copy failed: ${errorText(err)}`, "error"),
     );

@@ -56,5 +56,5 @@ export function notes(host: NotesHost) {
     });
   }
 
-  return { addPin, pick, removePin, editNote, editText };
+  return { addPin, pick, editNote, editText };
 }

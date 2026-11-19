@@ -8,6 +8,8 @@ import { type CopyMenu, createCopyMenu } from "./copy-menu";
 import { type IconName, icon } from "./icons";
 import type { Costs } from "../capture/estimate";
 import { type Output, type State, type Tool, pictureOnly } from "./state";
+import { REDO_KEY, UNDO_KEY } from "./history";
+import type { StylesLook } from "./styles";
 
 export type BarActions = {
   tool: (t: Tool) => void;
@@ -16,6 +18,7 @@ export type BarActions = {
   upload: () => void;
   styles: () => void;
   undo: () => void;
+  redo: () => void;
   clear: () => void;
   copy: () => void;
   copyAs: (o: Output) => void;
@@ -46,13 +49,18 @@ const MAC = /Mac|iPhone|iPad/.test(navigator.platform);
 const MOD = MAC ? "⌘" : "Ctrl+";
 const CLEAR_KEY = MAC ? "⇧⌫" : "Shift+Delete";
 
-function button(name: IconName | null, tip: string, key: string, onClick: () => void, label?: string): HTMLButtonElement {
+/** A button's hover tip and its accessible name, with its key. */
+function tip(b: HTMLElement, text: string, key: string) {
+  b.dataset.tip = key ? `${text}  ${key}` : text;
+  b.setAttribute("aria-label", key ? `${text} (${key})` : text);
+}
+
+function button(name: IconName | null, text: string, key: string, onClick: () => void, label?: string): HTMLButtonElement {
   const b = document.createElement("button");
   b.type = "button";
   if (name) b.append(icon(name));
   if (label) b.append(Object.assign(document.createElement("span"), { className: "label", textContent: label }));
-  b.dataset.tip = key ? `${tip}  ${key}` : tip;
-  b.setAttribute("aria-label", key ? `${tip} (${key})` : tip);
+  tip(b, text, key);
   b.addEventListener("click", (e) => {
     e.stopPropagation();
     onClick();
@@ -92,7 +100,7 @@ function grip(bar: HTMLElement): HTMLElement {
   return g;
 }
 
-export type Toolbar = { el: HTMLElement; update: (s: State) => void; flash: (message: string) => void };
+export type Toolbar = { el: HTMLElement; update: (s: State, styles: StylesLook) => void; flash: (message: string) => void };
 
 export function createToolbar(act: BarActions): Toolbar {
   const bar = document.createElement("div");
@@ -125,10 +133,12 @@ export function createToolbar(act: BarActions): Toolbar {
   const upload = group("picture");
   upload.append(button("upload", `Add an image (or paste: ${MOD}V)`, "", act.upload));
 
+  const styles = button("styles", "Styles of the last pick", "S", act.styles);
   const edit = group();
   edit.append(
-    button("styles", "Styles of the last pick", "S", act.styles),
-    button("undo", "Undo", `${MOD}Z`, act.undo),
+    styles,
+    button("undo", "Undo", UNDO_KEY, act.undo),
+    button("redo", "Redo", REDO_KEY, act.redo),
     button("clear", "Clear everything", CLEAR_KEY, act.clear),
   );
 
@@ -155,8 +165,11 @@ export function createToolbar(act: BarActions): Toolbar {
   return {
     el: bar,
     flash: menu.flash,
-    update(s) {
+    update(s, look) {
       bar.dataset.output = s.output;
+      styles.dataset.state = look.state;
+      styles.setAttribute("aria-pressed", String(look.state === "open"));
+      tip(styles, look.tip, "S");
       for (const [t, b] of tools) b.setAttribute("aria-pressed", String(t === s.tool));
       for (const [c, b] of colors) b.setAttribute("aria-pressed", String(c === s.color));
       const lit = s.output === "text" ? "text" : "picture";

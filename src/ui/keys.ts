@@ -11,6 +11,8 @@ export type Command =
   | { type: "color"; color: Color }
   | { type: "image" }
   | { type: "undo" }
+  /** ⌘⇧Z on a Mac, Ctrl+Shift+Z and Ctrl+Y elsewhere (Edvard, 2026-11-19). */
+  | { type: "redo" }
   | { type: "copy" }
   | { type: "escape" }
   | { type: "walk"; key: WalkKey }
@@ -32,7 +34,9 @@ export function commandFor(e: KeyInput, tool: Tool): Command | null {
   const mod = e.ctrlKey || e.metaKey;
   if (mod && !e.altKey) {
     const k = e.key.toLowerCase();
-    if (k === "z") return { type: "undo" };
+    if (k === "z") return { type: e.shiftKey ? "redo" : "undo" };
+    // Ctrl+Y only: ⌘Y is Chrome's History on a Mac.
+    if (k === "y" && e.ctrlKey && !e.metaKey) return { type: "redo" };
     if (k === "c") return { type: "copy" };
     return null;
   }
