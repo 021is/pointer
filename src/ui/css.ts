@@ -78,13 +78,27 @@ export const CSS = `
 }
 .bar .switch button { height: 28px; padding: 0 10px 0 8px; border-radius: 9px; font-size: 12px; }
 .bar .switch button[aria-pressed="true"] { box-shadow: 0 2px 10px rgba(106, 76, 240, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.25); }
-/* Copy: a split button. The main part copies as chosen; ▾ opens the menu above it. */
-.bar .copygroup { position: relative; display: inline-flex; margin-left: 6px; border-radius: 10px;
-  box-shadow: 0 6px 20px rgba(157, 133, 255, 0.35); }
+/* The draw button: the last drawing tool, and ▾ for the other five in a menu above it. */
+.bar .drawgroup { position: relative; display: inline-flex; }
+.bar .drawgroup button.draw { border-radius: 10px 0 0 10px; }
+.bar .drawgroup button.caret { min-width: 16px; padding: 0 3px; border-radius: 0 10px 10px 0; font-size: 10px; color: #9d95c4; }
+.bar .drawmenu {
+  position: absolute; left: 0; bottom: calc(100% + 10px); width: 220px; padding: 6px; z-index: 2;
+  background: #120f1d; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px;
+  box-shadow: 0 18px 44px rgba(5, 3, 15, 0.6); color: #ece9fb;
+}
+.bar .drawmenu[hidden] { display: none; }
+.bar .drawmenu .item:focus-visible { outline: 2px solid #9d85ff; outline-offset: -2px; }
+.bar .drawmenu kbd { font: 600 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace; color: #9d95c4; }
+.bar .drawgroup:has(.drawmenu:not([hidden])) [data-tip]:hover::before { display: none; }
+/* Copy: a split button, the bar's one accent, as tall as the tools (Edvard, 2026-11-19: "the copy
+   button is too big"). The main part copies as chosen; ▾ opens the menu above it. */
+.bar .copygroup { position: relative; display: inline-flex; margin-left: 4px; border-radius: 10px; }
 .bar .copygroup button.copy, .bar .copygroup button.caret { color: #160f33; font-weight: 700;
   background: linear-gradient(180deg, #ffffff, #e4ddff); box-shadow: inset 0 -1px 0 rgba(106, 76, 240, 0.25); }
-.bar .copygroup button.copy { padding: 0 12px 0 11px; border-radius: 10px 0 0 10px; }
-.bar .copygroup button.caret { min-width: 28px; border-radius: 0 10px 10px 0; border-left: 1px solid rgba(106, 76, 240, 0.25); }
+.bar .copygroup button.copy { gap: 5px; padding: 0 9px 0 8px; border-radius: 10px 0 0 10px; }
+.bar .copygroup button.copy .icon { width: 16px; height: 16px; }
+.bar .copygroup button.caret { min-width: 18px; padding: 0 3px; border-radius: 0 10px 10px 0; border-left: 1px solid rgba(106, 76, 240, 0.25); font-size: 10px; }
 /* Only Copy and ▾ themselves: the menu's items are buttons too and keep their light text. */
 .bar .copygroup > button:hover { color: #160f33; background: linear-gradient(180deg, #ffffff, #d6cbff); }
 .bar .menu .item:hover { color: #fff; }
