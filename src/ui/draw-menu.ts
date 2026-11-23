@@ -4,6 +4,7 @@
 // Their keys still pick them directly and the button follows. The menu works by keyboard: the
 // arrows move, Enter takes, Esc closes; Pointer's own keys leave it alone (data-own-keys).
 
+import { closeOnOutside } from "../shared/outside";
 import { buttonName } from "./compact";
 import { type IconName, icon } from "./icons";
 import type { Tool } from "./state";
@@ -68,21 +69,19 @@ export function createDrawMenu(parts: DrawMenuParts): DrawMenu {
     );
   }
 
-  const outside = (e: Event) => {
-    if (!e.composedPath().includes(wrap)) close();
-  };
+  const outside = closeOnOutside(wrap, () => close());
   function open() {
     fill();
     menu.hidden = false;
     caret.setAttribute("aria-expanded", "true");
-    window.addEventListener("pointerdown", outside, true);
+    outside.watch();
     items()[0]?.focus();
   }
   function close() {
     if (menu.hidden) return;
     menu.hidden = true;
     caret.setAttribute("aria-expanded", "false");
-    window.removeEventListener("pointerdown", outside, true);
+    outside.unwatch();
   }
   function toggle() {
     if (menu.hidden) open();

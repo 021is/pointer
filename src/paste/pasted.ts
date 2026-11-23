@@ -6,6 +6,7 @@
 
 import { type Mark, type Pasted, isPasted } from "../marks/types";
 import type { Point } from "../shared/geometry";
+import { isTouch } from "../shared/platform";
 import { drag } from "../ui/drag";
 import { isEditable } from "../ui/keyboard";
 import { type Grip, dragged, gripAt, landing, stepOpacity } from "./geometry";
@@ -82,7 +83,9 @@ export function createPastedLayer(host: PasteHost): PastedLayer {
     return true;
   }
 
-  const HINT = "drag it, its corner resizes (Shift: free), [ ] see-through, Delete removes";
+  /** What to do with it: by keys with a mouse, by taps with a finger. */
+  const hint = () =>
+    isTouch() ? "drag it, its corner resizes it, Undo takes it back" : "drag it, its corner resizes (Shift: free), [ ] see-through, Delete removes";
 
   // macOS Chrome pastes only into something editable: Cmd+V on a page with nothing focused does
   // nothing at all. So on Cmd/Ctrl+V Pointer focuses this hidden field for a moment, the paste
@@ -115,7 +118,7 @@ export function createPastedLayer(host: PasteHost): PastedLayer {
     if (!file) return;
     e.preventDefault();
     e.stopImmediatePropagation();
-    if (await addFile(file, mouse)) host.say(`Image pasted: ${HINT}.`);
+    if (await addFile(file, mouse)) host.say(`Image pasted: ${hint()}.`);
   }
 
   const picker = Object.assign(document.createElement("input"), { type: "file", accept: "image/*", multiple: true, hidden: true });
@@ -127,7 +130,7 @@ export function createPastedLayer(host: PasteHost): PastedLayer {
     for (const [i, file] of files.entries()) {
       if (await addFile(file, { x: innerWidth / 2 + i * 24, y: innerHeight / 2 + i * 24 })) added++;
     }
-    if (added) host.say(`${added === 1 ? "Image" : `${added} images`} added: ${HINT}.`);
+    if (added) host.say(`${added === 1 ? "Image" : `${added} images`} added: ${hint()}.`);
   });
 
   function onDown(e: PointerEvent): boolean {

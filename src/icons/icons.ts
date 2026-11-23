@@ -4,14 +4,11 @@
 // lucide calendar-heart on EventCard (EventCard.tsx:27)". It moves by a drag (from anywhere on
 // it, its number too), resizes from its bottom-right corner, and Delete removes it, like the other
 // marks.
-//
-// Before, the bar's button opened a picker over the bar and a click placed the icon at "the last
-// point": where the layer last saw the mouse, which is where the mouse crossed onto the bar or
-// the picker, so the icon landed under the open picker, beside the button that opened it.
 
 import type { Pin } from "../marks/types";
 import { elementAt } from "../pick/walk";
 import type { Point } from "../shared/geometry";
+import { isTouch } from "../shared/platform";
 import type { State } from "../ui/state";
 import { createIconPicker } from "./picker";
 import { placeAt } from "./search";
@@ -50,24 +47,19 @@ export function createIcons(h: IconsHost) {
   const under = (at: Point, size: number) =>
     elementAt(at.x + size / 2 - scrollX, at.y + size / 2 - scrollY, h.host) ?? document.body;
 
-  /** The page point the open picker places on: the spot that was clicked. */
-  let spot: Point | null = null;
-
-  function place(name: string, svg: string) {
-    if (!spot) return;
-    const at = placeAt(SIZE, spot);
+  /** The icon chosen, centred on the spot that was clicked (page coordinates). */
+  function place(name: string, svg: string, page: Point) {
+    const at = placeAt(SIZE, page);
     const icon: IconMark = { kind: "icon", color: h.state.color, el: under(at, SIZE), at, note: "", name, svg, size: SIZE };
     h.update(() => h.state.marks.push(icon));
-    h.say(`Icon ${name} added: drag it to move it, its corner resizes, Delete removes it.`);
+    const gone = isTouch() ? "Undo takes it back" : "Delete removes it";
+    h.say(`Icon ${name} added: drag it to move it, its corner resizes it, ${gone}.`);
   }
 
   const picker = createIconPicker({ place, say: h.say });
 
-  /** The Icon tool's click: the picker opens at the spot (`view`), and places there (`page`). */
-  function ask(view: Point, page: Point) {
-    spot = page;
-    picker.open(view);
-  }
+  /** The Icon tool's click: the picker opens beside it (`view`), and places on it (`page`). */
+  const ask = (view: Point, page: Point) => picker.open(view, page);
 
   /** A press on an icon grabs it; false when the press is not on one. */
   function grab(e: PointerEvent, page: Point): boolean {

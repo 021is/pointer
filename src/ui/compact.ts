@@ -6,6 +6,7 @@
 // nothing else). On a wide viewport the More button is hidden and the bar is as it always was.
 // The layout itself is CSS (css.ts, @media (max-width: 767px)); this is its state.
 
+import { closeOnOutside } from "../shared/outside";
 import { icon } from "./icons";
 
 /** A button's short name, shown under its icon when More is open and in the draw menu: its tip's
@@ -35,23 +36,18 @@ export function createCompact(bar: HTMLElement, tip: (b: HTMLElement, text: stri
 
   const isOpen = () => bar.dataset.more === "open";
   /** A press outside the bar while More is open only closes it. */
-  const outside = (e: Event) => {
-    if (e.composedPath().includes(bar)) return;
-    e.preventDefault();
-    e.stopPropagation();
-    collapse();
-  };
+  const outside = closeOnOutside(bar, () => collapse());
   function open() {
     bar.dataset.more = "open";
     toggle.setAttribute("aria-expanded", "true");
-    window.addEventListener("pointerdown", outside, true);
+    outside.watch();
   }
   /** Closes More; true when it was open (Esc then does nothing else). */
   function collapse(): boolean {
     if (!isOpen()) return false;
     delete bar.dataset.more;
     toggle.setAttribute("aria-expanded", "false");
-    window.removeEventListener("pointerdown", outside, true);
+    outside.unwatch();
     return true;
   }
   toggle.addEventListener("click", (e) => {

@@ -8,12 +8,13 @@
 
 import { lucideSvg } from "../marks/svg";
 import type { Point, Size } from "../shared/geometry";
+import { closeOnOutside } from "../shared/outside";
 import { loadLucide } from "./data";
 import { type LucideData, QUICK, searchIcons } from "./search";
 
 export type PickerHost = {
-  /** Lay the icon on the spot the picker was opened for. */
-  place: (name: string, svg: string) => void;
+  /** Lay the icon on `page`, the spot the picker was opened for (page coordinates). */
+  place: (name: string, svg: string, page: Point) => void;
   say: (message: string, kind?: "ok" | "error") => void;
 };
 
@@ -36,7 +37,15 @@ export function pickerSpot(at: Point, view: Size): PickerSpot {
 
 const SVG = (inner: string) => lucideSvg(inner, "currentColor");
 
-export type IconPicker = { el: HTMLElement; open: (at: Point) => void; close: () => void; isOpen: () => boolean };
+/** Chooses an icon for the spot this opening of the picker is for, and closes it. */
+type Pick = (name: string, svg: string) => void;
+
+export type IconPicker = {
+  el: HTMLElement;
+  /** Opens beside `at` (the viewport point clicked); a choice lands on `page` (the same spot). */
+  open: (at: Point, page: Point) => void;
+  close: () => void;
+};
 
 export function createIconPicker(h: PickerHost): IconPicker {
   const el = Object.assign(document.createElement("div"), { className: "iconpick", hidden: true });
@@ -55,22 +64,18 @@ export function createIconPicker(h: PickerHost): IconPicker {
   more.append(input, grid, foot);
   panel.append(quick, more);
   el.append(ring, panel);
+  const outside = closeOnOutside(panel, close);
   let data: LucideData | null = null;
 
-  function choice(name: string, svg: string): HTMLButtonElement {
+  function choice(name: string, svg: string, pick: Pick): HTMLButtonElement {
     const b = Object.assign(document.createElement("button"), { type: "button", className: "icon-result", title: name });
     b.setAttribute("aria-label", name);
     b.innerHTML = SVG(svg); // Lucide's own markup, bundled with the extension: never the page's
-    b.addEventListener("click", () => choose(name, svg));
+    b.addEventListener("click", () => pick(name, svg));
     return b;
   }
 
-  function choose(name: string, svg: string) {
-    close();
-    h.place(name, svg);
-  }
-
-  function fillQuick(d: LucideData) {
+  function fillQuick(d: LucideData, pick: Pick) {
     const known = QUICK.filter((name) => d.svg[name] !== undefined);
     const toMore = Object.assign(document.createElement("button"), { type: "button", className: "more-button", textContent: "More…" });
     toMore.setAttribute("aria-expanded", "false");
@@ -78,42 +83,41 @@ export function createIconPicker(h: PickerHost): IconPicker {
       more.hidden = !more.hidden;
       toMore.setAttribute("aria-expanded", String(!more.hidden));
       if (!more.hidden) {
-        show();
+        show(d, pick);
         input.focus();
       }
     });
-    quick.replaceChildren(...known.map((name) => choice(name, d.svg[name] ?? "")), toMore);
+    quick.replaceChildren(...known.map((name) => choice(name, d.svg[name] ?? "", pick)), toMore);
     foot.textContent = `Lucide ${d.version} (ISC) · Enter takes the first one.`;
+    // This opening's search: typing filters, Enter takes the first match.
+    input.oninput = () => show(d, pick);
+    input.onkeydown = (e) => {
+      const first = grid.querySelector<HTMLButtonElement>(".icon-result")?.title;
+      if (e.key !== "Enter" || !first) return;
+      e.preventDefault();
+      pick(first, d.svg[first] ?? "");
+    };
+    quick.querySelector<HTMLButtonElement>("button")?.focus({ preventScroll: true });
   }
 
-  function show() {
-    if (!data) return;
-    const d = data;
+  function show(d: LucideData, pick: Pick) {
     const names = searchIcons(d, input.value);
-    grid.replaceChildren(...names.map((name) => choice(name, d.svg[name] ?? "")));
+    grid.replaceChildren(...names.map((name) => choice(name, d.svg[name] ?? "", pick)));
     if (!names.length) grid.textContent = `No icon for "${input.value}".`;
   }
 
-  input.addEventListener("input", show);
   panel.addEventListener("keydown", (e) => {
     e.stopPropagation();
-    if (e.key === "Escape") {
-      e.preventDefault();
-      return close();
-    }
-    const first = grid.querySelector<HTMLButtonElement>(".icon-result")?.title;
-    if (e.key === "Enter" && e.target === input && first && data) {
-      e.preventDefault();
-      choose(first, data.svg[first] ?? "");
-    }
+    if (e.key !== "Escape") return;
+    e.preventDefault();
+    close();
   });
 
-  /** A press anywhere but the picker closes it, placing nothing. */
-  const outside = (e: Event) => {
-    if (!e.composedPath().includes(panel)) close();
-  };
-
-  function open(at: Point) {
+  function open(at: Point, page: Point) {
+    const pick: Pick = (name, svg) => {
+      close();
+      h.place(name, svg, page);
+    };
     const spot = pickerSpot(at, { w: innerWidth, h: innerHeight });
     panel.style.cssText = "top" in spot ? `left:${spot.left}px;top:${spot.top}px` : `left:${spot.left}px;bottom:${spot.bottom}px`;
     ring.style.cssText = `left:${at.x}px;top:${at.y}px`;
@@ -121,12 +125,12 @@ export function createIconPicker(h: PickerHost): IconPicker {
     input.value = "";
     el.hidden = false;
     panel.focus({ preventScroll: true });
-    window.addEventListener("pointerdown", outside, true);
-    if (data) return void fillAndFocus(data);
+    outside.watch();
+    if (data) return fillQuick(data, pick);
     loadLucide().then(
       (d) => {
         data = d;
-        if (!el.hidden) fillAndFocus(d);
+        if (!el.hidden) fillQuick(d, pick);
       },
       (err: unknown) => {
         close();
@@ -135,15 +139,10 @@ export function createIconPicker(h: PickerHost): IconPicker {
     );
   }
 
-  function fillAndFocus(d: LucideData) {
-    fillQuick(d);
-    quick.querySelector<HTMLButtonElement>("button")?.focus({ preventScroll: true });
-  }
-
   function close() {
     el.hidden = true;
-    window.removeEventListener("pointerdown", outside, true);
+    outside.unwatch();
   }
 
-  return { el, open, close, isOpen: () => !el.hidden };
+  return { el, open, close };
 }

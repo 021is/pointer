@@ -3,6 +3,7 @@
 // tab. The confirmation shows on the button itself, not as a toast over the bar.
 
 import type { Costs } from "../capture/estimate";
+import { closeOnOutside } from "../shared/outside";
 import { OUTPUTS, type Output, type State } from "./state";
 
 export type CopyMenuParts = {
@@ -65,18 +66,16 @@ export function createCopyMenu(parts: CopyMenuParts): CopyMenu {
   menu.addEventListener("pointerdown", (e) => e.stopPropagation());
   wrap.append(copy, caret, menu);
 
-  const outside = (e: Event) => {
-    if (!e.composedPath().includes(wrap)) close();
-  };
+  const outside = closeOnOutside(wrap, () => close());
   function close() {
     menu.hidden = true;
     caret.setAttribute("aria-expanded", "false");
-    window.removeEventListener("pointerdown", outside, true);
+    outside.unwatch();
   }
   function open() {
     menu.hidden = false;
     caret.setAttribute("aria-expanded", "true");
-    window.addEventListener("pointerdown", outside, true);
+    outside.watch();
     for (const { cost } of items.values()) cost.textContent = "…";
     why.hidden = true;
     parts.estimate().then(

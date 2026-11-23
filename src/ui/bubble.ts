@@ -2,6 +2,7 @@
 // Esc cancels. Resolves with the text, or null when cancelled.
 
 import type { Point } from "../shared/geometry";
+import { isTouch } from "../shared/platform";
 import { visibleView } from "../shared/view";
 
 export type BubbleOptions = { at: Point; placeholder: string; value?: string; hint: string };
@@ -20,7 +21,8 @@ export function openBubble(root: ShadowRoot, options: BubbleOptions): Promise<st
   input.rows = 2;
   const hint = document.createElement("div");
   hint.className = "hint";
-  hint.textContent = options.hint;
+  // A finger has no Esc: what a tap does (leaving the box keeps what is typed, as blur does below).
+  hint.textContent = isTouch() ? "Enter, or a tap outside, keeps what you typed" : options.hint;
   box.append(input, hint);
 
   // Beside the spot, inside the part of the page the person sees (a 320 px phone too).
