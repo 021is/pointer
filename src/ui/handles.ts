@@ -16,6 +16,8 @@ export type HandleHost = {
   editNote: (pin: Pin, view: Point) => void;
   editText: (text: TextShape, view: Point) => void;
   onPick: (pin: Pin) => void;
+  /** A pin dragged by its number, let go: an icon finds the element it now lies on. */
+  moved: (pin: Pin) => void;
 };
 
 /** The topmost text drawn under a page point. */
@@ -28,8 +30,8 @@ export function textAt(marks: State["marks"], page: Point): TextShape | undefine
 }
 
 export function handles(host: HandleHost) {
-  /** Press, then: moved past 4 px → `move` from the press, else `click`. */
-  function press(e: PointerEvent, page: Point, move: ((dx: number, dy: number) => void) | null, click: () => void) {
+  /** Press, then: moved past 4 px → `move` from the press (and `done` once let go), else `click`. */
+  function press(e: PointerEvent, page: Point, move: ((dx: number, dy: number) => void) | null, click: () => void, done = () => {}) {
     let moved = false;
     host.drag(
       e,
@@ -38,21 +40,26 @@ export function handles(host: HandleHost) {
         moved = true;
         host.update(() => move(p.x - page.x, p.y - page.y));
       },
-      () => {
-        if (!moved) click();
-      },
+      () => (moved ? done() : click()),
     );
   }
 
   function grabPin(e: PointerEvent, pin: Pin, view: Point, page: Point) {
     const start = { ...pin.at };
-    // A comment's and an idea's badge drag; a pick's follows its element, a gap's its measure.
-    const free = pin.kind === "comment" || pin.kind === "idea";
+    // A comment's, an idea's and an icon's badge drag (an icon's sits on its corner: a press there
+    // opened the note and never moved it); a pick's follows its element, a gap's its measure.
+    const free = pin.kind === "comment" || pin.kind === "idea" || pin.kind === "icon";
     const move = free ? (dx: number, dy: number) => (pin.at = { x: start.x + dx, y: start.y + dy }) : null;
-    press(e, page, move, () => {
-      if (pin.kind === "pick") host.onPick(pin);
-      host.editNote(pin, view);
-    });
+    press(
+      e,
+      page,
+      move,
+      () => {
+        if (pin.kind === "pick") host.onPick(pin);
+        host.editNote(pin, view);
+      },
+      () => host.moved(pin),
+    );
   }
 
   function grabText(e: PointerEvent, text: TextShape, view: Point, page: Point) {

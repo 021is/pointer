@@ -38,9 +38,11 @@ export function searchIcons(data: LucideData, query: string, limit = 60): string
   return ranked.slice(0, limit).map((r) => r.name);
 }
 
-/** Where a placed icon's top-left goes: centred on the point (a drop, the last click), or on the
- *  middle of the view when there is none; page coordinates. */
-export function placeAt(size: number, point: { x: number; y: number } | null, view: { w: number; h: number }, scroll: { x: number; y: number }) {
-  const c = point ?? { x: scroll.x + view.w / 2, y: scroll.y + view.h / 2 };
-  return { x: c.x - size / 2, y: c.y - size / 2 };
+/** The picker's first row, one click away (Edvard, 2026-11-23: "first 3-5 icons"): the icons a
+ *  page most often lacks. "More" opens the rest, searchable. */
+export const QUICK: readonly string[] = ["search", "menu", "user", "heart", "plus"];
+
+/** Where a placed icon's top-left goes: centred on the spot the person clicked; page coordinates. */
+export function placeAt(size: number, spot: { x: number; y: number }) {
+  return { x: spot.x - size / 2, y: spot.y - size / 2 };
 }

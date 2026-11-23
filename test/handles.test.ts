@@ -1,7 +1,32 @@
-import { describe, expect, it } from "vitest";
-import type { Mark } from "../src/marks/types";
-import { textAt } from "../src/ui/handles";
-import { chooseOutput, chooseTool, pictureOnly } from "../src/ui/state";
+import { describe, expect, it, vi } from "vitest";
+import type { Mark, Pin } from "../src/marks/types";
+import type { Point } from "../src/shared/geometry";
+import { handles, textAt } from "../src/ui/handles";
+import { chooseOutput, chooseTool, initialState, pictureOnly } from "../src/ui/state";
+
+describe("an icon's number drags the icon (it sat on the icon's corner and only opened its note)", () => {
+  it("a drag from the number moves the icon and settles it; a click still opens the note", () => {
+    const icon: Pin = { kind: "icon", color: "red", el: {} as Element, at: { x: 100, y: 100 }, note: "", name: "bell", svg: "<path/>", size: 32 };
+    const state = { ...initialState(), marks: [icon] as Mark[] };
+    const path: Point[] = [];
+    const drag = (_e: PointerEvent, move: (p: Point, shift: boolean) => void, end: () => void) => {
+      for (const p of path) move(p, false);
+      end();
+    };
+    const editNote = vi.fn();
+    const moved = vi.fn();
+    const h = handles({ state, update: (c) => c(), drag, editNote, editText: () => {}, onPick: () => {}, moved });
+    const badge = { x: 132, y: 100 };
+    path.push({ x: 150, y: 140 }, { x: 182, y: 160 });
+    h.grabPin({} as PointerEvent, icon, badge, badge);
+    expect(icon.at).toEqual({ x: 150, y: 160 });
+    expect(moved).toHaveBeenCalledWith(icon);
+    expect(editNote).not.toHaveBeenCalled();
+    path.length = 0;
+    h.grabPin({} as PointerEvent, icon, badge, badge);
+    expect(editNote).toHaveBeenCalledWith(icon, badge);
+  });
+});
 
 describe("the bar's mode rules", () => {
   it("a picture-only tool chosen in Text switches the output to Picture", () => {

@@ -81,7 +81,6 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
     color: (c) => update(() => (state.color = c)),
     output: (o) => setOutput(o),
     upload: () => pasted.upload(),
-    icons: () => icons.toggle(),
     styles: () => pressStyles(hooks, lastPick(), say),
     undo: hist.undo,
     redo: hist.redo,
@@ -96,7 +95,7 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
   const flow = copyFlow({ state, host, hooks: () => hooks, say, flash: bar.flash, update, setOutput, clear: hist.clear });
   const drag = (down: PointerEvent, move: (p: Point, shift: boolean) => void, end: () => void) =>
     dragOn(layer, down, move, end);
-  const icons = createIcons({ state, host, update, drag, say, last: () => (mouse.x || mouse.y ? mouse : null) });
+  const icons = createIcons({ state, host, update, drag, say });
   root.append(bar.el, icons.el, toast.el);
 
   const layout = liveLayout;
@@ -126,6 +125,7 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
   }
 
   function setTool(tool: Tool) {
+    icons.close();
     update(() => {
       Object.assign(state, chooseTool(state, tool));
       state.hover = null;
@@ -172,6 +172,7 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
     editNote: (pin, view) => void editNote(pin, view),
     editText: (text, view) => void editText(text, view),
     onPick: (pin) => hooks.onPick(pin),
+    moved: (pin) => icons.settle(pin),
   });
 
   function onDown(e: PointerEvent) {
@@ -202,6 +203,8 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
       if (el) void addPin(tool, el, page);
     } else if (tool === "gap") {
       startGap(e, page);
+    } else if (tool === "icon") {
+      icons.ask(view, page);
     } else if (tool === "text") {
       void openBubble(root, { at: view, placeholder: "Text on the page", hint: "Enter places it · Esc cancels" }).then(
         (text) => text && update(() => state.marks.push({ kind: "text", color: state.color, at: page, text })),

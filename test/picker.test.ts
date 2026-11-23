@@ -1,41 +1,100 @@
 // @vitest-environment happy-dom
-// The icon picker's gestures on its real DOM: a press without a move adds the icon at the last
-// point (null), a drag let go outside the panel drops it there; Lucide's data is already loaded.
+// The Icon tool (Edvard, 2026-11-23): a click on the page opens the picker at that spot, with five
+// quick icons and More; choosing one places it centred on the spot and closes the picker; Esc or a
+// press elsewhere closes it without placing. Before, the icon landed where the mouse last crossed
+// onto Pointer's bar or picker (the layer's "last point"), under the open picker.
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createIconPicker } from "../src/icons/picker";
+import { createIcons } from "../src/icons/icons";
+import { createIconPicker, pickerSpot } from "../src/icons/picker";
+import { QUICK } from "../src/icons/search";
+import type { Mark } from "../src/marks/types";
+import { initialState } from "../src/ui/state";
 
 afterEach(() => {
   globalThis.__pointerLucide = undefined;
   document.body.innerHTML = "";
 });
 
-async function open() {
-  globalThis.__pointerLucide = { version: "0.503.0", svg: { bell: "<path/>", "bell-ring": "<path/>" }, tags: { bell: [], "bell-ring": [] } };
+const tick = () => new Promise((r) => setTimeout(r, 0));
+const svg = Object.fromEntries([...QUICK, "bell", "bell-ring"].map((n) => [n, `<path d="${n}"/>`]));
+const lucide = () => {
+  globalThis.__pointerLucide = { version: "0.503.0", svg, tags: Object.fromEntries(Object.keys(svg).map((n) => [n, []])) };
+};
+
+async function picker() {
+  lucide();
   const place = vi.fn();
-  const picker = createIconPicker({ place, say: () => {} });
-  document.body.append(picker.el);
-  picker.toggle();
-  await new Promise((r) => setTimeout(r, 0));
-  const result = picker.el.querySelector<HTMLButtonElement>(".icon-result") as HTMLButtonElement;
-  result.setPointerCapture = () => {};
-  return { place, result };
+  const p = createIconPicker({ place, say: () => {} });
+  document.body.append(p.el);
+  p.open({ x: 200, y: 150 });
+  await tick();
+  const buttons = () => [...p.el.querySelectorAll<HTMLButtonElement>(".quick button")];
+  return { p, place, buttons };
 }
 
-const pointer = (type: string, x: number, y: number) => new PointerEvent(type, { clientX: x, clientY: y, bubbles: true, pointerId: 1 });
-
-describe("placing an icon", () => {
-  it("by click: at the last point", async () => {
-    const { place, result } = await open();
-    result.dispatchEvent(pointer("pointerdown", 10, 10));
-    result.dispatchEvent(pointer("pointerup", 10, 10));
-    expect(place).toHaveBeenCalledWith("bell", "<path/>", null);
+describe("the picker at the spot", () => {
+  it("opens with the five quick icons and More, the first one focused", async () => {
+    const { p, buttons } = await picker();
+    expect(p.isOpen()).toBe(true);
+    expect(buttons().map((b) => b.getAttribute("aria-label") ?? b.textContent)).toEqual([...QUICK, "More…"]);
+    expect(document.activeElement).toBe(buttons()[0]);
   });
 
-  it("by drop: where it was let go, outside the panel", async () => {
-    const { place, result } = await open();
-    result.dispatchEvent(pointer("pointerdown", 10, 10));
-    result.dispatchEvent(pointer("pointermove", 200, 300));
-    result.dispatchEvent(pointer("pointerup", 640, 420));
-    expect(place).toHaveBeenCalledWith("bell", "<path/>", { x: 640, y: 420 });
+  it("a quick icon places and closes", async () => {
+    const { p, place, buttons } = await picker();
+    buttons()[3]?.click();
+    expect(place).toHaveBeenCalledWith("heart", '<path d="heart"/>');
+    expect(p.isOpen()).toBe(false);
+  });
+
+  it("More opens the search over the rest; Enter takes the first match", async () => {
+    const { p, place, buttons } = await picker();
+    buttons().at(-1)?.click();
+    const input = p.el.querySelector("input") as HTMLInputElement;
+    expect(p.el.querySelector<HTMLElement>(".more")?.hidden).toBe(false);
+    input.value = "bell";
+    input.dispatchEvent(new Event("input"));
+    expect([...p.el.querySelectorAll(".grid .icon-result")].map((b) => b.getAttribute("title"))).toEqual(["bell", "bell-ring"]);
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    expect(place).toHaveBeenCalledWith("bell", '<path d="bell"/>');
+    expect(p.isOpen()).toBe(false);
+  });
+
+  it("Esc and a press elsewhere close it, placing nothing", async () => {
+    const { p, place, buttons } = await picker();
+    buttons()[0]?.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(p.isOpen()).toBe(false);
+    p.open({ x: 10, y: 10 });
+    await tick();
+    document.body.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    expect(p.isOpen()).toBe(false);
+    expect(place).not.toHaveBeenCalled();
+  });
+
+  it("opens beside the spot, inside the view: below it, or above it near the bottom", () => {
+    const view = { w: 1280, h: 800 };
+    expect(pickerSpot({ x: 200, y: 150 }, view)).toEqual({ left: 214, top: 164 });
+    expect(pickerSpot({ x: 1270, y: 700 }, view)).toEqual({ left: 952, bottom: 114 });
+  });
+});
+
+describe("the icon lands where the person clicked", () => {
+  it("centred on the clicked spot, whatever the mouse did on the way to the picker", async () => {
+    lucide();
+    // happy-dom has no hit testing: nothing under the spot, so the icon is on the page itself.
+    Object.defineProperty(document, "elementsFromPoint", { value: () => [], configurable: true });
+    const state = initialState();
+    const update = (change: () => void) => change();
+    const icons = createIcons({ state, host: document.createElement("div"), update, drag: () => {}, say: () => {} });
+    document.body.append(icons.el);
+    // The Icon tool's click at view (300, 200), page (300, 1200): the page is scrolled 1000 px.
+    icons.ask({ x: 300, y: 200 }, { x: 300, y: 1200 });
+    await tick();
+    // The way to the picker crosses the bar: no "last point" decides anything any more.
+    window.dispatchEvent(new PointerEvent("pointermove", { clientX: 640, clientY: 760 }));
+    icons.el.querySelector<HTMLButtonElement>('.quick button[aria-label="search"]')?.click();
+    const icon = state.marks[0] as Extract<Mark, { kind: "icon" }>;
+    expect(icon).toMatchObject({ kind: "icon", name: "search", at: { x: 284, y: 1184 }, size: 32, el: document.body });
+    Reflect.deleteProperty(document, "elementsFromPoint");
   });
 });

@@ -14,6 +14,7 @@ describe("commandFor", () => {
     expect(commandFor(key("p"), "page")).toEqual({ type: "tool", tool: "pick" });
     expect(commandFor(key("B"), "page")).toEqual({ type: "tool", tool: "box" });
     expect(commandFor(key("c"), "page")).toEqual({ type: "tool", tool: "comment" });
+    expect(commandFor(key("l"), "page")).toEqual({ type: "tool", tool: "icon" });
   });
 
   it("maps 1-3 to colours and nothing past them", () => {

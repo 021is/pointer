@@ -1,6 +1,6 @@
 // The floating bar. The 021 mark drags it; every button shows its name and key on hover. Its
 // groups (Edvard, 2026-11-19: "group them"): [Page Move] | [Pick Comment Idea Crop] | [draw ▾]
-// (draw-menu.ts) Icons | colours, image | Styles Undo Redo Clear | Picture|Text | Copy ▾. Crops, the
+// (draw-menu.ts) Icon | colours, image | Styles Undo Redo Clear | Picture|Text | Copy ▾. Crops, the
 // drawing tools, icons, colours and image upload are for a picture, so Text hides them (Gap stays
 // on its key G, its text says enough); a drawing key pressed in Text switches back to Picture.
 // Copy is a split button (copy-menu.ts) whose menu also offers Picture only.
@@ -20,7 +20,6 @@ export type BarActions = {
   color: (c: Color) => void;
   output: (o: Output) => void;
   upload: () => void;
-  icons: () => void;
   styles: () => void;
   undo: () => void;
   redo: () => void;
@@ -33,8 +32,8 @@ export type BarActions = {
   close: () => void;
 };
 
-/** Where a tool sits on the bar: its own button in "use" or "mark", or inside the draw button. */
-type Entry = DrawEntry & { group: "use" | "mark" | "draw" };
+/** Where a tool sits on the bar: its own button in "use", "mark" or "icon", or inside the draw button. */
+type Entry = DrawEntry & { group: "use" | "mark" | "draw" | "icon" };
 
 export const TOOLS: readonly Entry[] = [
   { group: "use", tool: "page", key: "V", icon: "page", title: "Use the page" },
@@ -49,6 +48,7 @@ export const TOOLS: readonly Entry[] = [
   { group: "draw", tool: "ellipse", key: "E", icon: "ellipse", title: "Ellipse · Shift: circle" },
   { group: "draw", tool: "gap", key: "G", icon: "gap", title: "Gap: drag from one element to another to measure the space" },
   { group: "draw", tool: "text", key: "T", icon: "text", title: "Text on the page" },
+  { group: "icon", tool: "icon", key: "L", icon: "icons", title: "Icon: click a spot, then choose an icon" },
 ];
 
 export const COLOR_KEYS: readonly Color[] = ["red", "blue", "yellow"];
@@ -135,7 +135,7 @@ export function createToolbar(act: BarActions): Toolbar {
     choose: act.tool,
   });
   const drawing = group("picture");
-  drawing.append(draw.el, button("icons", "Icons: search Lucide, click one or drag it onto the page", "", act.icons));
+  drawing.append(draw.el, ...TOOLS.filter((t) => t.group === "icon").map(toolButton));
 
   const colors = new Map<Color, HTMLButtonElement>();
   const swatches = group("picture");

@@ -15,7 +15,6 @@ function bar() {
     color: noop,
     output,
     upload: noop,
-    icons: noop,
     styles: noop,
     undo: noop,
     redo: noop,
