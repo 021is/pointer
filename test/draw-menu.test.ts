@@ -17,7 +17,6 @@ function bar() {
     color: noop,
     output: noop,
     upload: noop,
-    icons: noop,
     styles: noop,
     undo: noop,
     redo: noop,
@@ -41,7 +40,7 @@ describe("the draw button", () => {
   it("holds the six drawing tools and the bar keeps the others as their own buttons", () => {
     const { tb, main } = bar();
     expect(main().getAttribute("aria-label")).toBe("Pen · Shift: straight (D)");
-    for (const label of ["Use the page", "Move", "Pick", "Comment", "Idea", "Crop"]) {
+    for (const label of ["Use the page", "Move", "Pick", "Comment", "Idea", "Crop", "Icon"]) {
       expect(tb.el.querySelector(`.group > button[aria-label^="${label}"]`)).not.toBeNull();
     }
     expect(tb.el.querySelector('.group > button[aria-label^="Box"]')).toBeNull();
@@ -52,7 +51,7 @@ describe("the draw button", () => {
     const hidden = (el: Element | null) => el?.closest('[data-only="picture"]') !== null;
     const q = (sel: string) => tb.el.querySelector(sel);
     expect(hidden(q("button.draw"))).toBe(true);
-    expect(hidden(q('button[aria-label^="Icons"]'))).toBe(true);
+    expect(hidden(q('button[aria-label^="Icon"]'))).toBe(true);
     expect(hidden(q('button[aria-label^="Crop"]'))).toBe(true);
     expect(hidden(q('button[aria-label^="Add an image"]'))).toBe(true);
     expect(hidden(q("button.swatch"))).toBe(true);

@@ -19,7 +19,7 @@ dev-build information (React fibers, Vue and Svelte metadata, source maps).
 |---|---|
 | `src/background.ts` | service worker: icon/shortcut → inject; `captureVisibleTab`; the welcome page on install (and on an update that left no shortcut); the preview tab |
 | `src/welcome.ts`, `src/shared/shortcut.ts` | the welcome page names the key Chrome really bound, or offers to set one |
-| `src/ui/` | the content script: shadow-rooted layer, toolbar, bubble, keys, state; `copy-flow.ts` (Copy, clear after copy, preview), `copy-menu.ts` (the split button), `move.ts` (the Move tool), `history.ts` (Undo, Redo, Clear everything: the one way), `styles.ts` (the Styles button: every press opens, closes or says why) |
+| `src/ui/` | the content script: shadow-rooted layer, toolbar, bubble, keys, state; `copy-flow.ts` (Copy, clear after copy, preview), `copy-menu.ts` (the split button), `move.ts` (the Move tool), `history.ts` (Undo, Redo, Clear everything: the one way), `styles.ts` (the Styles button: every press opens, closes or says why), `compact.ts` (the bar under 768 px, as in DevTools' device mode: five tools at hand, the rest behind More; touch works everywhere, the layer is `touch-action: none`) |
 | `src/draw/`, `src/pick/`, `src/marks/` | drawing gestures, element picking, marks → SVG |
 | `src/keep/` | marks kept through a reload: `saved.ts` (marks ↔ plain data, pure; icons by Lucide name only), `check.ts` (every kept mark checked field by field), `keep.ts` (the content script's side), `store.ts` (the worker's `chrome.storage.session`) |
 | `src/capture/` | screenshot, crop, layout within the image budget, text strip, clipboard, cost estimate |

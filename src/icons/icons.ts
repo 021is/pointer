@@ -1,12 +1,14 @@
-// Icons laid on the page (Edvard, 2026-11-19, his pick: "Lucide, bundled"): the bar's icon button
-// opens the picker; an icon lands centred on the drop point or the last point (else the middle of
-// the view), snapped to the element under it like a pick, and numbered: "[6] icon: lucide
-// calendar-heart on EventCard (EventCard.tsx:27)". It moves by a drag, resizes from its
-// bottom-right corner, and Delete removes it, like the other marks.
+// Icons laid on the page (Edvard, 2026-11-19, his pick: "Lucide, bundled"). The Icon tool: click
+// a spot, the picker opens there (picker.ts), and the icon chosen lands centred on that spot
+// (Edvard, 2026-11-23), snapped to the element under it like a pick, and numbered: "[6] icon:
+// lucide calendar-heart on EventCard (EventCard.tsx:27)". It moves by a drag (from anywhere on
+// it, its number too), resizes from its bottom-right corner, and Delete removes it, like the other
+// marks.
 
 import type { Pin } from "../marks/types";
 import { elementAt } from "../pick/walk";
 import type { Point } from "../shared/geometry";
+import { isTouch } from "../shared/platform";
 import type { State } from "../ui/state";
 import { createIconPicker } from "./picker";
 import { placeAt } from "./search";
@@ -19,8 +21,6 @@ export type IconsHost = {
   update: (change: () => void) => void;
   drag: (down: PointerEvent, move: (p: Point, shift: boolean) => void, end: () => void) => void;
   say: (message: string, kind?: "ok" | "error") => void;
-  /** The last point the mouse was on the page (page coordinates), or null before any. */
-  last: () => Point | null;
 };
 
 const SIZE = 32;
@@ -47,15 +47,19 @@ export function createIcons(h: IconsHost) {
   const under = (at: Point, size: number) =>
     elementAt(at.x + size / 2 - scrollX, at.y + size / 2 - scrollY, h.host) ?? document.body;
 
-  function place(name: string, svg: string, view: Point | null) {
-    const point = view ? { x: view.x + scrollX, y: view.y + scrollY } : h.last();
-    const at = placeAt(SIZE, point, { w: innerWidth, h: innerHeight }, { x: scrollX, y: scrollY });
+  /** The icon chosen, centred on the spot that was clicked (page coordinates). */
+  function place(name: string, svg: string, page: Point) {
+    const at = placeAt(SIZE, page);
     const icon: IconMark = { kind: "icon", color: h.state.color, el: under(at, SIZE), at, note: "", name, svg, size: SIZE };
     h.update(() => h.state.marks.push(icon));
-    h.say(`Icon ${name} added: drag it, its corner resizes, Delete removes.`);
+    const gone = isTouch() ? "Undo takes it back" : "Delete removes it";
+    h.say(`Icon ${name} added: drag it to move it, its corner resizes it, ${gone}.`);
   }
 
   const picker = createIconPicker({ place, say: h.say });
+
+  /** The Icon tool's click: the picker opens beside it (`view`), and places on it (`page`). */
+  const ask = (view: Point, page: Point) => picker.open(view, page);
 
   /** A press on an icon grabs it; false when the press is not on one. */
   function grab(e: PointerEvent, page: Point): boolean {
@@ -70,5 +74,10 @@ export function createIcons(h: IconsHost) {
     return true;
   }
 
-  return { el: picker.el, toggle: picker.toggle, grab };
+  /** An icon moved by its number: it is now on the element under its new middle. */
+  function settle(pin: Pin) {
+    if (pin.kind === "icon") h.update(() => (pin.el = under(pin.at, pin.size)));
+  }
+
+  return { el: picker.el, ask, close: picker.close, grab, settle };
 }

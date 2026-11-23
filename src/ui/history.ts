@@ -4,7 +4,7 @@
 // picks' CSS edits. Any other change to the marks after an undo starts a new story: Redo empties.
 
 import { type Mark, isPin } from "../marks/types";
-import { IS_MAC } from "../shared/platform";
+import { IS_MAC, isTouch } from "../shared/platform";
 import type { Extension } from "./extension";
 import { type State, pinsOf } from "./state";
 import type { ToastAction } from "./toast";
@@ -80,7 +80,7 @@ export function createHistory(h: HistoryHost): History {
   function redo() {
     fresh();
     const step = redos.pop();
-    if (!step) return h.say(`Nothing to redo: Redo (${REDO_KEY}) puts back what Undo took.`);
+    if (!step) return h.say(`Nothing to redo: Redo${isTouch() ? "" : ` (${REDO_KEY})`} puts back what Undo took.`);
     if (step.kind === "clear") {
       clearNow();
       return h.say("Cleared again.", "ok", undoAction);

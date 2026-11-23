@@ -1,12 +1,14 @@
 // The floating bar. The 021 mark drags it; every button shows its name and key on hover. Its
 // groups (Edvard, 2026-11-19: "group them"): [Page Move] | [Pick Comment Idea Crop] | [draw ▾]
-// (draw-menu.ts) Icons | colours, image | Styles Undo Redo Clear | Picture|Text | Copy ▾. Crops, the
+// (draw-menu.ts) Icon | colours, image | Styles Undo Redo Clear | Picture|Text | Copy ▾. Crops, the
 // drawing tools, icons, colours and image upload are for a picture, so Text hides them (Gap stays
 // on its key G, its text says enough); a drawing key pressed in Text switches back to Picture.
-// Copy is a split button (copy-menu.ts) whose menu also offers Picture only.
+// Copy is a split button (copy-menu.ts) whose menu also offers Picture only. On a narrow viewport
+// the bar keeps Pick, Comment, Draw, Undo and Copy and puts the rest behind More (compact.ts).
 
 import { COLORS, type Color } from "../marks/types";
 import { IS_MAC } from "../shared/platform";
+import { behindMore, buttonName, createCompact } from "./compact";
 import { type CopyMenu, createCopyMenu } from "./copy-menu";
 import { type IconName, icon } from "./icons";
 import type { Costs } from "../capture/estimate";
@@ -20,7 +22,6 @@ export type BarActions = {
   color: (c: Color) => void;
   output: (o: Output) => void;
   upload: () => void;
-  icons: () => void;
   styles: () => void;
   undo: () => void;
   redo: () => void;
@@ -33,8 +34,8 @@ export type BarActions = {
   close: () => void;
 };
 
-/** Where a tool sits on the bar: its own button in "use" or "mark", or inside the draw button. */
-type Entry = DrawEntry & { group: "use" | "mark" | "draw" };
+/** Where a tool sits on the bar: its own button in "use", "mark" or "icon", or inside the draw button. */
+type Entry = DrawEntry & { group: "use" | "mark" | "draw" | "icon" };
 
 export const TOOLS: readonly Entry[] = [
   { group: "use", tool: "page", key: "V", icon: "page", title: "Use the page" },
@@ -49,6 +50,7 @@ export const TOOLS: readonly Entry[] = [
   { group: "draw", tool: "ellipse", key: "E", icon: "ellipse", title: "Ellipse · Shift: circle" },
   { group: "draw", tool: "gap", key: "G", icon: "gap", title: "Gap: drag from one element to another to measure the space" },
   { group: "draw", tool: "text", key: "T", icon: "text", title: "Text on the page" },
+  { group: "icon", tool: "icon", key: "L", icon: "icons", title: "Icon: click a spot, then choose an icon" },
 ];
 
 export const COLOR_KEYS: readonly Color[] = ["red", "blue", "yellow"];
@@ -56,9 +58,11 @@ export const COLOR_KEYS: readonly Color[] = ["red", "blue", "yellow"];
 const MOD = IS_MAC ? "⌘" : "Ctrl+";
 const CLEAR_KEY = IS_MAC ? "⇧⌫" : "Shift+Delete";
 
-/** A button's hover tip and its accessible name, with its key. */
+/** A button's hover tip and its accessible name, with its key; and its short name, shown under
+ *  its icon on a narrow bar with More open. */
 function tip(b: HTMLElement, text: string, key: string) {
   b.dataset.tip = key ? `${text}  ${key}` : text;
+  b.dataset.name = buttonName(text);
   b.setAttribute("aria-label", key ? `${text} (${key})` : text);
 }
 
@@ -107,7 +111,13 @@ function grip(bar: HTMLElement): HTMLElement {
   return g;
 }
 
-export type Toolbar = { el: HTMLElement; update: (s: State, styles: StylesLook) => void; flash: (message: string) => void };
+export type Toolbar = {
+  el: HTMLElement;
+  update: (s: State, styles: StylesLook) => void;
+  flash: (message: string) => void;
+  /** A narrow bar's More, closed; true when it was open. */
+  collapse: () => boolean;
+};
 
 export function createToolbar(act: BarActions): Toolbar {
   const bar = document.createElement("div");
@@ -135,7 +145,7 @@ export function createToolbar(act: BarActions): Toolbar {
     choose: act.tool,
   });
   const drawing = group("picture");
-  drawing.append(draw.el, button("icons", "Icons: search Lucide, click one or drag it onto the page", "", act.icons));
+  drawing.append(draw.el, ...TOOLS.filter((t) => t.group === "icon").map(toolButton));
 
   const colors = new Map<Color, HTMLButtonElement>();
   const swatches = group("picture");
@@ -150,13 +160,10 @@ export function createToolbar(act: BarActions): Toolbar {
   upload.append(button("upload", `Add an image (or paste: ${MOD}V)`, "", act.upload));
 
   const styles = button("styles", "Styles of the last pick", "S", act.styles);
+  const redo = button("redo", "Redo", REDO_KEY, act.redo);
+  const clear = button("clear", "Clear everything", CLEAR_KEY, act.clear);
   const edit = group();
-  edit.append(
-    styles,
-    button("undo", "Undo", UNDO_KEY, act.undo),
-    button("redo", "Redo", REDO_KEY, act.redo),
-    button("clear", "Clear everything", CLEAR_KEY, act.clear),
-  );
+  edit.append(styles, button("undo", "Undo", UNDO_KEY, act.undo), redo, clear);
 
   const menu: CopyMenu = createCopyMenu({
     copy: button("copy", "Copy for the agent", `${MOD}C`, act.copy, "Copy"),
@@ -176,11 +183,16 @@ export function createToolbar(act: BarActions): Toolbar {
   const close = button("close", "Close", "Esc Esc", act.close);
   close.classList.add("close");
 
-  bar.append(grip(bar), using, marking, drawing, swatches, upload, edit, toggle, menu.el, close);
+  const compact = createCompact(bar, tip);
+  // A narrow bar keeps Pick, Comment, Draw, Undo and Copy at hand; the rest waits behind More.
+  behindMore(using, tools.get("idea"), tools.get("crop"), tools.get("icon"), draw.el.querySelector(".caret"), swatches, upload);
+  behindMore(styles, redo, clear, toggle, menu.el.querySelector(".caret"), close);
+  bar.append(grip(bar), using, marking, drawing, swatches, upload, edit, toggle, menu.el, close, compact.toggle);
 
   return {
     el: bar,
     flash: menu.flash,
+    collapse: compact.collapse,
     update(s, look) {
       bar.dataset.output = s.output;
       styles.dataset.state = look.state;

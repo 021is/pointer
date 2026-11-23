@@ -23,6 +23,7 @@ const ICON_PATHS = {
   textOnly: '<path d="M4 6.5h16M4 12h16M4 17.5h10"/>',
   copy: '<rect x="8.5" y="8.5" width="11.5" height="11.5" rx="2.5"/><path d="M15.5 8.5V6A1.5 1.5 0 0014 4.5H6A1.5 1.5 0 004.5 6v8A1.5 1.5 0 006 15.5h2.5"/>',
   close: '<path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/>',
+  more: '<circle cx="5.5" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="18.5" cy="12" r="1.6" fill="currentColor" stroke="none"/>',
   /** The 021 mark (021is/021-site brand/icon.svg): the rounded "0" and its dot. */
   mark: '<rect x="2.5" y="7" width="19" height="10" rx="5"/><circle cx="15.6" cy="12" r="2.7" fill="currentColor" stroke="none"/>',
 } as const;

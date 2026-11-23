@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
-// The icon picker (Edvard, 2026-11-19): search Lucide by name and tags, place by click (the last
-// point, else the middle of the view) or by drop, move and resize, kept through a reload, and the
-// output line "[6] icon: lucide calendar-heart on EventCard (EventCard.tsx:27)".
+// Icons (Edvard, 2026-11-19; the Icon tool 2026-11-23): search Lucide by name and tags, place on
+// the clicked spot, move and resize, kept through a reload, and the output line "[6] icon: lucide
+// calendar-heart on EventCard (EventCard.tsx:27)". The picker itself: picker.test.ts.
 import { describe, expect, it } from "vitest";
 import { formatStrip } from "../src/bundle/format";
 import type { Bundle, PinInfo } from "../src/bundle/types";
@@ -32,14 +32,9 @@ describe("search", () => {
 });
 
 describe("placing", () => {
-  const view = { w: 1000, h: 800 };
-  it("a click: centred on the last point, else on the middle of the view", () => {
-    expect(placeAt(32, { x: 300, y: 400 }, view, { x: 0, y: 100 })).toEqual({ x: 284, y: 384 });
-    expect(placeAt(32, null, view, { x: 0, y: 100 })).toEqual({ x: 484, y: 484 });
-  });
-
-  it("a drop: centred where it was let go", () => {
-    expect(placeAt(32, { x: 116, y: 216 }, view, { x: 0, y: 0 })).toEqual({ x: 100, y: 200 });
+  it("centred on the spot the Icon tool clicked", () => {
+    expect(placeAt(32, { x: 300, y: 400 })).toEqual({ x: 284, y: 384 });
+    expect(placeAt(48, { x: 116, y: 216 })).toEqual({ x: 92, y: 192 });
   });
 
   it("a drag moves it; from its bottom-right corner it resizes, square, never below 12 px", () => {

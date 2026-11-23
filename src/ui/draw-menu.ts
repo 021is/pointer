@@ -4,6 +4,8 @@
 // Their keys still pick them directly and the button follows. The menu works by keyboard: the
 // arrows move, Enter takes, Esc closes; Pointer's own keys leave it alone (data-own-keys).
 
+import { closeOnOutside } from "../shared/outside";
+import { buttonName } from "./compact";
 import { type IconName, icon } from "./icons";
 import type { Tool } from "./state";
 
@@ -20,8 +22,6 @@ export type DrawMenuParts = {
 
 export type DrawMenu = { el: HTMLElement; update: (tool: Tool) => void };
 
-/** The menu's word for a tool: its title's first word ("Gap: drag from…" → "Gap"). */
-export const shortName = (title: string) => title.split(/[\s:·]/)[0] ?? title;
 
 /** The draw tool the button shows: the one in use, else the last one used. */
 export function shownTool(entries: readonly DrawEntry[], tool: Tool, last: DrawEntry): DrawEntry {
@@ -56,7 +56,7 @@ export function createDrawMenu(parts: DrawMenuParts): DrawMenu {
           const b = Object.assign(document.createElement("button"), { type: "button", className: "item" });
           b.setAttribute("role", "menuitem");
           b.dataset.tool = e.tool;
-          b.append(icon(e.icon), Object.assign(document.createElement("span"), { className: "name", textContent: shortName(e.title) }));
+          b.append(icon(e.icon), Object.assign(document.createElement("span"), { className: "name", textContent: buttonName(e.title) }));
           b.append(Object.assign(document.createElement("kbd"), { textContent: e.key }));
           parts.tip(b, e.title, e.key);
           b.addEventListener("click", (ev) => {
@@ -69,21 +69,19 @@ export function createDrawMenu(parts: DrawMenuParts): DrawMenu {
     );
   }
 
-  const outside = (e: Event) => {
-    if (!e.composedPath().includes(wrap)) close();
-  };
+  const outside = closeOnOutside(wrap, () => close());
   function open() {
     fill();
     menu.hidden = false;
     caret.setAttribute("aria-expanded", "true");
-    window.addEventListener("pointerdown", outside, true);
+    outside.watch();
     items()[0]?.focus();
   }
   function close() {
     if (menu.hidden) return;
     menu.hidden = true;
     caret.setAttribute("aria-expanded", "false");
-    window.removeEventListener("pointerdown", outside, true);
+    outside.unwatch();
   }
   function toggle() {
     if (menu.hidden) open();

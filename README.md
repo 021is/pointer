@@ -86,6 +86,7 @@ twice, or click the ✕ at the right end of the bar.
 | No file and line in the copy | Your app is not running in development mode, or its framework gives no source information (see [below](#where-the-file-and-line-come-from)). Your agent still gets each element's text and selector, which is enough to find it. |
 | It doesn't run on a `file://` page | In `chrome://extensions`, open Pointer's **Details** and turn on **Allow access to file URLs**. |
 | Paste gives only the picture | That's expected in Claude Code: its chat keeps only the image. The picture has the file:line lines printed under it, so nothing is lost. |
+| Where are my tools on a phone-sized page? | Below 768 px wide (Chrome DevTools' device mode, a narrow window) the bar docks to the bottom: Pick, Comment, Draw, Undo and Copy, and **More** (⋯) for every other tool, each with its name. Touch works: tap to comment or pick, drag to draw or move. To scroll the page, use the Page tool or the mouse wheel. |
 
 Still stuck? [Open an issue](https://github.com/021is/pointer/issues) and say what you pressed and what you saw.
 
@@ -102,7 +103,7 @@ Still stuck? [Open an issue](https://github.com/021is/pointer/issues) and say wh
 | G | **Gap** | Drag from one element to another (or to its container): it snaps to their edges and measures the space, \|← 24px →\|. Its note: smaller, bigger or the gap you want. |
 | D A B E T | **Draw** | One button on the bar holds pen, arrow, box, ellipse, gap and text: it shows the last one used, ▾ (or a second press) opens the others. Pen, arrow, box, ellipse, text. Shift: straight line, 45° arrow, square, circle. 1 2 3: red, blue, yellow. Double-click a box or an ellipse to type on it: "[5] box: make this one card". |
 | M | **Move** | Drag any mark or pasted image. Delete removes the one under the mouse. |
-|   | **Icons** | The icon button next to the drawing tools: search [Lucide](https://lucide.dev) by name or tag, click one to add it where your mouse was, or drag it onto the page. Drag it to move it, its corner resizes it, Delete removes it. Your agent reads "[6] icon: lucide calendar-heart on EventCard (EventCard.tsx:27)". |
+| L | **Icon** | Click the spot where an icon should go: a small picker opens there with five quick icons, and **More** searches all of [Lucide](https://lucide.dev) by name or tag. Pick one and it lands on that spot. Esc closes the picker. Drag the icon to move it, its corner resizes it, Delete removes it. Your agent reads "[6] icon: lucide calendar-heart on EventCard (EventCard.tsx:27)". |
 | V | **Page** | Use the page as usual. Clicks go through and the marks stay. |
 | ⌘V / Ctrl+V | **Paste an image** | Puts a screenshot or mockup on the page at the mouse (or use the bar's image button). Drag it, resize it from its corner (Shift: free), `[` `]` make it see-through. The bar switches to Move, so you can drag it right away. It is kept through a reload with your other marks. |
 | S | **Styles** | The style box of the last pick, and away again. |

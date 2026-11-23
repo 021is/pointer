@@ -31,7 +31,9 @@ export type Tool =
   | "box"
   | "ellipse"
   | "gap"
-  | "text";
+  | "text"
+  /** Click a spot, then choose an icon in the picker that opens there (Edvard, 2026-11-23). */
+  | "icon";
 
 export type State = {
   tool: Tool;
@@ -268,6 +270,7 @@ const PICTURE_ONLY: Record<Tool, boolean> = {
   // A gap's text names both elements and the pixels: it says enough without a picture.
   gap: false,
   text: true,
+  icon: true,
 };
 
 /** Tools that only make sense in a picture; the bar hides them in Text. */
