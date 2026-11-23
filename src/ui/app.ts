@@ -1,15 +1,21 @@
 // Pointer on a page: the shadow-rooted layer, the bar, the tools' gestures. State lives in
-// state.ts, keys in keyboard.ts, pasted images in paste/; this file is the edge that meets the DOM.
+// state.ts, keys in keyboard.ts and app-keys.ts, pasted images in paste/, the Screen tool in
+// screen/; this file is the edge that meets the DOM. The marked page is the tab's own, or its
+// copy framed at a screen size: a press is read as `client` (the tab, where Pointer's own boxes
+// open), `view` (the marked page's viewport, for hit tests) and `page` (where marks are kept).
 
 import { type DrawTool, extendShape, isMeaningful, startShape } from "../draw/shapes";
 import { renderSvg } from "../marks/svg";
 import type { Pin } from "../marks/types";
 import { createPastedLayer } from "../paste/pasted";
 import { liveLayout, shortName, viewRect } from "../pick/describe";
-import { elementAt, walk } from "../pick/walk";
+import { elementAt } from "../pick/walk";
+import { createScreens } from "../screen/screen";
+import { createSheets } from "../screen/sheets";
+import { pageAt, viewAt, viewport } from "../screen/surface";
 import { type Point, near } from "../shared/geometry";
 import { editPlaceholder, placeholderAt } from "../shared/placeholder";
-import { componentOf } from "../source/client";
+import { appKeys } from "./app-keys";
 import { isBubbleOpen, openBubble } from "./bubble";
 import { copyFlow } from "./copy-flow";
 import { cropGestures } from "./crop-gesture";
@@ -17,12 +23,12 @@ import { gapGesture } from "./gap-gesture";
 import { CSS } from "./css";
 import { drag as dragOn } from "./drag";
 import type { Extension, ExtensionHost } from "./extension";
-import { keyHandler } from "./keyboard";
 import { notes, pinTarget } from "./notes";
 import { handles, textAt } from "./handles";
 import { createHistory } from "./history";
+import { hoverer } from "./hover";
 import { createKeeper } from "../keep/keep";
-import { createIcons, iconAt } from "../icons/icons";
+import { createIcons } from "../icons/icons";
 import { markAt } from "./move";
 import {
   type Output,
@@ -34,14 +40,13 @@ import {
   liveScene,
   chooseOutput,
   chooseTool,
-  otherOutput,
   pinsOf,
   scenePins,
   targetsElements,
 } from "./state";
 import { pressStyles, stylesLook } from "./styles";
 import { createToast } from "./toast";
-import { createToolbar } from "./toolbar";
+import { createToolbar, tip } from "./toolbar";
 
 export type App = { open: () => void; close: () => void; toggle: () => void };
 
@@ -56,6 +61,8 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
   style.textContent = CSS;
   const layer = document.createElement("div");
   layer.className = "layer";
+  // The marks and pasted images lie on a sheet over the marked page: the whole tab, or the frame.
+  const sheet = Object.assign(document.createElement("div"), { className: "sheet" });
   const marksView = document.createElement("div");
   const toast = createToast();
   const say = toast.say;
@@ -70,13 +77,28 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
     update,
     say,
   });
-  layer.append(pasted.el, marksView);
+  sheet.append(pasted.el, marksView);
+  layer.append(sheet);
   root.append(style, layer);
   const hooks = ext(root, { rerender: () => render(), numberOf: (pin) => pinsOf(state.marks).indexOf(pin) + 1 });
   const lastPick = () => pinsOf(state.marks).findLast((p) => p.kind === "pick");
   const hist = createHistory({ state, hooks: () => hooks, update, say });
   const clear = () => hist.clear("Cleared everything.");
+  const sheets = createSheets({ state, park: (pins) => hooks.park(pins), restart: hist.restart });
+  const screens = createScreens({
+    sheets,
+    marks: () => state.marks,
+    render: () => render(),
+    say,
+    tip,
+    listeners: [
+      ["keydown", ((e: KeyboardEvent) => onKey(e)) as EventListener, { capture: true }],
+      ["paste", pasted.onPaste as EventListener, { capture: true }],
+      ["scroll", () => render(), { passive: true, capture: true }],
+    ],
+  });
   const bar = createToolbar({
+    screen: screens.menu.el,
     tool: setTool,
     color: (c) => update(() => (state.color = c)),
     output: (o) => setOutput(o),
@@ -92,7 +114,7 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
     estimate: () => flow.estimate(),
     close,
   });
-  const flow = copyFlow({ state, host, hooks: () => hooks, say, flash: bar.flash, update, setOutput, clear: hist.clear });
+  const flow = copyFlow({ state, host, hooks: () => hooks, say, flash: bar.flash, update, setOutput, clear: hist.clear, screen: screens.name });
   const drag = (down: PointerEvent, move: (p: Point, shift: boolean) => void, end: () => void) =>
     dragOn(layer, down, move, end);
   const icons = createIcons({ state, host, update, drag, say });
@@ -105,10 +127,13 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
     frame = requestAnimationFrame(() => {
       frame = 0;
       layer.dataset.tool = state.tool;
+      screens.place(sheet);
       pasted.paint();
-      marksView.innerHTML = renderSvg(liveScene(state, layout()), { x: 0, y: 0, w: innerWidth, h: innerHeight });
+      marksView.innerHTML = renderSvg(liveScene(state, layout()), { x: 0, y: 0, ...viewport() });
       bar.update(state, stylesLook(lastPick(), hooks.panelFor(), (el) => shortName(el, viewRect(el))));
-      keeper.schedule();
+      // Only the tab's own page is kept through a reload: a framed screen is gone after one, and
+      // while it shows, the tab's marks wait unchanged (their kept copy with them).
+      if (screens.name() === null) keeper.schedule();
     });
   }
 
@@ -136,24 +161,12 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
     update(() => Object.assign(state, chooseOutput(state, output)));
   }
 
-  function setHover(el: Element | null) {
-    if (state.hover?.el === el) return;
-    state.hover = el ? { el, label: shortName(el, viewRect(el)) } : null;
-    render();
-    if (!el) return;
-    void componentOf(el).then((info) => {
-      const name = info.chain[0];
-      if (name && state.hover?.el === el) {
-        state.hover.label = `${name} · ${shortName(el, viewRect(el))}`;
-        render();
-      }
-    });
-  }
+  const setHover = hoverer(state, render);
 
   const { addPin, pick, editNote, editText, editShapeNote } = notes({ root, state, update, hooks: () => hooks });
   /** A double-click on a box or an ellipse types on it, whatever the tool. */
   function onDouble(e: MouseEvent) {
-    const s = framedAt(state.marks, { x: e.clientX + scrollX, y: e.clientY + scrollY });
+    const s = framedAt(state.marks, pageAt(e));
     if (s) void editShapeNote(s, { x: e.clientX, y: e.clientY });
   }
 
@@ -169,26 +182,29 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
     state,
     update,
     drag,
-    editNote: (pin, view) => void editNote(pin, view),
-    editText: (text, view) => void editText(text, view),
+    editNote: (pin, client) => void editNote(pin, client),
+    editText: (text, client) => void editText(text, client),
     onPick: (pin) => hooks.onPick(pin),
     moved: (pin) => icons.settle(pin),
   });
 
   function onDown(e: PointerEvent) {
     if (e.button !== 0 || isBubbleOpen(root)) return;
-    const view = { x: e.clientX, y: e.clientY };
-    const page = { x: view.x + scrollX, y: view.y + scrollY };
+    const client = { x: e.clientX, y: e.clientY };
+    const view = viewAt(e);
+    const page = pageAt(e);
     const tool = state.tool;
-    const pin = pinAt(view);
     // A press on Pointer's layer never starts a text selection on the page.
     e.preventDefault();
-    if (pin) return grabPin(e, pin, view, page);
+    // Around a framed screen, or while it loads, there is nothing to mark.
+    if (!screens.accepts(view)) return;
+    const pin = pinAt(view);
+    if (pin) return grabPin(e, pin, client, page);
     if (pasted.onDown(e) || icons.grab(e, page)) return;
     if (tool === "move") return grabMark(e, page);
     // Drawing tools draw over everything; the others grab a drawn text first.
     const text = DRAW.has(tool) ? undefined : textAt(state.marks, page);
-    if (text) return grabText(e, text, view, page);
+    if (text) return grabText(e, text, client, page);
     const under = elementAt(view.x, view.y, host);
     // A ⊕ placeholder is Pointer's own: a click edits its label, whatever the tool.
     const box = placeholderAt(under);
@@ -204,9 +220,9 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
     } else if (tool === "gap") {
       startGap(e, page);
     } else if (tool === "icon") {
-      icons.ask(view, page);
+      icons.ask(client, page);
     } else if (tool === "text") {
-      void openBubble(root, { at: view, placeholder: "Text on the page", hint: "Enter places it · Esc cancels" }).then(
+      void openBubble(root, { at: client, placeholder: "Text on the page", hint: "Enter places it · Esc cancels" }).then(
         (text) => text && update(() => state.marks.push({ kind: "text", color: state.color, at: page, text })),
       );
     } else if (DRAW.has(tool)) {
@@ -226,72 +242,56 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
 
   let mouse: Point = { x: 0, y: 0 };
   function onHoverMove(e: PointerEvent) {
-    mouse = { x: e.clientX + scrollX, y: e.clientY + scrollY };
+    mouse = pageAt(e);
     if (e.buttons !== 0 || state.draft) return;
-    const onNumber = pinAt({ x: e.clientX, y: e.clientY }) !== undefined;
+    const view = viewAt(e);
+    const onNumber = pinAt(view) !== undefined;
     const onMark = state.tool === "move" && markAt(state.marks, mouse) !== undefined;
     layer.style.cursor = onNumber ? "pointer" : onMark ? "move" : "";
-    if (targetsElements(state.tool)) setHover(onNumber ? null : elementAt(e.clientX, e.clientY, host));
+    if (targetsElements(state.tool)) setHover(onNumber || !screens.accepts(view) ? null : elementAt(view.x, view.y, host));
   }
 
-  const trail: Element[] = [];
-  const onKey = keyHandler(() => state.tool, {
-    tool: setTool,
-    color: (c) => update(() => (state.color = c)),
-    image: () => setOutput(otherOutput(state.output)),
-    undo: hist.undo,
-    redo: hist.redo,
+  const onKey = appKeys({
+    state,
+    hist,
+    pasted,
+    setTool,
+    setOutput,
+    update,
+    setHover,
+    pick,
+    cropElement,
     copy: () => flow.copy(),
-    escape: () => (state.tool === "page" ? close() : setTool("page")),
-    walk: (key) => {
-      if (!state.hover) return;
-      const next = walk(state.hover.el, key, trail);
-      state.hover = null;
-      setHover(next);
-    },
-    take: () => {
-      const el = state.hover?.el;
-      if (!el) return;
-      if (state.tool === "crop") return cropElement(el);
-      const r = viewRect(el);
-      pick(el, { x: r.x + scrollX, y: r.y + scrollY });
-    },
     panel: () => pressStyles(hooks, lastPick(), say),
-    beforePaste: () => pasted.catchPaste(),
-    overPasted: () => pasted.hovered() !== undefined,
-    canRemove: () =>
-      pasted.hovered() !== undefined || iconAt(state.marks, mouse) !== undefined || (state.tool === "move" && markAt(state.marks, mouse) !== undefined),
-    see: (direction) => {
-      const p = pasted.hovered();
-      if (p) pasted.see(p, direction);
-    },
-    remove: () => {
-      const gone = pasted.hovered() ?? iconAt(state.marks, mouse) ?? (state.tool === "move" ? markAt(state.marks, mouse) : undefined);
-      if (gone) update(() => (state.marks = state.marks.filter((m) => m !== gone)));
-    },
     clear,
+    close,
+    mouse: () => mouse,
   });
 
   const listeners: [EventTarget, string, EventListener, AddEventListenerOptions?][] = [
     [layer, "pointerdown", onDown as EventListener],
     [layer, "pointermove", onHoverMove as EventListener],
     [layer, "dblclick", onDouble as EventListener],
+    [layer, "wheel", screens.wheel as EventListener, { passive: false }],
     [window, "pointermove", pasted.track as EventListener, { passive: true }],
     [window, "paste", pasted.onPaste as EventListener, { capture: true }],
     [window, "keydown", onKey as EventListener, { capture: true }],
     [window, "scroll", render, { passive: true, capture: true }],
-    [window, "resize", render],
+    [window, "resize", screens.layout],
   ];
 
   function open() {
     document.documentElement.append(host);
     for (const [t, type, fn, opt] of listeners) t.addEventListener(type, fn, opt);
+    screens.shown(true);
     render();
     if (!asked) restore();
   }
-  /** Closing Pointer on purpose forgets the kept copy; the marks stay in memory until a reload. */
+  /** Closing Pointer on purpose forgets the kept copy; the marks stay in memory until a reload,
+   *  a framed screen's with its frame, hidden until Pointer opens again. */
   function close() {
     for (const [t, type, fn, opt] of listeners) t.removeEventListener(type, fn, opt);
+    screens.shown(false);
     host.remove();
     keeper.forget();
   }

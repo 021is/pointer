@@ -1,17 +1,19 @@
 // What the DOM itself says about an element: a selector that finds it, its text, its size and
-// its key styles. The framework's view (component, file) comes from source/.
+// its key styles. The framework's view (component, file) comes from source/. An element may be in
+// the page framed at a screen size: its own document and window answer, never the tab's.
 
 import type { ElementInfo } from "../bundle/types";
 import { KEY_PROPS, keyStyles } from "../bundle/key-styles";
+import { scroll } from "../screen/surface";
 import type { Rect } from "../shared/geometry";
 import type { Layout } from "../ui/state";
 
 const PLAIN_CLASS = /^-?[a-zA-Z_][\w-]*$/;
 const MAX_DEPTH = 5;
 
-const isUnique = (selector: string) => {
+const isUnique = (doc: Document, selector: string) => {
   try {
-    return document.querySelectorAll(selector).length === 1;
+    return doc.querySelectorAll(selector).length === 1;
   } catch {
     return false; // a selector the browser can't parse finds nothing, so it isn't unique
   }
@@ -32,21 +34,22 @@ function part(el: Element): string {
 /** The shortest selector, up to five levels, that finds this element and only it. */
 export function selectorOf(el: Element): string {
   // Every selector returned is the escaped one that was tested: `#a.b` would find nothing.
+  const doc = el.ownerDocument;
   const testId = el.getAttribute("data-testid");
   const byTestId = testId ? `[data-testid="${CSS.escape(testId)}"]` : null;
-  if (byTestId && isUnique(byTestId)) return byTestId;
+  if (byTestId && isUnique(doc, byTestId)) return byTestId;
   const byId = el.id ? `#${CSS.escape(el.id)}` : null;
-  if (byId && isUnique(byId)) return byId;
+  if (byId && isUnique(doc, byId)) return byId;
   const parts: string[] = [];
   for (let node: Element | null = el; node && parts.length < MAX_DEPTH; node = node.parentElement) {
-    if (node === document.documentElement) break;
-    if (node !== el && node.id && isUnique(`#${CSS.escape(node.id)}`)) {
+    if (node === doc.documentElement) break;
+    if (node !== el && node.id && isUnique(doc, `#${CSS.escape(node.id)}`)) {
       parts.unshift(`#${CSS.escape(node.id)}`);
       break;
     }
     parts.unshift(part(node));
     const selector = parts.join(" > ");
-    if (isUnique(selector)) return selector;
+    if (isUnique(doc, selector)) return selector;
   }
   return parts.join(" > ");
 }
@@ -63,20 +66,22 @@ export function viewRect(el: Element): Rect {
   return { x: r.left, y: r.top, w: r.width, h: r.height };
 }
 
-/** The page as it is laid out right now: its scroll and every element's box. */
+/** The page being marked as it is laid out right now: its scroll and every element's box. */
 export function liveLayout(): Layout {
-  return { scroll: { x: scrollX, y: scrollY }, rectOf: viewRect };
+  return { scroll: scroll(), rectOf: viewRect };
 }
 
+/** An element of the framed page is of that page's realm: `instanceof HTMLElement` (the tab's)
+ *  is false for it, so what it can do is asked of the element itself. */
 function textOf(el: Element): string | undefined {
-  const raw = el instanceof HTMLElement ? el.innerText : (el.textContent ?? "");
+  const raw = "innerText" in el && typeof el.innerText === "string" ? el.innerText : (el.textContent ?? "");
   const text = raw.slice(0, 200).replace(/\s+/g, " ").trim();
   if (text) return text;
   return el.getAttribute("aria-label") ?? el.getAttribute("alt") ?? el.getAttribute("placeholder") ?? undefined;
 }
 
 export function readStyles(el: Element, props: readonly string[]): Record<string, string> {
-  const computed = getComputedStyle(el);
+  const computed = (el.ownerDocument.defaultView ?? window).getComputedStyle(el);
   return Object.fromEntries(props.map((p) => [p, computed.getPropertyValue(p)]));
 }
 

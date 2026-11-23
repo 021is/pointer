@@ -12,9 +12,12 @@ let next = 0;
 function ask(el: Element): Promise<ComponentInfo> {
   const id = `p${++next}`;
   el.setAttribute(PROBE_ATTR, id);
+  // The element's own window: the tab's, or the page framed at a screen size, whose probe runs
+  // in that frame's world (screen/worker.ts).
+  const win = el.ownerDocument.defaultView ?? window;
   return new Promise<ComponentInfo>((resolve) => {
     const done = (info: ComponentInfo) => {
-      window.removeEventListener(ANSWER, onAnswer);
+      win.removeEventListener(ANSWER, onAnswer);
       clearTimeout(timer);
       if (el.getAttribute(PROBE_ATTR) === id) el.removeAttribute(PROBE_ATTR);
       resolve(info);
@@ -25,8 +28,8 @@ function ask(el: Element): Promise<ComponentInfo> {
       else if (reply?.id === id) done(reply.info);
     };
     const timer = setTimeout(() => done(unknown("the page did not answer in time")), TIMEOUT_MS);
-    window.addEventListener(ANSWER, onAnswer);
-    window.dispatchEvent(new CustomEvent(ASK, { detail: JSON.stringify({ id }) }));
+    win.addEventListener(ANSWER, onAnswer);
+    win.dispatchEvent(new CustomEvent(ASK, { detail: JSON.stringify({ id }) }));
   });
 }
 

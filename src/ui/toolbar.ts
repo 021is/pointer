@@ -1,9 +1,11 @@
 // The floating bar. The 021 mark drags it; every button shows its name and key on hover. Its
-// groups (Edvard, 2026-11-19: "group them"): [Page Move] | [Pick Comment Idea Crop] | [draw ▾]
-// (draw-menu.ts) Icon | colours, image | Styles Undo Redo Clear | Picture|Text | Copy ▾. Crops, the
-// drawing tools, icons, colours and image upload are for a picture, so Text hides them (Gap stays
-// on its key G, its text says enough); a drawing key pressed in Text switches back to Picture.
-// Copy is a split button (copy-menu.ts) whose menu also offers Picture only.
+// groups (Edvard, 2026-11-19: "group them"): Screen | [Page Move] | [Pick Comment Idea Crop] |
+// [draw ▾] (draw-menu.ts) Icon | colours, image | Styles Undo Redo Clear | Picture|Text | Copy ▾.
+// Screen (screen/menu.ts) is one button with its sizes in a menu (Edvard, 2026-11-23: "one tool
+// in bar and not more"). Crops, the drawing tools, icons, colours and image upload are for a
+// picture, so Text hides them (Gap stays on its key G, its text says enough); a drawing key
+// pressed in Text switches back to Picture. Copy is a split button (copy-menu.ts) whose menu
+// also offers Picture only.
 
 import { COLORS, type Color } from "../marks/types";
 import { IS_MAC } from "../shared/platform";
@@ -16,6 +18,8 @@ import { REDO_KEY, UNDO_KEY } from "./history";
 import type { StylesLook } from "./styles";
 
 export type BarActions = {
+  /** The Screen button and its menu (screen/menu.ts), first on the bar. */
+  screen: HTMLElement;
   tool: (t: Tool) => void;
   color: (c: Color) => void;
   output: (o: Output) => void;
@@ -57,7 +61,7 @@ const MOD = IS_MAC ? "⌘" : "Ctrl+";
 const CLEAR_KEY = IS_MAC ? "⇧⌫" : "Shift+Delete";
 
 /** A button's hover tip and its accessible name, with its key. */
-function tip(b: HTMLElement, text: string, key: string) {
+export function tip(b: HTMLElement, text: string, key: string) {
   b.dataset.tip = key ? `${text}  ${key}` : text;
   b.setAttribute("aria-label", key ? `${text} (${key})` : text);
 }
@@ -176,7 +180,9 @@ export function createToolbar(act: BarActions): Toolbar {
   const close = button("close", "Close", "Esc Esc", act.close);
   close.classList.add("close");
 
-  bar.append(grip(bar), using, marking, drawing, swatches, upload, edit, toggle, menu.el, close);
+  const screen = group();
+  screen.append(act.screen);
+  bar.append(grip(bar), screen, using, marking, drawing, swatches, upload, edit, toggle, menu.el, close);
 
   return {
     el: bar,

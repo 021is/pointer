@@ -130,6 +130,7 @@ describe("crops in the bundle", () => {
     const text = formatBundle({
       url: "https://x.dev/",
       viewport: { w: 1280, h: 800 },
+      screen: null,
       crops: [{ label: "A", component: null, size: { w: 10, h: 10 }, offScreen: false }],
       pins: [],
       shapeNotes: [],
@@ -145,6 +146,7 @@ describe("crops in the bundle", () => {
     const base = {
       url: "https://x.dev/",
       viewport: { w: 1280, h: 800 },
+      screen: null,
       pins: [],
       shapeNotes: [],
       drawings: { arrows: 1, boxes: 0, ellipses: 0, pens: 0, texts: [], pasted: 0 },

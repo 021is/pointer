@@ -3,7 +3,7 @@
 
 import { type ElementEdits, type Inserted, changeLines, noEdits, withProp, withoutProp } from "./edits";
 import { PLACEHOLDER_ATTR } from "../shared/placeholder";
-import { knownClasses } from "./rules";
+import { knownClasses, realmOf } from "./rules";
 
 const PLACEHOLDER =
   "outline:2px dashed #7c5cff;outline-offset:-2px;background:rgba(124,92,255,.08);color:#7c5cff;" +
@@ -49,7 +49,7 @@ export function edit(el: Element): Edited {
   const placed: { node: HTMLElement; position: Inserted["position"] }[] = [];
   // "before" is what the element looked like when the panel first opened on it, so a value that
   // depends on another (letter-spacing in em, after a font-size edit) still reads its original.
-  const live = getComputedStyle(el);
+  const live = realmOf(el).getComputedStyle(el);
   const start = new Map<string, string>();
   const computed = (prop: string) => {
     if (!start.has(prop)) start.set(prop, live.getPropertyValue(prop).trim());
@@ -97,7 +97,7 @@ export function edit(el: Element): Edited {
       const removed = self.edits.removedClasses.includes(name);
       self.edits = removed
         ? { ...self.edits, removedClasses: self.edits.removedClasses.filter((c) => c !== name) }
-        : { ...self.edits, addedClasses: [...self.edits.addedClasses, { name, built: knownClasses().has(name) }] };
+        : { ...self.edits, addedClasses: [...self.edits.addedClasses, { name, built: knownClasses(el).has(name) }] };
     },
     insert(position) {
       const node = document.createElement("div");

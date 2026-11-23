@@ -8,14 +8,16 @@ export function placeholderAt(el: Element | null): HTMLElement | null {
 }
 
 /**
- * Focus a placeholder for typing. Clicked (`at`): the caret goes where the click was. Just
- * inserted: all of its text is selected, ready to be replaced.
+ * Focus a placeholder for typing. Clicked (`at`, in its page's viewport): the caret goes where the
+ * click was. Just inserted: all of its text is selected, ready to be replaced. Its own document
+ * answers: the tab's, or the page framed at a screen size.
  */
 export function editPlaceholder(box: HTMLElement, at?: { x: number; y: number }): void {
+  const doc = box.ownerDocument;
   box.focus({ preventScroll: true });
-  const caret = at ? document.caretRangeFromPoint?.(at.x, at.y) : null;
-  const range = caret && box.contains(caret.startContainer) ? caret : document.createRange();
+  const caret = at ? doc.caretRangeFromPoint?.(at.x, at.y) : null;
+  const range = caret && box.contains(caret.startContainer) ? caret : doc.createRange();
   if (range !== caret) range.selectNodeContents(box);
-  getSelection()?.removeAllRanges();
-  getSelection()?.addRange(range);
+  doc.getSelection()?.removeAllRanges();
+  doc.getSelection()?.addRange(range);
 }

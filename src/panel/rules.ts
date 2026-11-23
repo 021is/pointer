@@ -17,21 +17,28 @@ const safeMatches = (el: Element, selector: string) => {
 /** Which rules a walk enters: those that apply now, or every one there is. */
 type Scope = "applying" | "all";
 
-function eachRule(scope: Scope, visit: (rule: CSSStyleRule, note: string) => void): number {
+/** A page's window with its own constructors: a page framed at a screen size has its own realm,
+ *  so its rules are instances of its CSSStyleRule, and its @media answers to its own width. */
+type Realm = Window & typeof globalThis;
+
+/** The window an element lives in: the tab's, or the framed page's. */
+export const realmOf = (el: Element): Realm => (el.ownerDocument.defaultView ?? window) as Realm;
+
+function eachRule(w: Realm, scope: Scope, visit: (rule: CSSStyleRule, note: string) => void): number {
   let unreadable = 0;
   const walk = (rules: CSSRuleList, note: string) => {
     for (const rule of rules) {
-      if (rule instanceof CSSStyleRule) visit(rule, note);
-      else if (rule instanceof CSSMediaRule) {
-        if (scope === "all" || matchMedia(rule.media.mediaText).matches) walk(rule.cssRules, note);
-      } else if (rule instanceof CSSSupportsRule) {
+      if (rule instanceof w.CSSStyleRule) visit(rule, note);
+      else if (rule instanceof w.CSSMediaRule) {
+        if (scope === "all" || w.matchMedia(rule.media.mediaText).matches) walk(rule.cssRules, note);
+      } else if (rule instanceof w.CSSSupportsRule) {
         if (scope === "all" || CSS.supports(rule.conditionText)) walk(rule.cssRules, note);
-      } else if (typeof CSSContainerRule !== "undefined" && rule instanceof CSSContainerRule) {
+      } else if (typeof w.CSSContainerRule !== "undefined" && rule instanceof w.CSSContainerRule) {
         walk(rule.cssRules, ` (if its container matches ${rule.conditionText})`);
       } else if ("cssRules" in rule) walk((rule as CSSGroupingRule).cssRules, note);
     }
   };
-  for (const sheet of document.styleSheets) {
+  for (const sheet of w.document.styleSheets) {
     let rules: CSSRuleList;
     try {
       rules = sheet.cssRules;
@@ -52,11 +59,12 @@ export function isUniversal(selector: string): boolean {
 /** Property → the selector that sets it last ("inline" for the style attribute). */
 export function matchedProps(el: Element): Matched {
   const props = new Map<string, string>();
-  const unreadable = eachRule("applying", (rule, note) => {
+  const w = realmOf(el);
+  const unreadable = eachRule(w, "applying", (rule, note) => {
     if (isUniversal(rule.selectorText) || !safeMatches(el, rule.selectorText)) return;
     for (let i = 0; i < rule.style.length; i++) props.set(rule.style.item(i), rule.selectorText + note);
   });
-  if (el instanceof HTMLElement || el instanceof SVGElement) {
+  if (el instanceof w.HTMLElement || el instanceof w.SVGElement) {
     for (let i = 0; i < el.style.length; i++) props.set(el.style.item(i), "inline");
   }
   return { props, unreadable };
@@ -66,11 +74,12 @@ const CLASS = /\.((?:\\.|[\w-])+)/g;
 
 /**
  * Every class name some rule of the page mentions, at any width (an `md:` class is built even
- * when the window is narrow). Read fresh each time: dev servers add CSS as code changes.
+ * when the window is narrow). Read fresh each time: dev servers add CSS as code changes. `el`'s
+ * page decides: the tab's, or the one framed at a screen size.
  */
-export function knownClasses(): Set<string> {
+export function knownClasses(el: Element): Set<string> {
   const found = new Set<string>();
-  eachRule("all", (rule) => {
+  eachRule(realmOf(el), "all", (rule) => {
     for (const m of rule.selectorText.matchAll(CLASS)) found.add((m[1] ?? "").replace(/\\(.)/g, "$1"));
   });
   return found;

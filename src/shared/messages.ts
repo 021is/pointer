@@ -1,6 +1,6 @@
 // The messages between the content script, the service worker and the preview page: take the
 // screenshot; show a preview of what Copy would give; hand that preview to the page that asks;
-// keep a page's marks through its reload.
+// keep a page's marks through its reload; load the icons; probe a page framed at a screen size.
 
 import { isSaved } from "../keep/check";
 import type { Saved } from "../keep/saved";
@@ -59,4 +59,12 @@ export type IconsLoaded = { ok: true } | { ok: false; error: string };
 
 export function isIconsLoad(message: unknown): message is IconsLoad {
   return typeOf(message) === "icons:load";
+}
+
+/** A framed screen loaded its page: put the probe into that frame's own world too (screen/). */
+export type ScreenProbe = { type: "screen:probe" };
+export type ScreenProbed = { ok: true } | { ok: false; error: string };
+
+export function isScreenProbe(message: unknown): message is ScreenProbe {
+  return typeOf(message) === "screen:probe";
 }

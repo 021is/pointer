@@ -71,7 +71,7 @@ describe("the output line", () => {
       changes: [],
       note: "",
     };
-    const b: Bundle = { url: "http://localhost:3300/", viewport: { w: 1, h: 1 }, crops: [], pins: [pin], shapeNotes: [], drawings: { arrows: 0, boxes: 0, ellipses: 0, pens: 0, texts: [], pasted: 0 }, image: null };
+    const b: Bundle = { url: "http://localhost:3300/", viewport: { w: 1, h: 1 }, screen: null, crops: [], pins: [pin], shapeNotes: [], drawings: { arrows: 0, boxes: 0, ellipses: 0, pens: 0, texts: [], pasted: 0 }, image: null };
     expect(formatStrip(b, true).split("\n").at(-1)).toBe("[6] icon: lucide calendar-heart on EventCard (src/EventCard.tsx:27)");
   });
 });

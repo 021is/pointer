@@ -52,13 +52,17 @@ function drawPasted(ctx: CanvasRenderingContext2D, pasted: readonly Laid[], regi
 /**
  * The picture: each region (the crop frames A, B …, or the one auto crop) stacked, its marks on
  * it, a letter tab above each frame, and `strip` (the bundle's text) printed under it all.
+ * Regions and scene are in the marked page's viewport; `toTab` says where such a rect is on the
+ * tab, which is what the screenshot shows (a page framed at a screen size sits inside it, maybe
+ * shrunk to fit). Each region keeps one pixel per CSS pixel of the marked page.
  */
 export async function picture(
   shot: HTMLImageElement,
   regions: readonly Region[],
   scene: Scene,
   strip: string | null,
-  pasted: readonly Laid[] = [],
+  pasted: readonly Laid[],
+  toTab: (r: Rect) => Rect,
 ): Promise<{ blob: Blob; size: Size }> {
   const ratio = shot.naturalWidth / window.innerWidth;
   const image = { w: shot.naturalWidth, h: shot.naturalHeight };
@@ -78,7 +82,7 @@ export async function picture(
 
   ctx.imageSmoothingQuality = "high";
   for (const { region, size, top, tab } of stack.placed) {
-    const src = toImagePixels(region.rect, ratio, image);
+    const src = toImagePixels(toTab(region.rect), ratio, image);
     ctx.drawImage(shot, src.x, src.y, src.w, src.h, 0, top, size.w, size.h);
     drawPasted(ctx, pasted, region.rect, { x: 0, y: top, ...size });
     // One renderer: the marks and, for a frame, its outline and letter tab come from svg.ts,

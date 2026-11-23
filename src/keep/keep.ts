@@ -2,7 +2,8 @@
 // the service worker after each change (debounced), asks for them when Pointer opens on the page
 // again, and forgets them on Clear and on closing Pointer. The worker keeps them in
 // chrome.storage.session: in memory, for this tab and page only, gone when Chrome closes, never
-// synced, never sent anywhere.
+// synced, never sent anywhere. Only the tab's own page is kept (app.ts saves on Full only): a
+// framed screen is gone after a reload, so `document` and the tab's scroll here are the page's.
 
 import type { Mark, Pasted, Pin } from "../marks/types";
 import { loadLucide } from "../icons/data";

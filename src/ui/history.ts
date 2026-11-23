@@ -25,7 +25,13 @@ export const REDO_KEY = IS_MAC ? "⌘⇧Z" : "Ctrl+Shift+Z";
 /** The same marks, one by one: a move replaces its mark, so it counts as a change. */
 export const sameMarks = (a: readonly Mark[], b: readonly Mark[]) => a.length === b.length && a.every((m, i) => m === b[i]);
 
-export type History = { undo: () => void; redo: () => void; clear: (message: string) => void };
+export type History = {
+  undo: () => void;
+  redo: () => void;
+  clear: (message: string) => void;
+  /** Another page's marks came in (screen/sheets.ts): nothing of before can be undone or redone. */
+  restart: () => void;
+};
 
 export function createHistory(h: HistoryHost): History {
   let redos: Step[] = [];
@@ -100,6 +106,11 @@ export function createHistory(h: HistoryHost): History {
       if (!clearNow()) return;
       redos = [];
       h.say(message, "ok", undoAction);
+    },
+    restart() {
+      redos = [];
+      cleared = null;
+      settle();
     },
   };
 }

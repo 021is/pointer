@@ -5,6 +5,7 @@
 // through a reload with the other marks (keep/). A paste switches to Move (state.ts afterPaste).
 
 import { type Mark, type Pasted, isPasted } from "../marks/types";
+import { pageAt, scroll, toView, viewport } from "../screen/surface";
 import type { Point } from "../shared/geometry";
 import { drag } from "../ui/drag";
 import { isEditable } from "../ui/keyboard";
@@ -36,7 +37,8 @@ export type PastedLayer = {
 export function createPastedLayer(host: PasteHost): PastedLayer {
   const el = Object.assign(document.createElement("div"), { className: "pasted" });
   const boxes = new Map<Pasted, HTMLElement>();
-  let mouse: Point = { x: innerWidth / 2, y: innerHeight / 2 };
+  /** The mouse on the tab (client coordinates), mapped onto the marked page where it is used. */
+  let mouse = { clientX: innerWidth / 2, clientY: innerHeight / 2 };
   const all = () => host.marks().filter(isPasted);
 
   function boxOf(p: Pasted): HTMLElement {
@@ -59,12 +61,13 @@ export function createPastedLayer(host: PasteHost): PastedLayer {
     }
     for (const p of live) {
       const box = boxOf(p);
-      box.style.cssText = `left:${p.rect.x - scrollX}px;top:${p.rect.y - scrollY}px;width:${p.rect.w}px;height:${p.rect.h}px;opacity:${p.opacity}`;
+      const at = toView(p.rect);
+      box.style.cssText = `left:${at.x}px;top:${at.y}px;width:${p.rect.w}px;height:${p.rect.h}px;opacity:${p.opacity}`;
       if (box.parentNode !== el) el.append(box);
     }
   }
 
-  /** An image file onto the page, centred on `at` (viewport coordinates). */
+  /** An image file onto the page, centred on `at` (page coordinates). */
   async function addFile(file: File, at: Point): Promise<boolean> {
     const img = new Image();
     img.src = URL.createObjectURL(file);
@@ -77,7 +80,7 @@ export function createPastedLayer(host: PasteHost): PastedLayer {
       return false;
     }
     const natural = { w: img.naturalWidth, h: img.naturalHeight };
-    const rect = landing(natural, devicePixelRatio, { x: at.x + scrollX, y: at.y + scrollY }, { w: innerWidth, h: innerHeight });
+    const rect = landing(natural, devicePixelRatio, at, viewport());
     host.add({ kind: "image", img, rect, opacity: 1 });
     return true;
   }
@@ -115,7 +118,7 @@ export function createPastedLayer(host: PasteHost): PastedLayer {
     if (!file) return;
     e.preventDefault();
     e.stopImmediatePropagation();
-    if (await addFile(file, mouse)) host.say(`Image pasted: ${HINT}.`);
+    if (await addFile(file, pageAt(mouse))) host.say(`Image pasted: ${HINT}.`);
   }
 
   const picker = Object.assign(document.createElement("input"), { type: "file", accept: "image/*", multiple: true, hidden: true });
@@ -124,8 +127,10 @@ export function createPastedLayer(host: PasteHost): PastedLayer {
     const files = [...(picker.files ?? [])];
     picker.value = "";
     let added = 0;
+    const view = viewport();
+    const s = scroll();
     for (const [i, file] of files.entries()) {
-      if (await addFile(file, { x: innerWidth / 2 + i * 24, y: innerHeight / 2 + i * 24 })) added++;
+      if (await addFile(file, { x: s.x + view.w / 2 + i * 24, y: s.y + view.h / 2 + i * 24 })) added++;
     }
     if (added) host.say(`${added === 1 ? "Image" : `${added} images`} added: ${HINT}.`);
   });
@@ -136,7 +141,7 @@ export function createPastedLayer(host: PasteHost): PastedLayer {
     if (!p) return false;
     e.preventDefault();
     const start = { ...p.rect };
-    const from = { x: e.clientX + scrollX, y: e.clientY + scrollY };
+    const from = pageAt(e);
     const grip: Grip = gripAt(start, from) ?? "move";
     const layer = target?.closest(".layer");
     if (!(layer instanceof HTMLElement)) return false;
@@ -157,10 +162,10 @@ export function createPastedLayer(host: PasteHost): PastedLayer {
     upload: () => picker.click(),
     onDown,
     track: (e) => {
-      mouse = { x: e.clientX, y: e.clientY };
+      mouse = { clientX: e.clientX, clientY: e.clientY };
     },
     hovered: () => {
-      const at = { x: mouse.x + scrollX, y: mouse.y + scrollY };
+      const at = pageAt(mouse);
       return all().findLast((p) => gripAt(p.rect, at) !== null);
     },
     see: (p, direction) => host.update(() => (p.opacity = stepOpacity(p.opacity, direction))),

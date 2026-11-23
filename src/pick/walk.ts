@@ -1,10 +1,14 @@
 // Finding the element under the cursor (past Pointer's own layer) and walking the DOM with the
-// arrow keys: ↑ parent, ↓ back down the way it came (or the first child), ← → siblings.
+// arrow keys: ↑ parent, ↓ back down the way it came (or the first child), ← → siblings. The page
+// is the one being marked (screen/surface.ts): the tab's, or its copy framed at a screen size.
+
+import { surfaceDoc } from "../screen/surface";
 
 export type WalkKey = "ArrowUp" | "ArrowDown" | "ArrowLeft" | "ArrowRight";
 
+/** The page's element at a point of its viewport, Pointer's own layer left out. */
 export function elementAt(x: number, y: number, host: Element): Element | null {
-  for (const el of document.elementsFromPoint(x, y)) {
+  for (const el of surfaceDoc().elementsFromPoint(x, y)) {
     if (el !== host && !host.contains(el)) return el;
   }
   return null;
@@ -15,7 +19,7 @@ export function walk(el: Element, key: WalkKey, trail: Element[]): Element {
   switch (key) {
     case "ArrowUp": {
       const parent = el.parentElement;
-      if (!parent || parent === document.documentElement) return el;
+      if (!parent || parent === el.ownerDocument.documentElement) return el;
       trail.push(el);
       return parent;
     }

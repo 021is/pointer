@@ -26,7 +26,8 @@ dev-build information (React fibers, Vue and Svelte metadata, source maps).
 | `src/preview.ts`, `preview.html` | the preview page: what Copy would give, from the service worker |
 | `pages.css`, `brand/` | the extension's pages in 021's look, and 021's logo, bundled (never fetched) |
 | `src/panel/` | the style panel: matched CSS, live edits on one element, their diff |
-| `src/icons/` | the icon picker: Lucide (lucide-static, pinned to the version DanceClub web and 021.is use) built into `dist/lucide.js`, injected by the worker only when the picker opens; search, place, move, resize. Notices: `THIRD-PARTY-NOTICES.md` |
+| `src/icons/` | the Icon tool: click a spot, a picker opens there (five quick icons, More searches the rest); Lucide (lucide-static, pinned to the version DanceClub web and 021.is use) built into `dist/lucide.js`, injected by the worker only when the picker opens; place, move, resize. Notices: `THIRD-PARTY-NOTICES.md` |
+| `src/screen/` | the Screen tool (Full, Tablet, Mobile, Custom): `sizes.ts` (pure: sizes, the custom size's check, where the frame sits), `surface.ts` (the page being marked: the tab's or the framed copy's; every gesture maps through it), `stage.ts` (the same URL in a sandboxed same-origin iframe, its device frame, refused pages), `sheets.ts` (each page keeps its own marks), `menu.ts` (the bar's one button), `screen.ts` (the controller), `store.ts` (the custom size in `chrome.storage.local`), `worker.ts` (the probe into the frame) |
 | `src/paste/` | images pasted onto the page: landing, move/resize, see-through; kept through a reload with the marks (`src/keep/`) |
 | `src/source/` | the page-world probe: framework, component chain, file:line via source maps |
 | `src/bundle/` | the bundle's data and its text format, key styles, colours |
@@ -38,15 +39,23 @@ dev-build information (React fibers, Vue and Svelte metadata, source maps).
 
 - **Least permissions:** `activeTab` + `scripting` + `storage`, nothing else, no host
   permissions. A feature that would need more is discussed in an issue first, never a quiet
-  manifest change. `storage` is for marks kept through a reload (Edvard, 2026-11-19, TF153):
-  `chrome.storage.session` only, never `local` or `sync`.
+  manifest change. `storage` is for marks kept through a reload (Edvard, 2026-11-19, TF153), in
+  `chrome.storage.session`, and for one setting, the Screen tool's custom size (Edvard,
+  2026-11-23, TF177), in `chrome.storage.local` (`src/screen/store.ts`: two numbers, checked when
+  read back). Nothing else in `local`, nothing ever in `sync`.
 - **Nothing leaves the browser** except to the clipboard. No network calls of our own, apart from
   the page-world probe reading the page's own dev server (chunks, source maps, same origin only).
   No analytics. What people mark is kept only in session memory, per tab and page (`src/keep/`),
-  and forgotten on Clear, on closing Pointer, when the tab closes and when Chrome closes.
+  and forgotten on Clear, on closing Pointer, when the tab closes and when Chrome closes. A
+  framed screen's marks live in memory with their frame only.
 - **Two worlds:** `src/source/probe.ts` runs in the page's MAIN world (fibers are only visible
   there) and talks to the content script by `CustomEvent` with JSON strings only
-  (`src/source/protocol.ts`), checked where they enter. Nothing else runs in MAIN.
+  (`src/source/protocol.ts`), checked where they enter. Nothing else runs in MAIN. On a framed
+  screen the probe runs in the frame's MAIN world too (`src/screen/worker.ts`).
+- **Two pages:** on a framed screen the marked page is the frame's, of its own realm. Read the
+  page through `src/screen/surface.ts` (never `scrollX`, `innerWidth`, `document` for the page);
+  an element's own `ownerDocument` and window answer for it; never `instanceof HTMLElement` or
+  `CSSStyleRule` on the page's objects (they are the frame's), ask the object or its own window.
 - **One renderer:** the live overlay and the copied picture both come from `marks/svg.ts`.
 - **Tokens are a cost:** every bundle line earns its place; the picture stays within what Claude
   reads at full size (`capture/layout.ts`), and the frames shrink before the text does.

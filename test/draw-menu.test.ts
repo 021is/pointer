@@ -13,6 +13,7 @@ function bar() {
   const tool = vi.fn();
   const noop = () => {};
   const tb = createToolbar({
+    screen: document.createElement("span"),
     tool,
     color: noop,
     output: noop,

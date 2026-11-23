@@ -86,6 +86,7 @@ twice, or click the ✕ at the right end of the bar.
 | No file and line in the copy | Your app is not running in development mode, or its framework gives no source information (see [below](#where-the-file-and-line-come-from)). Your agent still gets each element's text and selector, which is enough to find it. |
 | It doesn't run on a `file://` page | In `chrome://extensions`, open Pointer's **Details** and turn on **Allow access to file URLs**. |
 | Paste gives only the picture | That's expected in Claude Code: its chat keeps only the image. The picture has the file:line lines printed under it, so nothing is lost. |
+| Screen says the site can't be shown at another size | The site forbids being shown inside a frame (`X-Frame-Options: DENY` or `frame-ancestors 'none'`), or hides itself inside one. Pointer stays on Full. A dev server usually allows it; `SAMEORIGIN` works. |
 
 Still stuck? [Open an issue](https://github.com/021is/pointer/issues) and say what you pressed and what you saw.
 
@@ -95,6 +96,7 @@ Still stuck? [Open an issue](https://github.com/021is/pointer/issues) and say wh
 
 | Key | Tool | What it does |
 |---|---|---|
+|   | **Screen** | The first button on the bar: Full, Tablet (768 × 1024), Mobile (390 × 844) or Custom (a size you type, 240 to 3840 px a side, remembered). Pointer shows the same page in a device frame at that size and you mark it there like any page; your agent reads "viewport 390×844 (Mobile)". Each screen keeps its own marks, and Full brings the page back as it was. |
 | C | **Comment** (the default) | Click anywhere, type, Enter. Click a number to edit it, drag it to move it. |
 | P | **Pick** | Edit an element's CSS live: click it and its style box opens. ↑ parent, ↓ child, ← → siblings, Enter takes it. |
 | Q | **Idea** | Click what could be better, add your thought if you like. Your agent answers as a UI/UX expert and design critic: what is wrong and why, 2–3 fixes, and it asks before building. |
@@ -171,7 +173,8 @@ you press its icon or shortcut on that tab, and only until you turn it off. It s
 you mark goes to your clipboard, and you decide where to paste it. So that a reload does not wipe
 your marks, it keeps them in Chrome's session memory for that tab and page only
 (`chrome.storage.session`: never written to disk, never synced, gone when the tab or Chrome
-closes, and forgotten when you clear everything or close Pointer). The only reads
+closes, and forgotten when you clear everything or close Pointer). The one thing it keeps on your
+computer is the Screen tool's custom size, two numbers (`chrome.storage.local`). The only reads
 beyond the page are its own dev server's source maps (same origin), to find the file and line. The
 picture is drawn on a canvas, so it carries no metadata.
 Full policy: [021.is/plugins/pointer/privacy](https://021.is/plugins/pointer/privacy)

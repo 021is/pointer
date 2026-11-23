@@ -7,7 +7,7 @@ import { shortName, viewRect } from "../pick/describe";
 import { editPlaceholder } from "../shared/placeholder";
 import type { Edited } from "./element";
 import { groupProps, nudge, parseDeclaration, removedProps } from "./edits";
-import { matchedProps } from "./rules";
+import { matchedProps, realmOf } from "./rules";
 
 export type ViewHooks = { changed: () => void; close: () => void };
 
@@ -104,7 +104,7 @@ export function renderPanel(panel: HTMLElement, n: number, edited: Edited, info:
     // Rows come from the edits: a property removed with × stays gone, also after reopening.
     const removed = removedProps(edited.edits);
     const names = groupProps([...props.keys(), ...edited.edits.props.map((p) => p.prop)]).filter((p) => !removed.has(p));
-    const computed = getComputedStyle(el);
+    const computed = realmOf(el).getComputedStyle(el);
     rows.replaceChildren(
       ...names.map((prop) => {
         const change = edited.edits.props.find((p) => p.prop === prop)?.change;
