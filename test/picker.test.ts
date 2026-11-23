@@ -76,6 +76,11 @@ describe("the picker at the spot", () => {
     expect(pickerSpot({ x: 200, y: 150 }, view)).toEqual({ left: 214, top: 164 });
     expect(pickerSpot({ x: 1270, y: 700 }, view)).toEqual({ left: 952, bottom: 114 });
   });
+
+  it("on a 320 px phone it stays 8 px from each side", () => {
+    expect(pickerSpot({ x: 300, y: 100 }, { w: 320, h: 568 })).toEqual({ left: 8, top: 114 });
+    expect(pickerSpot({ x: 20, y: 500 }, { w: 375, h: 667 })).toEqual({ left: 34, bottom: 181 });
+  });
 });
 
 describe("the icon lands where the person clicked", () => {

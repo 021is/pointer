@@ -27,7 +27,9 @@ export type PickerSpot = { left: number; top: number } | { left: number; bottom:
 /** Where the picker opens for a click at `at` (viewport): beside the spot, below it when there is
  *  room, else above it; always inside the view and never over the spot itself. */
 export function pickerSpot(at: Point, view: Size): PickerSpot {
-  const left = Math.max(8, Math.min(at.x + GAP, view.w - WIDTH - 8));
+  // On a narrow view (320 px) the picker is as wide as the view allows, 8 px from each side.
+  const width = Math.min(WIDTH, view.w - 16);
+  const left = Math.max(8, Math.min(at.x + GAP, view.w - width - 8));
   if (at.y + GAP + TALL <= view.h - 8 || at.y < view.h / 2) return { left, top: Math.max(8, at.y + GAP) };
   return { left, bottom: Math.max(8, view.h - at.y + GAP) };
 }

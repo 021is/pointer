@@ -3,12 +3,12 @@
 
 import { type DrawTool, extendShape, isMeaningful, startShape } from "../draw/shapes";
 import { renderSvg } from "../marks/svg";
-import type { Pin } from "../marks/types";
 import { createPastedLayer } from "../paste/pasted";
 import { liveLayout, shortName, viewRect } from "../pick/describe";
 import { elementAt, walk } from "../pick/walk";
-import { type Point, near } from "../shared/geometry";
+import type { Point } from "../shared/geometry";
 import { editPlaceholder, placeholderAt } from "../shared/placeholder";
+import { showView } from "../shared/view";
 import { componentOf } from "../source/client";
 import { isBubbleOpen, openBubble } from "./bubble";
 import { copyFlow } from "./copy-flow";
@@ -36,7 +36,6 @@ import {
   chooseTool,
   otherOutput,
   pinsOf,
-  scenePins,
   targetsElements,
 } from "./state";
 import { pressStyles, stylesLook } from "./styles";
@@ -98,7 +97,8 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
   const icons = createIcons({ state, host, update, drag, say });
   root.append(bar.el, icons.el, toast.el);
 
-  const layout = liveLayout;
+  /** Pointer's own boxes stay in the part of the page the person sees (shared/view.ts). */
+  const syncView = () => showView(host);
   let frame = 0;
   function render() {
     if (frame) return;
@@ -106,7 +106,7 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
       frame = 0;
       layer.dataset.tool = state.tool;
       pasted.paint();
-      marksView.innerHTML = renderSvg(liveScene(state, layout()), { x: 0, y: 0, w: innerWidth, h: innerHeight });
+      marksView.innerHTML = renderSvg(liveScene(state, liveLayout()), { x: 0, y: 0, w: innerWidth, h: innerHeight });
       bar.update(state, stylesLook(lastPick(), hooks.panelFor(), (el) => shortName(el, viewRect(el))));
       keeper.schedule();
     });
@@ -157,15 +157,9 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
     if (s) void editShapeNote(s, { x: e.clientX, y: e.clientY });
   }
 
-  function pinAt(view: Point): Pin | undefined {
-    const drawn = scenePins(state.marks, layout());
-    const hit = drawn.findLast((p) => near(view, p.badge, 13));
-    return hit ? pinsOf(state.marks)[hit.n - 1] : undefined;
-  }
-
   const { cropElement, startCrop } = cropGestures({ state, update, render, say, drag });
   const { startGap } = gapGesture({ state, root, host, update, say, drag });
-  const { grabPin, grabText, grabMark } = handles({
+  const { grabPin, grabText, grabMark, pinAt } = handles({
     state,
     update,
     drag,
@@ -242,7 +236,7 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
     undo: hist.undo,
     redo: hist.redo,
     copy: () => flow.copy(),
-    escape: () => (state.tool === "page" ? close() : setTool("page")),
+    escape: () => bar.collapse() || (state.tool === "page" ? close() : setTool("page")),
     walk: (key) => {
       if (!state.hover) return;
       const next = walk(state.hover.el, key, trail);
@@ -281,10 +275,13 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
     [window, "keydown", onKey as EventListener, { capture: true }],
     [window, "scroll", render, { passive: true, capture: true }],
     [window, "resize", render],
+    [window.visualViewport ?? window, "resize", syncView],
+    [window.visualViewport ?? window, "scroll", syncView, { passive: true }],
   ];
 
   function open() {
     document.documentElement.append(host);
+    syncView();
     for (const [t, type, fn, opt] of listeners) t.addEventListener(type, fn, opt);
     render();
     if (!asked) restore();

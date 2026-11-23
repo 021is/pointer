@@ -4,7 +4,10 @@
 export const CSS = `
 :host { all: initial; }
 * { box-sizing: border-box; }
-.layer { position: fixed; inset: 0; pointer-events: auto; }
+/* touch-action: none: a finger draws, drags and picks like a mouse (DevTools' device mode sends
+   touch); without it the browser takes the drag for a scroll and cancels the gesture. The Page
+   tool (no layer) or the wheel scrolls. */
+.layer { position: fixed; inset: 0; pointer-events: auto; touch-action: none; }
 .layer[data-tool="page"] { pointer-events: none; }
 .layer[data-tool="pick"], .layer[data-tool="comment"] { cursor: crosshair; }
 .layer[data-tool="text"] { cursor: text; }
@@ -152,7 +155,8 @@ export const CSS = `
 
 /* Messages sit at the top of the view, never over the bar or its tooltips. */
 .toast {
-  position: fixed; left: 50%; top: 18px; transform: translate(-50%, -6px); max-width: min(560px, 90vw);
+  position: fixed; left: calc(var(--view-left, 0px) + var(--view-width, 100vw) / 2); top: calc(var(--view-top, 0px) + 18px);
+  transform: translate(-50%, -6px); width: max-content; max-width: min(560px, calc(var(--view-width, 100vw) - 16px));
   display: flex; align-items: center; gap: 12px; padding: 9px 12px 9px 14px; border-radius: 12px;
   background: rgba(18, 16, 28, 0.94); color: #f1eeff; border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 14px 36px rgba(5, 3, 15, 0.45); font: 600 13px/1.4 ui-sans-serif, system-ui, sans-serif;
@@ -167,7 +171,7 @@ export const CSS = `
 /* The icon picker, beside the spot that was clicked (picker.ts places it): five quick icons and
    More, which opens a search over all of Lucide. */
 .iconpicker {
-  position: fixed; width: max-content; max-width: min(320px, calc(100vw - 16px));
+  position: fixed; width: max-content; max-width: min(320px, calc(var(--view-width, 100vw) - 16px));
   padding: 8px; border-radius: 14px; pointer-events: auto; color: #ece9fb;
   background: #120f1d; border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 18px 44px rgba(5, 3, 15, 0.6);
   font: 13px/1.4 ui-sans-serif, system-ui, -apple-system, sans-serif;
@@ -179,7 +183,7 @@ export const CSS = `
   font-weight: 600; color: #ece9fb; background: rgba(255, 255, 255, 0.07); }
 .iconpicker .more-button:hover, .iconpicker .more-button:focus-visible, .iconpicker .more-button[aria-expanded="true"] { background: rgba(255, 255, 255, 0.14); }
 .iconpicker .more[hidden] { display: none; }
-.iconpicker .more { width: min(304px, calc(100vw - 32px)); margin-top: 8px; }
+.iconpicker .more { width: min(304px, calc(var(--view-width, 100vw) - 32px)); margin-top: 8px; }
 .iconpicker input {
   all: unset; box-sizing: border-box; width: 100%; padding: 9px 11px; border-radius: 10px; color: #fff;
   background: rgba(0, 0, 0, 0.28); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08); font-size: 14px;
@@ -195,4 +199,45 @@ export const CSS = `
 .icon-spot { position: fixed; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%; pointer-events: none;
   border: 2px solid #fff; box-shadow: 0 0 0 2px #7c5cff, 0 2px 8px rgba(0, 0, 0, 0.4); }
 .layer[data-tool="icon"] { cursor: copy; }
+
+/* A narrow viewport (a phone in DevTools' device mode, a narrow window): compact.ts. One row of
+   48 px targets docked to the bottom edge, the rest behind More, every menu as wide as the bar. */
+.bar .more-toggle { display: none; }
+@media (hover: none) { .bar [data-tip]:hover::before { display: none; } }
+@media (max-width: 767px) {
+  /* Laid out in the seen part (shared/view.ts): a page wider than the phone widens the layout. */
+  .bar { left: calc(var(--view-left, 0px) + 8px); right: auto; width: calc(var(--view-width, 100vw) - 16px);
+    top: calc(var(--view-top, 0px) + var(--view-height, 100vh) - 8px); bottom: auto; transform: translateY(-100%);
+    flex-wrap: nowrap; justify-content: space-between; gap: 0; padding: 4px; border-radius: 16px; touch-action: manipulation; }
+  .bar .grip { display: none; }
+  .bar .group, .bar .switch { padding: 0; margin: 0; gap: 0; }
+  .bar .group + .group::before, .bar .group + .switch::before { display: none; }
+  .bar button, .bar button.swatch { height: 48px; min-width: 48px; }
+  .bar .switch button { height: 44px; }
+  .bar .more-toggle { display: inline-flex; }
+  .bar:not([data-more="open"]) [data-tier="more"] { display: none !important; }
+  .bar [data-tip]:hover::before { display: none; }
+  .bar .copygroup { margin-left: 0; }
+  .bar .copygroup button.copy { padding: 0; }
+  .bar[data-more="open"] .copygroup button.copy { padding: 0 12px; }
+  .bar:not([data-more="open"]) .copygroup button.copy { border-radius: 10px; }
+  .bar .copygroup button.copy .label, .bar .copy .mode { display: none; }
+  .bar .drawgroup, .bar .copygroup { position: static; }
+  .bar .drawmenu, .bar .copygroup .menu { left: 0; right: 0; width: auto; bottom: calc(100% + 8px); }
+  .bar .menu .item { height: 44px; }
+  .bar[data-more="open"] { flex-wrap: wrap; justify-content: flex-start; row-gap: 4px; }
+  .bar[data-more="open"] button[data-name]:not(.swatch):not(:has(.label)) { flex-direction: column; gap: 4px; height: 58px; min-width: 58px; }
+  .bar[data-more="open"] button[data-name]:not(.swatch):not(:has(.label))::after {
+    content: attr(data-name); font: 600 10.5px/1 ui-sans-serif, system-ui, sans-serif; }
+  .bar[data-more="open"] .copygroup button.copy .label { display: inline; }
+  /* The icon picker: a sheet just above the bar, the spot still marked by its ring. */
+  .iconpicker { left: calc(var(--view-left, 0px) + 8px) !important; right: auto !important; bottom: auto !important;
+    top: calc(var(--view-top, 0px) + var(--view-height, 100vh) - 72px) !important; transform: translateY(-100%);
+    width: calc(var(--view-width, 100vw) - 16px); max-width: none; }
+  .iconpicker .more { width: auto; }
+  .iconpicker .grid { max-height: calc(var(--view-height, 100vh) * 0.3); }
+  .iconpicker .quick { flex-wrap: wrap; }
+  .iconpicker .icon-result, .iconpicker .more-button { width: 44px; height: 44px; }
+  .iconpicker .more-button { width: auto; }
+}
 `;

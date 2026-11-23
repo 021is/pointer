@@ -3,9 +3,10 @@
 // element). Edvard, 2026-11-18: "I cant move text".
 
 import { type Mark, type Pin, type Shape, isShape } from "../marks/types";
+import { liveLayout } from "../pick/describe";
 import { type Point, near } from "../shared/geometry";
 import { markAt, shifted } from "./move";
-import { type State, moveShape, shapeBox } from "./state";
+import { type State, moveShape, pinsOf, scenePins, shapeBox } from "./state";
 
 type TextShape = Extract<Shape, { kind: "text" }>;
 
@@ -95,5 +96,11 @@ export function handles(host: HandleHost) {
     );
   }
 
-  return { grabPin, grabText, grabMark };
+  /** The pin whose number is under a viewport point (13 px around it: a finger's reach too). */
+  function pinAt(view: Point): Pin | undefined {
+    const hit = scenePins(host.state.marks, liveLayout()).findLast((p) => near(view, p.badge, 13));
+    return hit ? pinsOf(host.state.marks)[hit.n - 1] : undefined;
+  }
+
+  return { grabPin, grabText, grabMark, pinAt };
 }

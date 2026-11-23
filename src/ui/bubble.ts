@@ -2,6 +2,7 @@
 // Esc cancels. Resolves with the text, or null when cancelled.
 
 import type { Point } from "../shared/geometry";
+import { visibleView } from "../shared/view";
 
 export type BubbleOptions = { at: Point; placeholder: string; value?: string; hint: string };
 
@@ -22,9 +23,12 @@ export function openBubble(root: ShadowRoot, options: BubbleOptions): Promise<st
   hint.textContent = options.hint;
   box.append(input, hint);
 
-  const width = 280;
-  const x = Math.min(Math.max(8, options.at.x + 16), window.innerWidth - width - 8);
-  const y = Math.min(Math.max(8, options.at.y + 16), window.innerHeight - 110);
+  // Beside the spot, inside the part of the page the person sees (a 320 px phone too).
+  const view = visibleView();
+  const width = Math.min(300, view.w - 16);
+  const x = Math.min(Math.max(view.x + 8, options.at.x + 16), view.x + view.w - width - 8);
+  const y = Math.min(Math.max(view.y + 8, options.at.y + 16), view.y + view.h - 110);
+  box.style.width = `${width}px`;
   box.style.left = `${x}px`;
   box.style.top = `${y}px`;
   root.append(box);

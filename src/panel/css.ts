@@ -9,6 +9,12 @@ export const PANEL_CSS = `
   box-shadow: 0 12px 34px rgba(0, 0, 0, 0.4); font: 12px/1.4 system-ui, sans-serif;
 }
 .panel[hidden] { display: none; }
+/* A narrow viewport: as wide as the seen part (shared/view.ts), in its top half, clear of the bar. */
+@media (max-width: 767px) {
+  .panel { top: calc(var(--view-top, 0px) + 8px); left: calc(var(--view-left, 0px) + 8px); right: auto;
+    width: calc(var(--view-width, 100vw) - 16px); max-height: calc(var(--view-height, 100vh) * 0.45); }
+  .panel header button { min-width: 36px; min-height: 36px; text-align: center; }
+}
 .panel header {
   display: flex; align-items: center; gap: 4px; padding: 8px 8px 8px 12px; cursor: grab;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1); user-select: none;
