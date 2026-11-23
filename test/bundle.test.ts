@@ -39,7 +39,6 @@ const comment: PinInfo = {
 const bundle: Bundle = {
   url: "https://app.example.com/events/42",
   viewport: { w: 1280, h: 800 },
-  screen: null,
   crops: [],
   pins: [pick, comment],
   shapeNotes: [],
@@ -95,9 +94,6 @@ describe("formatBundle", () => {
     const text = formatBundle({ ...bundle, pins: [plain], image: null });
     expect(text.split("\n")[0]).toBe("Pointer · https://app.example.com/events/42 · viewport 1280×800");
     expect(text).toContain("[2] comment · button");
-    // Marked on a framed screen: the size and its name say which breakpoint the marks are about.
-    const mobile = formatBundle({ ...bundle, pins: [plain], image: null, viewport: { w: 390, h: 844 }, screen: "Mobile" });
-    expect(mobile.split("\n")[0]).toBe("Pointer · https://app.example.com/events/42 · viewport 390×844 (Mobile)");
     expect(text.split("\n").slice(2).join("\n")).not.toContain("file:");
   });
 

@@ -6,7 +6,6 @@ import { measureGap, midpoint, shiftLine } from "../draw/gap";
 import type { GapLine, Pin } from "../marks/types";
 import { viewRect } from "../pick/describe";
 import { elementAt } from "../pick/walk";
-import { pageToClient, scroll, toView } from "../screen/surface";
 import type { Point } from "../shared/geometry";
 import { openBubble } from "./bubble";
 import type { State } from "./state";
@@ -28,10 +27,11 @@ export function gapBadge(line: GapLine): Point {
 
 export function gapGesture(h: GapHost) {
   const { state, update } = h;
+  const toView = (p: Point) => ({ x: p.x - scrollX, y: p.y - scrollY });
 
   async function askNote(pin: Pin) {
     const note = await openBubble(h.root, {
-      at: pageToClient(pin.at),
+      at: toView(pin.at),
       placeholder: "Smaller, bigger, or the gap you want (optional)",
       hint: "Enter saves · Esc keeps the gap without a note",
     });
@@ -57,8 +57,7 @@ export function gapGesture(h: GapHost) {
         if (!a || !b) return h.say("Gap: start and end the drag on elements of the page.", "error");
         const answer = measureGap(viewRect(a), viewRect(b), startView, endView);
         if (answer.kind === "none") return h.say(`Gap: ${answer.why}.`, "error");
-        const s = scroll();
-        const line = shiftLine(answer.line, s.x, s.y);
+        const line = shiftLine(answer.line, scrollX, scrollY);
         const pin: Pin = { kind: "gap", color: state.color, el: a, other: b, line, at: gapBadge(line), note: "" };
         update(() => state.marks.push(pin));
         void askNote(pin);

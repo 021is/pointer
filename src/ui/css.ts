@@ -10,9 +10,6 @@ export const CSS = `
 .layer[data-tool="text"] { cursor: text; }
 .layer[data-tool="pen"], .layer[data-tool="arrow"], .layer[data-tool="box"], .layer[data-tool="ellipse"] { cursor: crosshair; }
 .layer svg { position: absolute; inset: 0; overflow: visible; pointer-events: none; }
-/* The sheet the marks lie on: the whole tab, or exactly over a framed screen, at its zoom. */
-.sheet { position: absolute; inset: 0; transform-origin: 0 0; }
-.sheet.framed { inset: auto; overflow: hidden; }
 
 /* Pasted images: under the marks. They take the mouse with the page and pick tools (move,
    resize); with drawing tools the layer draws over them. */
@@ -85,30 +82,15 @@ export const CSS = `
 .bar .drawgroup { position: relative; display: inline-flex; }
 .bar .drawgroup button.draw { border-radius: 10px 0 0 10px; }
 .bar .drawgroup button.caret { min-width: 16px; padding: 0 3px; border-radius: 0 10px 10px 0; font-size: 10px; color: #9d95c4; }
-.bar .drawmenu, .bar .screenmenu {
+.bar .drawmenu {
   position: absolute; left: 0; bottom: calc(100% + 10px); width: 220px; padding: 6px; z-index: 2;
   background: #120f1d; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px;
   box-shadow: 0 18px 44px rgba(5, 3, 15, 0.6); color: #ece9fb;
 }
-.bar .drawmenu[hidden], .bar .screenmenu[hidden] { display: none; }
-.bar .drawmenu .item:focus-visible, .bar .screenmenu .item:focus-visible { outline: 2px solid #9d85ff; outline-offset: -2px; }
+.bar .drawmenu[hidden] { display: none; }
+.bar .drawmenu .item:focus-visible { outline: 2px solid #9d85ff; outline-offset: -2px; }
 .bar .drawmenu kbd { font: 600 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace; color: #9d95c4; }
 .bar .drawgroup:has(.drawmenu:not([hidden])) [data-tip]:hover::before { display: none; }
-/* Screen: one button, its sizes in a menu above it; Custom opens two fields. */
-.bar .screengroup { position: relative; display: inline-flex; }
-.bar .screenmenu { width: 250px; }
-.bar .screengroup:has(.screenmenu:not([hidden])) [data-tip]:hover::before { display: none; }
-.bar .screenmenu .custom { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 6px 4px;
-  margin-top: 4px; border-top: 1px solid rgba(255, 255, 255, 0.08); }
-.bar .screenmenu .custom[hidden] { display: none; }
-.bar .screenmenu .side { all: unset; box-sizing: border-box; width: 72px; height: 32px; padding: 0 8px; border-radius: 8px;
-  text-align: right; color: #fff; background: rgba(0, 0, 0, 0.28); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
-  font: 600 13px/32px ui-monospace, SFMono-Regular, Menlo, monospace; }
-.bar .screenmenu .side:focus { box-shadow: inset 0 0 0 1.5px #8a6dff, 0 0 0 3px rgba(124, 92, 255, 0.22); }
-.bar .screenmenu .times { color: #9d95c4; }
-.bar .screenmenu .custom button.show { height: 32px; min-width: 0; padding: 0 12px; margin-left: auto; color: #fff;
-  background: linear-gradient(180deg, #8a6dff, #6a4cf0); }
-.bar .screenmenu .custom .why { flex-basis: 100%; margin: 2px 2px 0; }
 /* Copy: a split button, the bar's one accent, as tall as the tools (Edvard, 2026-11-19: "the copy
    button is too big"). The main part copies as chosen; ▾ opens the menu above it. */
 .bar .copygroup { position: relative; display: inline-flex; margin-left: 4px; border-radius: 10px; }

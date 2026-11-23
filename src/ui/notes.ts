@@ -2,7 +2,6 @@
 // note or a text, removing a pin. A pick of an element already picked opens that pick: no twins.
 
 import type { Mark, Pin, PointKind } from "../marks/types";
-import { pageToClient, surfaceDoc } from "../screen/surface";
 import type { Point } from "../shared/geometry";
 import { openBubble } from "./bubble";
 import type { Extension } from "./extension";
@@ -11,15 +10,15 @@ import { type Framed, type State, pinsOf } from "./state";
 type TextMark = Extract<Mark, { kind: "text" }>;
 
 /** The element a comment or an idea belongs to: the one under it; an idea with nothing under it
- *  is about the page itself (the one being marked). */
+ *  is about the page itself. */
 export const pinTarget = (kind: "comment" | "idea", under: Element | null): Element | null =>
-  under ?? (kind === "idea" ? surfaceDoc().body : null);
+  under ?? (kind === "idea" ? document.body : null);
 
 export type NotesHost = { root: ShadowRoot; state: State; update: (change: () => void) => void; hooks: () => Extension };
 
-/** The note boxes open on the tab, beside the spot: `client` points, page points mapped there. */
 export function notes(host: NotesHost) {
   const { root, state, update } = host;
+  const toView = (at: Point) => ({ x: at.x - scrollX, y: at.y - scrollY });
 
   function removePin(pin: Pin) {
     host.hooks().onRemove(pin);
@@ -35,7 +34,7 @@ export function notes(host: NotesHost) {
     if (kind === "pick") return host.hooks().onPick(pin);
     const idea = kind === "idea";
     const note = await openBubble(root, {
-      at: pageToClient(at),
+      at: toView(at),
       placeholder: idea ? "Your thought (optional)" : "Comment",
       hint: idea ? "Enter keeps the idea · Esc keeps it without a thought" : "Enter saves · Shift+Enter new line · Esc skips",
     });

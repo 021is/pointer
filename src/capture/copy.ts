@@ -7,7 +7,6 @@ import type { Bundle, ComponentInfo, CropInfo, PinInfo } from "../bundle/types";
 import type { Frame } from "../marks/svg";
 import { type Crop, type Pin, cropLabel } from "../marks/types";
 import { describeElement, liveLayout } from "../pick/describe";
-import { surfaceWin, viewRectToClient, viewport as pageViewport } from "../screen/surface";
 import { cropFor } from "../shared/geometry";
 import { componentOf } from "../source/client";
 import {
@@ -31,8 +30,6 @@ export type CopyContext = {
   host: HTMLElement;
   /** The style panel's edits on a pin's element, one line each. */
   changesOf: (pin: Pin) => string[];
-  /** The screen the page is marked at ("Mobile"), or null on Full. */
-  screen: string | null;
 };
 
 export type CopyResult = { text: string; image: { w: number; h: number } | null };
@@ -76,10 +73,9 @@ export function cropInfos(
   );
 }
 
-/** The frames as the page lays them out now, and which of them the picture can show. The page is
- *  the one being marked: on a framed screen, the frame's viewport bounds the picture. */
+/** The frames as the page lays them out now, and which of them the picture can show. */
 function framesNow(ctx: CopyContext) {
-  const viewport = { x: 0, y: 0, ...pageViewport() };
+  const viewport = { x: 0, y: 0, w: innerWidth, h: innerHeight };
   const frames = sceneFrames(ctx.state.marks, liveLayout());
   return { viewport, frames, split: shownFrames(frames, viewport) };
 }
@@ -113,10 +109,8 @@ async function dataNow(ctx: CopyContext) {
   const [pins, crops] = await Promise.all([pinInfos(ctx), cropInfos(cropsOf(ctx.state.marks), frames, off, componentOf)]);
   const drawings = summarize(ctx.state.marks);
   const shapeNotes = shapeNotesOf(ctx.state.marks, pins.length);
-  const viewport = pageViewport();
-  // The framed page's own address: a link followed inside the frame is where the marks are.
-  const url = safeUrl(surfaceWin().location.href);
-  return (image: CopyResult["image"]): Bundle => ({ url, viewport, screen: ctx.screen, crops, pins, shapeNotes, drawings, image });
+  const viewport = { w: innerWidth, h: innerHeight };
+  return (image: CopyResult["image"]): Bundle => ({ url: safeUrl(location.href), viewport, crops, pins, shapeNotes, drawings, image });
 }
 
 /** What each output would cost now, for Copy's menu. */
@@ -150,7 +144,7 @@ export function buildBundle(ctx: CopyContext) {
   const image = shot
     ? (async () => {
         const [s, d] = await Promise.all([shot, data]);
-        return picture(s.shot, s.regions, s.scene, output === "image" ? null : formatStrip(d(null), true), s.laid, viewRectToClient);
+        return picture(s.shot, s.regions, s.scene, output === "image" ? null : formatStrip(d(null), true), s.laid);
       })()
     : null;
   const text =

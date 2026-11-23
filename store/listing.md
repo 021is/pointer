@@ -25,7 +25,6 @@ Turn it on with Alt+P (Control+Shift+P on a Mac) on the page you are building. P
 • Crop a component or a frame, several at once, and draw on them: pen, arrow, box, ellipse, text,
   with Shift for straight lines and squares.
 • Paste a screenshot or a mockup onto the page and lay it see-through over the real thing.
-• See and mark the page at Tablet or Mobile size, or a size you type, with one Screen button.
 • Change CSS live in the style panel: font size, colour, spacing, classes; even drop in a
   placeholder where a new element should go. Pointer records what you changed.
 
@@ -50,15 +49,10 @@ Made by Edvard Grei at 021.
   pressing its shortcut, and only until they turn it off. No access to any other tab or site.
 - **scripting:** On that user action, Pointer injects its overlay (the toolbar and the marks) into
   that tab, and a small script that reads the page's own development-build information (the
-  component name, the source file and the line) of the elements the user marks. When the user
-  shows the page at a tablet or phone size, the same small script also runs in that copy of the
-  page, which Pointer shows in a frame of the same site in that tab.
+  component name, the source file and the line) of the elements the user marks.
 - **storage:** Pointer keeps the user's marks on a page through a reload of that page, in
   `chrome.storage.session` (memory only, that tab and page, never synced), and forgets them when
-  the user clears them, closes Pointer, closes the tab or closes Chrome. It also remembers one
-  setting in `chrome.storage.local`: the custom screen size the user typed in the Screen tool (a
-  width and a height, two numbers), so it is filled in the next time. Nothing else is stored,
-  nothing is synced, nothing is sent.
+  the user clears them, closes Pointer, closes the tab or closes Chrome.
 - **Remote code:** No. All code ships in the extension package.
 - **Data usage:** Pointer collects no user data, of any category. Nothing is sent to 021 or to
   anyone. The copy goes only to the user's clipboard. (Tick no data type. Certify all three
@@ -78,9 +72,6 @@ Made by Edvard Grei at 021.
 5. Your marks, style edits and pasted images on a page are kept through a reload of that page,
    in Chrome's session memory (`chrome.storage.session`) for that tab only: never written to
    disk, never synced, gone when you clear them, close Pointer, close the tab or close Chrome.
-   The one thing kept on your computer (`chrome.storage.local`) is the custom screen size you
-   typed in the Screen tool: two numbers, never synced, never sent.
 6. Permissions: `activeTab` (the tab you turn it on), `scripting` (to draw the overlay there),
-   `storage` (the session memory and the custom size of point 5). No host permissions, no remote
-   code.
+   `storage` (the session memory of point 5). No host permissions, no remote code.
 7. Contact: the repository's issues, https://github.com/021is/pointer/issues.

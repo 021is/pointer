@@ -1,9 +1,6 @@
-// The bar's icons: one line style (24 grid, 1.8 stroke, round caps), drawn for Pointer; Screen's
-// is Lucide's monitor-smartphone (ISC, THIRD-PARTY-NOTICES.md), in the same style.
+// The bar's icons: one line style (24 grid, 1.8 stroke, round caps), drawn for Pointer.
 
 const ICON_PATHS = {
-  screen:
-    '<path d="M18 8V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h8"/><path d="M10 19v-3.96 3.15"/><path d="M7 19h5"/><rect width="6" height="10" x="16" y="12" rx="2"/>',
   page: '<path d="M6 3.5l12.5 6.2-5.6 1.9-2 5.9z"/><path d="M13 13l5 5"/>',
   move: '<path d="M12 3v18M3 12h18"/><path d="M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"/>',
   pick: '<circle cx="12" cy="12" r="6.5"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3"/>',

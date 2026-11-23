@@ -60,7 +60,6 @@ const el = (selector: string) => ({ selector, tag: "button", size: { w: 80, h: 3
 const bundle = (pins: PinInfo[]): Bundle => ({
   url: "http://localhost:3300/",
   viewport: { w: 1440, h: 900 },
-  screen: null,
   crops: [],
   pins,
   shapeNotes: [],

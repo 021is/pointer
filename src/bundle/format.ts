@@ -105,13 +105,10 @@ export function formatCrop(c: CropInfo): string {
   return `crop ${c.label} · ${who}${file}${size}${off}`;
 }
 
-/** "Pointer · <url> · viewport 390×844 (Mobile) · react": a framed screen is named, so the agent
- *  knows which breakpoint the marks are about. */
 function headLine(b: Bundle): string {
   const components = [...b.pins.map((p) => p.component), ...b.crops.flatMap((c) => (c.component ? [c.component] : []))];
   const frameworks = [...new Set(components.map((c) => c.framework))].filter((f) => f !== "none");
-  const screen = b.screen ? ` (${b.screen})` : "";
-  return [`Pointer · ${b.url} · viewport ${b.viewport.w}×${b.viewport.h}${screen}`, ...frameworks].join(" · ");
+  return [`Pointer · ${b.url} · viewport ${b.viewport.w}×${b.viewport.h}`, ...frameworks].join(" · ");
 }
 
 const fileOnly = (s: Source): string => formatSource({ ...s, file: s.file.split("/").pop() ?? s.file });

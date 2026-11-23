@@ -76,9 +76,6 @@ export type CropInfo = {
 export type Bundle = {
   url: string;
   viewport: { w: number; h: number };
-  /** The screen the page was marked at ("Mobile"), or null on Full: the agent knows which
-   *  breakpoint the marks are about (Edvard, 2026-11-23). */
-  screen: string | null;
   crops: CropInfo[];
   pins: PinInfo[];
   /** Boxes and ellipses with a note typed on them, numbered after the pins. */

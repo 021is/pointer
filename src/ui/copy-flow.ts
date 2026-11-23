@@ -20,8 +20,6 @@ export type CopyHost = {
   setOutput: (o: Output) => void;
   /** Clear everything with Undo (history.ts). */
   clear: (message: string) => void;
-  /** The screen the page is marked at ("Mobile"), or null on Full (screen/). */
-  screen: () => string | null;
 };
 
 const errorText = (err: unknown) => (err instanceof Error ? err.message : String(err));
@@ -32,7 +30,7 @@ export function copiedLabel(marks: number, tokens: number): string {
 }
 
 export function copyFlow(h: CopyHost) {
-  const ctx = () => ({ state: h.state, host: h.host, changesOf: h.hooks().changesOf, screen: h.screen() });
+  const ctx = () => ({ state: h.state, host: h.host, changesOf: h.hooks().changesOf });
 
   function copy() {
     if (isEmpty(h.state.marks) && h.state.output === "text") {

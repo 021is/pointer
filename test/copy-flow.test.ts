@@ -25,7 +25,7 @@ function setup(output: "picture" | "text" | "image") {
   const el = document.getElementById("b") as Element;
   const state = { ...initialState(), output };
   state.marks = [{ kind: "comment", color: "red", el, at: { x: 10, y: 10 }, note: "bigger" }];
-  return { state, host: document.createElement("div"), changesOf: () => [], screen: null };
+  return { state, host: document.createElement("div"), changesOf: () => [] };
 }
 
 afterEach(() => {
@@ -91,7 +91,6 @@ describe("copyFlow", () => {
       update,
       setOutput: (o) => (ctx.state.output = o),
       clear,
-      screen: () => null,
     });
   }
 

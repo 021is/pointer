@@ -28,12 +28,8 @@ export type KeyActions = {
   clear: () => void;
 };
 
-/** A field, a text area or editable text: asked of the target itself, not by `instanceof`, since a
- *  key typed in a page framed at a screen size comes from that frame's realm. */
-export function isEditable(t: EventTarget | null | undefined): boolean {
-  const el = t as { tagName?: unknown; isContentEditable?: unknown } | null | undefined;
-  return el?.tagName === "INPUT" || el?.tagName === "TEXTAREA" || el?.isContentEditable === true;
-}
+export const isEditable = (t: EventTarget | null | undefined) =>
+  t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || (t instanceof HTMLElement && t.isContentEditable);
 
 /** A part of Pointer's own UI that handles its keys itself (the draw menu: arrows, Enter, Esc). */
 const ownsKeys = (e: KeyboardEvent) => e.composedPath().some((n) => n instanceof HTMLElement && n.hasAttribute("data-own-keys"));
@@ -44,8 +40,7 @@ export function keyHandler(tool: () => Tool, run: KeyActions): (e: KeyboardEvent
     if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === "v") return run.beforePaste();
     const cmd = commandFor(e, tool());
     if (!cmd) return;
-    // A text selected in the page where the key was pressed (the tab's or the framed one) copies as text.
-    if (cmd.type === "copy" && !(e.view ?? window).getSelection()?.isCollapsed) return;
+    if (cmd.type === "copy" && !getSelection()?.isCollapsed) return;
     if (cmd.type === "see" && !run.overPasted()) return;
     if (cmd.type === "remove" && !run.canRemove()) return;
     e.preventDefault();

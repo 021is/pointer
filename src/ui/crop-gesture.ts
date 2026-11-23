@@ -2,7 +2,6 @@
 // live), a drag draws a free frame. Frames under 8 px each way are refused, said so.
 
 import { viewRect } from "../pick/describe";
-import { scroll } from "../screen/surface";
 import { type Point, dragRect, near } from "../shared/geometry";
 import type { State } from "./state";
 
@@ -20,8 +19,7 @@ export function cropGestures(host: CropHost) {
   /** A crop of the component's box (followed live), its page rect kept for when it leaves. */
   function cropElement(el: Element) {
     const r = viewRect(el);
-    const s = scroll();
-    update(() => state.marks.push({ kind: "crop", el, rect: { ...r, x: r.x + s.x, y: r.y + s.y } }));
+    update(() => state.marks.push({ kind: "crop", el, rect: { ...r, x: r.x + scrollX, y: r.y + scrollY } }));
   }
 
   function startCrop(e: PointerEvent, page: Point, under: Element | null) {

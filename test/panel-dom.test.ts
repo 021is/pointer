@@ -41,7 +41,7 @@ describe("matchedProps: the CSS that reaches the element", () => {
 
 describe("knownClasses", () => {
   it("knows classes from every rule, @media at any width included", () => {
-    const known = knownClasses(document.body);
+    const known = knownClasses();
     expect(known.has("card")).toBe(true);
     expect(known.has("wide:p-8")).toBe(true);
     expect(known.has("never-used")).toBe(false);

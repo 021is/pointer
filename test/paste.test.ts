@@ -73,7 +73,6 @@ describe("formatStrip without a picture", () => {
     const b: Bundle = {
       url: "https://x.dev/",
       viewport: { w: 1, h: 1 },
-      screen: null,
       crops: [],
       pins: [],
       shapeNotes: [],
@@ -106,7 +105,6 @@ describe("formatStrip: the compact lines under the picture", () => {
   const bundle: Bundle = {
     url: "https://app.example.com/dance",
     viewport: { w: 1440, h: 788 },
-    screen: null,
     crops: [],
     pins: [
       pin(7, { changes: ["gap 6px → 8px", "font-style normal → italic"], note: "make it lighter" }),

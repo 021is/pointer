@@ -11,7 +11,6 @@
 
 import type { Pin } from "../marks/types";
 import { elementAt } from "../pick/walk";
-import { surfaceDoc, toView } from "../screen/surface";
 import type { Point } from "../shared/geometry";
 import type { State } from "../ui/state";
 import { createIconPicker } from "./picker";
@@ -48,10 +47,8 @@ export function dragged(start: { at: Point; size: number }, from: Point, to: Poi
 
 export function createIcons(h: IconsHost) {
   /** The element under an icon's middle, else the page: what the icon is "on". */
-  const under = (at: Point, size: number) => {
-    const middle = toView({ x: at.x + size / 2, y: at.y + size / 2 });
-    return elementAt(middle.x, middle.y, h.host) ?? surfaceDoc().body;
-  };
+  const under = (at: Point, size: number) =>
+    elementAt(at.x + size / 2 - scrollX, at.y + size / 2 - scrollY, h.host) ?? document.body;
 
   /** The page point the open picker places on: the spot that was clicked. */
   let spot: Point | null = null;
@@ -66,11 +63,10 @@ export function createIcons(h: IconsHost) {
 
   const picker = createIconPicker({ place, say: h.say });
 
-  /** The Icon tool's click: the picker opens beside it on the tab (`client`), and places on that
-   *  spot of the page (`page`). */
-  function ask(client: Point, page: Point) {
+  /** The Icon tool's click: the picker opens at the spot (`view`), and places there (`page`). */
+  function ask(view: Point, page: Point) {
     spot = page;
-    picker.open(client);
+    picker.open(view);
   }
 
   /** A press on an icon grabs it; false when the press is not on one. */

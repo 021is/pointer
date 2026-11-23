@@ -10,13 +10,11 @@ export const ANSWER = "pointer:probe:done";
 export type Ask = { id: string };
 export type Answer = { id: string; info: ComponentInfo };
 
-/** The parsed message, or an Error saying what was wrong with it. Read by its detail, not by
- *  `instanceof CustomEvent`: an event from a page framed at a screen size is of that frame's realm. */
+/** The parsed message, or an Error saying what was wrong with it. */
 export function readMessage<T extends { id: string }>(event: Event): T | Error | null {
-  const detail = (event as { detail?: unknown }).detail;
-  if (typeof detail !== "string") return null;
+  if (!(event instanceof CustomEvent) || typeof event.detail !== "string") return null;
   try {
-    const value = JSON.parse(detail) as unknown;
+    const value = JSON.parse(event.detail) as unknown;
     if (value && typeof value === "object" && typeof (value as { id?: unknown }).id === "string") {
       return value as T;
     }
