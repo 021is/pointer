@@ -11,7 +11,7 @@ import { COLORS, type Color } from "../marks/types";
 import { IS_MAC } from "../shared/platform";
 import { NARROW, buttonName, createCompact, staysOpen } from "./compact";
 import { type CopyMenu, createCopyMenu } from "./copy-menu";
-import { type Laid, Relayout, fitRow, relayout, seenPart } from "./fit";
+import { type Laid, Relayout, fitRow, relayout, rowCandidates, seenPart } from "./fit";
 import { type IconName, icon } from "./icons";
 import type { Costs } from "../capture/estimate";
 import { type Output, type State, type Tool, pictureOnly } from "./state";
@@ -226,8 +226,19 @@ export function createToolbar(act: BarActions): Toolbar {
     const change = relayout(laid, now);
     if (change === Relayout.KEEP) return;
     if (change === Relayout.CLOSE_AND_ARRANGE) compact.collapse();
-    laid = now;
-    keepingFocus(bar, () => (now.kind === "narrow" ? layout.narrow(fitRow(now.width, now.output)) : layout.wide()));
+    keepingFocus(bar, () => {
+      if (now.kind === "wide") layout.wide();
+      // Laid only once measured: a bar not yet on screen measures nothing, and the next update tries again.
+      if (now.kind === "wide" || fitNarrow(now.width, now.output)) laid = now;
+    });
+  }
+  /** Every candidate in the row, its widths read, then the row that fits: one task, no paint between.
+   *  False when nothing could be measured (the bar not laid out yet). */
+  function fitNarrow(width: number, output: Output): boolean {
+    layout.narrow(new Set(rowCandidates(output)));
+    const sizes = layout.sizes();
+    layout.narrow(fitRow(width, output, sizes));
+    return sizes.more > 0;
   }
 
   return {

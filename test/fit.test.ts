@@ -1,11 +1,20 @@
 // What the narrow bar keeps at hand for the seen width (Edvard, 2026-11-24: at a mini tablet's
-// ~700 px the full-width bar with five far-apart icons read as broken): as many tools as fit, in
-// priority order, the first that does not fit ends the row; Text frees the picture tools' room.
+// ~700 px the full-width bar with five far-apart icons read as broken; in Chrome on a Mac at
+// ~530 px, cells must be as wide as their names): Copy and More always, then as many tools as the
+// measured widths fit, in priority order, the first that does not fit ending the row; one gap per
+// cell, none before a ▾; Text frees the picture tools' room.
 import { describe, expect, it } from "vitest";
-import { CARET, CELL, type Laid, PRIORITY, ROW_FRAME, Relayout, fitRow, relayout, seenPart } from "../src/ui/fit";
+import { GAP, type Laid, PRIORITY, ROW_FRAME, Relayout, type Sizes, fitRow, relayout, seenPart } from "../src/ui/fit";
+import type { Part } from "../src/ui/sheet";
 import { SHEET } from "../src/ui/sheet";
 
-const row = (width: number, output: "picture" | "text" = "picture") => [...fitRow(width, output)];
+/** Widths as Chromium lays the row out on Linux: a ▾ 30, "Comment" 56, Copy 48, the rest 44. */
+const of = (p: Part) => (p.endsWith("Caret") ? 30 : p === "comment" ? 56 : p === "copy" ? 48 : 44);
+const sizes: Sizes = { of, more: 44 };
+const row = (width: number, output: "picture" | "text" = "picture") => {
+  const kept = fitRow(width, output, sizes);
+  return PRIORITY.filter((p) => kept.has(p));
+};
 
 describe("relayout", () => {
   const wide: Laid = { kind: "wide" };
@@ -31,17 +40,27 @@ describe("relayout", () => {
 describe("the narrow bar's row", () => {
   it("keeps the five quick tools on a phone and adds more as the width grows", () => {
     expect(row(320)).toEqual(["pick", "comment", "draw", "undo", "copy"]);
-    expect(row(390)).toEqual(["pick", "comment", "draw", "undo", "copy", "copyCaret"]);
-    expect(row(600)).toEqual(["pick", "comment", "draw", "undo", "copy", "copyCaret", "drawCaret", "move", "icon", "crop", "idea"]);
+    expect(row(390)).toEqual(["pick", "comment", "draw", "undo", "copy", "copyCaret", "drawCaret"]);
+    expect(row(530)).toEqual([...row(390), "move", "icon", "crop"]);
+    expect(row(600)).toEqual([...row(530), "idea"]);
     expect(row(700)).toEqual([...row(600), "image", "redo"]);
-    expect(row(767)).toEqual([...row(700), "page"]);
+    expect(row(767)).toEqual([...row(700), "page", "clear"]);
   });
 
-  it("never passes the seen width, More included", () => {
-    for (const w of [320, 360, 390, 430, 600, 700, 767]) {
-      const cells = row(w).reduce((sum, p) => sum + (p.endsWith("Caret") ? CARET : CELL), 0);
-      expect(ROW_FRAME + cells + CELL, `${w}`).toBeLessThanOrEqual(w);
+  it("never passes the seen width: its cells, one gap between cells, none before a ▾, and More", () => {
+    for (const w of [320, 360, 390, 430, 530, 600, 700, 767]) {
+      const cells = row(w).reduce((sum, p) => sum + of(p) + (p.endsWith("Caret") ? 0 : GAP), 0);
+      expect(ROW_FRAME + cells + sizes.more, `${w}`).toBeLessThanOrEqual(w);
     }
+  });
+
+  it("measures: a wider name takes more room, so fewer tools fit", () => {
+    const wider: Sizes = { of: (p) => of(p) + 10, more: 54 };
+    expect(fitRow(390, "picture", wider).size).toBeLessThan(fitRow(390, "picture", sizes).size);
+  });
+
+  it("always keeps Copy, however narrow", () => {
+    expect([...fitRow(150, "picture", sizes)]).toEqual(["copy"]);
   });
 
   it("in Text, leaves out what only a picture needs and takes the next ones", () => {
@@ -50,7 +69,7 @@ describe("the narrow bar's row", () => {
   });
 
   it("keeps a menu's ▾ only beside its own button", () => {
-    for (const w of [320, 390, 430, 600, 700, 767]) {
+    for (const w of [320, 390, 430, 530, 600, 700, 767]) {
       const r = row(w);
       if (r.includes("drawCaret")) expect(r).toContain("draw");
       if (r.includes("copyCaret")) expect(r).toContain("copy");

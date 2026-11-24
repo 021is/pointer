@@ -4,19 +4,22 @@
 // in exactly one; the colours only with Pen or Icon; More says Close while it is open; Esc, a press
 // outside, a drag down and a chosen tool close it, while Undo, Redo, Clear, a colour and Picture |
 // Text leave it open. The wide bar keeps its own order.
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DRAG_CLOSE } from "../src/ui/compact";
 import { SHEET } from "../src/ui/sheet";
 import { type Tool, initialState } from "../src/ui/state";
 import { type Toolbar, TOOLS, colorsShown } from "../src/ui/toolbar";
-import { NO_PICK, inRow, makeBar } from "./bar";
+import { NO_PICK, inRow, layOutCells, makeBar } from "./bar";
 
 /** The seen width as DevTools' device mode sets it; app.ts updates the bar on the resize. */
 const at = (width: number) => window.happyDOM.setViewport({ width, height: 844 });
 
+beforeEach(layOutCells);
+
 afterEach(() => {
   at(1024);
   document.body.innerHTML = "";
+  vi.restoreAllMocks();
 });
 
 const q = (tb: Toolbar, sel: string) => tb.el.querySelector<HTMLElement>(sel) as HTMLElement;
@@ -46,10 +49,28 @@ describe("the row and the sheet", () => {
     }
   });
 
-  it("on a phone: five quick tools, Copy's options and More in the row; the rest in the sheet, never both", () => {
+  it("a bar measured before it is laid out (nothing has a width yet) is measured again on the next update", () => {
+    vi.restoreAllMocks(); // every element 0 wide, as before the first paint
+    at(390);
+    const tb = makeBar();
+    layOutCells();
+    show(tb);
+    expect(inRow(tb)).toEqual(["Pick", "Comment", "Pen", "Shapes", "Undo", "Copy", "Options", "More"]);
+  });
+
+  it("on a 320 px phone: the five quick tools and More; both menus' ▾ wait in the sheet", () => {
+    at(320);
+    const tb = makeBar();
+    expect(inRow(tb)).toEqual(["Pick", "Comment", "Pen", "Undo", "Copy", "More"]);
+    more(tb).click();
+    expect(inSheet(tb, "mark")).toContain("Shapes");
+    expect(inSheet(tb, "send")).toContain("Options");
+  });
+
+  it("on a phone: the quick tools with their ▾ and More in the row; the rest in the sheet, never both", () => {
     const tb = phoneSheet();
-    expect(inRow(tb)).toEqual(["Pick", "Comment", "Pen", "Undo", "Copy", "Options", "Close"]);
-    expect(inSheet(tb, "mark")).toEqual(["Idea", "Shapes", "Icon", "Image", "Crop", "Red", "Blue", "Yellow"]);
+    expect(inRow(tb)).toEqual(["Pick", "Comment", "Pen", "Shapes", "Undo", "Copy", "Options", "Close"]);
+    expect(inSheet(tb, "mark")).toEqual(["Idea", "Icon", "Image", "Crop", "Red", "Blue", "Yellow"]);
     expect(inSheet(tb, "edit")).toEqual(["Page", "Move", "Redo", "Clear", "Styles"]);
     const send = [...tb.el.querySelectorAll('.sheet [data-group="send"] button')].map((b) => b.getAttribute("aria-label"));
     expect(send).toEqual(["Copy gives a picture (I)", "Copy gives the text only, ~3× cheaper (I)"]);
@@ -76,7 +97,7 @@ describe("the row and the sheet", () => {
     at(390);
     show(tb);
     expect(tb.el.style.left).toBe("");
-    expect(inRow(tb)).toEqual(["Pick", "Comment", "Pen", "Undo", "Copy", "Options", "More"]);
+    expect(inRow(tb)).toEqual(["Pick", "Comment", "Pen", "Shapes", "Undo", "Copy", "Options", "More"]);
     more(tb).click();
     at(600);
     show(tb);
@@ -189,7 +210,7 @@ describe("closing the sheet", () => {
   });
 
   it.each([
-    ["Draw's", 390, "More drawing tools", ".drawmenu"],
+    ["Draw's", 320, "More drawing tools", ".drawmenu"],
     ["Copy's", 320, "Choose what Copy gives", ".copygroup .menu"],
   ])("%s ▾ in the sheet opens its menu above the bar, and a second press closes it", (_, width, label, menuAt) => {
     at(width);

@@ -3,11 +3,22 @@
 // its tools, each named under its icon; above it, while More is open, the tool sheet: at most 45%
 // of the seen height, three named groups of 48 px cells. One "selected" look, the current tool's
 // violet; Picture | Text and Styles show their state quietly; Copy is the one strong button.
+// Edvard, 2026-11-24, in Chrome on a Mac: each row cell is as wide as its name needs, so the
+// selected look covers it with room either side; the cells keep one even gap; a split button (Pen
+// ▾, Copy ▾) reads as one control: its ▾ a narrow segment against its tool, a hairline between.
 
 import { NARROW } from "./compact";
-import { CARET, CELL } from "./fit";
+import { BAR_MARGIN, BAR_PAD, GAP } from "./fit";
 
-/** A cell's name under its icon; no extra letter spacing, so "Comment" fits a 48 px cell. */
+/** A row cell's least width (a 44 px target) and its padding either side of its name. */
+export const CELL_MIN = 44;
+export const CELL_PAD = 6;
+/** A split button's ▾: narrower than any tool, as tall as it (56 px). */
+export const CARET = 30;
+/** A sheet cell's least width. */
+const SHEET_CELL = 48;
+
+/** A cell's name under its icon; no extra letter spacing. */
 const LABEL = "content: attr(data-name); font: 600 10.5px/1 ui-sans-serif, system-ui, sans-serif; letter-spacing: 0;";
 
 export const NARROW_CSS = `
@@ -16,20 +27,25 @@ export const NARROW_CSS = `
 @media ${NARROW} {
   /* The row, laid out in the seen part (shared/view.ts): a page wider than the phone widens the layout. */
   .bar { left: calc(var(--view-left, 0px) + var(--view-width, 100vw) / 2); right: auto; width: max-content;
-    max-width: calc(var(--view-width, 100vw) - 12px); top: calc(var(--view-top, 0px) + var(--view-height, 100vh) - 6px);
-    bottom: auto; transform: translate(-50%, -100%); flex-wrap: nowrap; justify-content: center; gap: 0; padding: 4px;
+    max-width: calc(var(--view-width, 100vw) - ${2 * BAR_MARGIN}px); top: calc(var(--view-top, 0px) + var(--view-height, 100vh) - 6px);
+    bottom: auto; transform: translate(-50%, -100%); flex-wrap: nowrap; justify-content: center; gap: ${GAP}px; padding: 4px ${BAR_PAD}px;
     border-radius: 16px; touch-action: manipulation; }
+  /* Each cell keeps its own width: fit.ts measures them and lets only what fits into the row (the
+     buttons' own rules set it again below: their all: unset outranks this one). */
+  .bar > * { flex: none; }
   .bar [data-tip]:hover::before { display: none; }
   .bar .group, .bar .switch { padding: 0; margin: 0; gap: 0; }
   .bar .group + .group::before, .bar .group + .switch::before { display: none; }
   .bar .more-toggle { display: inline-flex; }
-  /* A cell: the icon, its name under it. */
+  /* A cell: the icon, its name under it, as wide as the name needs and never under a 44 px target. */
   .bar > button, .bar > .drawgroup > button.draw, .bar > .copygroup > button.copy {
-    width: ${CELL}px; min-width: ${CELL}px; height: 56px; padding: 0; flex-direction: column; gap: 4px; }
+    box-sizing: border-box; width: auto; min-width: ${CELL_MIN}px; height: 56px; padding: 0 ${CELL_PAD}px; flex-direction: column; gap: 4px; flex: none; }
   .bar > button::after, .bar > .drawgroup > button.draw::after { ${LABEL} }
-  .bar > .drawgroup > button.caret, .bar > .copygroup > button.caret { width: ${CARET}px; min-width: ${CARET}px; height: 56px; }
-  /* Pen and its ▾ read as one cell of two targets. */
+  /* A split button: the ▾ a narrow segment against its tool, as tall, a hairline between. */
+  .bar > .drawgroup > button.caret, .bar > .copygroup > button.caret {
+    box-sizing: border-box; width: ${CARET}px; min-width: ${CARET}px; height: 56px; padding: 0; flex: none; }
   .bar > .drawgroup:has(> .caret) { border-radius: 10px; background: rgba(255, 255, 255, 0.05); }
+  .bar > .drawgroup > button.caret { border-left: 1px solid rgba(255, 255, 255, 0.12); }
   .bar .copygroup { margin-left: 0; }
   .bar .copygroup button.copy .label { font: 700 10.5px/1 ui-sans-serif, system-ui, sans-serif; }
   .bar > .copygroup:not(:has(> .caret)) > button.copy { border-radius: 10px; }
@@ -64,7 +80,7 @@ export const NARROW_CSS = `
   .bar .sheet-group[hidden] { display: none; }
   .bar .sheet-title { padding: 0 8px; color: rgba(236, 233, 251, 0.66); font: 700 10.5px/14px ui-sans-serif, system-ui, sans-serif;
     letter-spacing: 0.08em; text-transform: uppercase; }
-  .bar .sheet .cells { display: grid; grid-template-columns: repeat(auto-fill, minmax(${CELL}px, 1fr)); }
+  .bar .sheet .cells { display: grid; grid-template-columns: repeat(auto-fill, minmax(${SHEET_CELL}px, 1fr)); }
   .bar .sheet .cells button { height: 48px; min-width: 44px; flex-direction: column; gap: 3px; }
   .bar .sheet .cells button[data-name]:not(.swatch):not(:has(.label))::after { ${LABEL} }
   /* A menu's ▾ on its own: ▾ as its icon, its name under it. */
@@ -82,7 +98,7 @@ export const NARROW_CSS = `
   .bar .sheet .switch { padding: 2px; }
   .bar .sheet .switch button { min-width: 52px; height: 44px; padding: 0 6px; font-size: 10.5px; }
   .bar .sheet .switch button[aria-pressed="true"] { color: #fff; background: rgba(255, 255, 255, 0.16); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2); }
-  .bar .sheet [data-group="send"] .cells > button.caret { width: ${CELL + 16}px; }
+  .bar .sheet [data-group="send"] .cells > button.caret { width: ${SHEET_CELL + 16}px; }
 
   /* The icon picker: a sheet just above the bar, the spot still marked by its ring. */
   .iconpicker { left: calc(var(--view-left, 0px) + 8px) !important; right: auto !important; bottom: auto !important;
