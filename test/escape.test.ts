@@ -1,11 +1,12 @@
 // @vitest-environment happy-dom
 // Esc is Pointer's while it is open (Edvard, 2026-11-24: "sometimes when I escape it closes my
-// sheet in my app instead of closing the pointer"): Pointer's look at it on the window, in the
-// capture phase (ui/app.ts), comes before the page's listeners on document and its elements and
-// after it, and keeps both the keydown and its keyup from them. Only with the Page tool and nothing
-// of Pointer's open does the page get its Esc, untouched. A page listener on the window's capture
-// phase added before Pointer opened still runs first: no script can come before it.
-import { afterEach, describe, expect, it } from "vitest";
+// sheet in my app instead of closing the pointer"; then "Esc closes Pointer"): Pointer's look at it
+// on the window, in the capture phase (ui/app.ts), comes before the page's listeners on document
+// and its elements and after it, and keeps both the keydown and its keyup from them, also the keyup
+// of the Esc that closed Pointer. Only with the Page tool and nothing of Pointer's open does the
+// page get its Esc, untouched. A page listener on the window's capture phase added before Pointer
+// opened still runs first: no script can come before it.
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { openBubble } from "../src/ui/bubble";
 import { keyHandler } from "../src/ui/keyboard";
 import type { Tool } from "../src/ui/state";
@@ -22,12 +23,14 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-/** Pointer open with a tool, its keys on the window's capture phase as app.ts puts them. */
+/** Pointer open with a tool, its keys on the window's capture phase as app.ts puts them; closing it
+ *  takes keydown off and keeps keyup, as app.ts does. */
 function pointer(tool: Tool, somethingOpen = false) {
   const run = actions(false, somethingOpen);
   const keys = keyHandler(() => tool, run);
   on(window, "keydown", keys.keydown as EventListener, true);
   on(window, "keyup", keys.keyup as EventListener, true);
+  run.close = vi.fn(() => window.removeEventListener("keydown", keys.keydown as EventListener, true));
   return run;
 }
 
@@ -62,12 +65,16 @@ function esc(target: EventTarget = document.body): KeyboardEvent {
 }
 
 describe("Esc while Pointer is open", () => {
-  it("with a mark tool, is Pointer's: it leaves the tool for Page, and the page never hears its keydown or keyup", () => {
+  it("with a mark tool and nothing open, closes Pointer, and the page never hears its keydown or keyup", () => {
     const run = pointer("comment");
     const heard = page();
     expect(esc().defaultPrevented).toBe(true);
-    expect(run.tool).toHaveBeenCalledWith("page");
+    expect(run.close).toHaveBeenCalledOnce();
+    expect(run.tool).not.toHaveBeenCalled();
     expect(heard).toEqual([]);
+    // Pointer closed: the next Esc is the page's.
+    esc();
+    expect(heard).toHaveLength(12);
   });
 
   it("with a menu or the sheet open, closes that first, even with the Page tool, and the page hears nothing", () => {

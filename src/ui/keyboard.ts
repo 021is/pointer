@@ -1,9 +1,9 @@
 // The keyboard edge: never while typing (the page's fields or Pointer's own), never over a text
 // selection for Ctrl+C; every key Pointer takes is kept from the page, its keyup too for Esc.
-// Esc is Pointer's while it is open (Edvard, 2026-11-24: Esc sometimes closed his app's own sheet):
-// it closes Pointer's own control that has focus (shared/escape.ts), else an open menu or the
-// sheet, else it leaves the current tool for Page; only with the Page tool and nothing of Pointer's
-// open does Esc pass to the page, untouched, for the page's own Esc.
+// Esc is Pointer's while it is open (Edvard, 2026-11-24: Esc sometimes closed his app's own sheet;
+// then "Esc closes Pointer"): it closes Pointer's own control that has focus (shared/escape.ts),
+// else an open menu or the sheet, else Pointer itself; only with the Page tool and nothing of
+// Pointer's open does Esc pass to the page, untouched, for the page's own Esc.
 
 import type { Color } from "../marks/types";
 import type { WalkKey } from "../pick/walk";
@@ -20,6 +20,8 @@ export type KeyActions = {
   copy: () => void;
   /** Closes Pointer's open menu or sheet; false when none was open. */
   escape: () => boolean;
+  /** Closes Pointer. */
+  close: () => void;
   walk: (key: WalkKey) => void;
   take: () => void;
   panel: () => void;
@@ -68,7 +70,7 @@ export function keyHandler(tool: () => Tool, run: KeyActions): KeyHandler {
     }
     if (tool() === "page") return false;
     take(e);
-    run.tool("page");
+    run.close();
     return true;
   }
 
@@ -113,7 +115,9 @@ export function keyHandler(tool: () => Tool, run: KeyActions): KeyHandler {
     }
   }
 
-  /** Some pages close on Esc's keyup: the keyup of an Esc Pointer took is Pointer's too. */
+  /** Some pages close on Esc's keyup: the keyup of an Esc Pointer took is Pointer's too, also when
+   *  that Esc closed Pointer (app.ts keeps this listener on the window for the page's life, so it
+   *  stays ahead of the page's later ones; it takes nothing else). */
   function keyup(e: KeyboardEvent) {
     if (!isEscape(e) || !tookEscape) return;
     tookEscape = false;

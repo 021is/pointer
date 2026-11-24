@@ -1,12 +1,19 @@
-// Esc pressed with focus at an element, routed as Pointer's window-level look at Esc routes it
-// (ui/keyboard.ts → shared/escape.ts): the innermost of Pointer's own controls around it closes.
-import { escapeFor } from "../src/shared/escape";
+// Esc pressed with focus at an element, as the browser sends it and Pointer takes it: a real
+// keydown dispatched at the element, with Pointer's keyboard edge on the window's capture phase as
+// app.ts puts it (ui/keyboard.ts → shared/escape.ts). Page tool, nothing of Pointer's open: only one
+// of Pointer's own controls around the element can take it.
+import { keyHandler } from "../src/ui/keyboard";
+import { actions } from "./key-actions";
 
-/** True when one of Pointer's own controls took the Esc. */
+/** True when Pointer took the Esc (one of its own controls closed). */
 export function pressEscape(el: Element): boolean {
-  const path: EventTarget[] = [];
-  for (let n: Node | null = el; n; n = n instanceof ShadowRoot ? n.host : n.parentNode) path.push(n);
-  const close = escapeFor(path);
-  close?.();
-  return close !== undefined;
+  const keys = keyHandler(() => "page", actions(false));
+  window.addEventListener("keydown", keys.keydown, true);
+  try {
+    const down = new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true, composed: true });
+    el.dispatchEvent(down);
+    return down.defaultPrevented;
+  } finally {
+    window.removeEventListener("keydown", keys.keydown, true);
+  }
 }

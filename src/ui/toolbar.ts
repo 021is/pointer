@@ -205,7 +205,7 @@ export function createToolbar(act: BarActions): Toolbar {
   ]);
   const toggle = Object.assign(document.createElement("span"), { className: "switch" });
   toggle.append(...outputs.values());
-  const close = button("close", "Close Pointer", "", act.close);
+  const close = button("close", "Close Pointer", "Esc", act.close);
   close.classList.add("close");
 
   const sheet = createSheet();
