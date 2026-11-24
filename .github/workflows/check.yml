@@ -16,8 +16,9 @@ jobs:
   check:
     name: Check
     # Private: 021's own runners (no billed minutes). Public: GitHub's runners, never 021's: a
-    # public repo's pull requests must not run strangers' code on 021's machines.
-    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted","021"]') || 'ubuntu-latest' }}
+    # public repo's pull requests must not run strangers' code on 021's machines. The OS is pinned:
+    # ubuntu-latest moved to 26.04, where the pinned Playwright installs no Chromium (2026-11-24).
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted","021"]') || 'ubuntu-24.04' }}
     timeout-minutes: 15
     steps:
       # The whole history: gitleaks reads every commit.
