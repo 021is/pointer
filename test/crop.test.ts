@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { formatBundle, formatCrop } from "../src/bundle/format";
-import { cropInfos } from "../src/capture/copy";
-import { BUDGET, GAP, shownFrames, stackRegions } from "../src/capture/layout";
+import { cropInfos, shownIn } from "../src/capture/copy";
+import { BUDGET, GAP, stackRegions } from "../src/capture/layout";
 import { STRIP, stripHeight } from "../src/capture/strip";
 import { FRAME_TAB as TAB } from "../src/marks/svg";
 import { type Crop, cropLabel } from "../src/marks/types";
@@ -71,36 +71,21 @@ describe("stackRegions: several frames in one picture", () => {
   });
 });
 
-describe("shownFrames: what the picture can show", () => {
-  const viewport = { x: 0, y: 0, w: 1280, h: 800 };
-  const a = { label: "A", rect: { x: 10, y: 750, w: 100, h: 100 } };
-  const b = { label: "B", rect: { x: 10, y: 900, w: 100, h: 100 } };
-
-  it("keeps the on-screen part of each frame and names the ones scrolled away", () => {
-    expect(shownFrames([a, b], viewport)).toEqual({
-      shown: [{ label: "A", rect: { x: 10, y: 750, w: 100, h: 50 } }],
-      off: ["B"],
-    });
-  });
-
-  it("stops with the reason when every frame is off screen", () => {
-    expect(shownFrames([b], viewport)).toEqual(new Error("every crop is scrolled out of view: scroll one back in"));
-  });
-
-  it("is empty, not an error, without frames", () => {
-    expect(shownFrames([], viewport)).toEqual({ shown: [], off: [] });
-  });
-});
-
 describe("cropInfos", () => {
-  it("names each crop's component and marks the ones off screen", async () => {
+  it("names each crop's component and how it shows in the picture", async () => {
     const info = { framework: "react" as const, chain: ["Card"], where: { kind: "silent" as const } };
     const frames = sceneFrames([component, free], layout);
-    const infos = await cropInfos([component, free], frames, ["B"], async () => info);
+    const infos = await cropInfos([component, free], frames, (l) => (l === "B" ? "part" : "whole"), async () => info);
     expect(infos).toEqual([
-      { label: "A", component: info, size: { w: 308, h: 208 }, offScreen: false },
-      { label: "B", component: null, size: { w: 400, h: 300 }, offScreen: true },
+      { label: "A", component: info, size: { w: 308, h: 208 }, shown: "whole" },
+      { label: "B", component: null, size: { w: 400, h: 300 }, shown: "part" },
     ]);
+  });
+
+  it("takes how each crop shows from the shots: whole, larger than the screen, or not found", () => {
+    const shown = shownIn({ cuts: [], larger: ["B"], missed: ["C"] });
+    expect(["A", "B", "C"].map(shown)).toEqual(["whole", "part", "none"]);
+    expect(shownIn(null)("A")).toBe("whole");
   });
 });
 
@@ -115,14 +100,15 @@ describe("crops in the bundle", () => {
           where: { kind: "found", source: { file: "src/feature/profile/Header.tsx", line: 42 } },
         },
         size: { w: 320, h: 180 },
-        offScreen: false,
+        shown: "whole",
       }),
     ).toBe("crop A · ProfileHeader ← ProfilePage · src/feature/profile/Header.tsx:42 · 320×180");
-    expect(formatCrop({ label: "B", component: null, size: { w: 400, h: 300 }, offScreen: false })).toBe(
-      "crop B · frame 400×300",
+    expect(formatCrop({ label: "B", component: null, size: { w: 400, h: 300 }, shown: "whole" })).toBe("crop B · frame 400×300");
+    expect(formatCrop({ label: "C", component: null, size: { w: 900, h: 2000 }, shown: "part" })).toBe(
+      "crop C · frame 900×2000 (larger than the screen: the picture shows its top left part)",
     );
-    expect(formatCrop({ label: "C", component: null, size: { w: 9, h: 9 }, offScreen: true })).toBe(
-      "crop C · frame 9×9 (off screen, not in the picture)",
+    expect(formatCrop({ label: "D", component: null, size: { w: 9, h: 9 }, shown: "none" })).toBe(
+      "crop D · frame 9×9 (not on the page at Copy, not in the picture)",
     );
   });
 
@@ -130,7 +116,7 @@ describe("crops in the bundle", () => {
     const text = formatBundle({
       url: "https://x.dev/",
       viewport: { w: 1280, h: 800 },
-      crops: [{ label: "A", component: null, size: { w: 10, h: 10 }, offScreen: false }],
+      crops: [{ label: "A", component: null, size: { w: 10, h: 10 }, shown: "whole" }],
       pins: [],
       shapeNotes: [],
       drawings: { arrows: 1, boxes: 0, ellipses: 0, pens: 0, texts: [], pasted: 0 },
@@ -150,7 +136,7 @@ describe("crops in the bundle", () => {
       drawings: { arrows: 1, boxes: 0, ellipses: 0, pens: 0, texts: [], pasted: 0 },
       image: null,
     };
-    const frame = formatBundle({ ...base, crops: [{ label: "A", component: null, size: { w: 10, h: 10 }, offScreen: false }] });
+    const frame = formatBundle({ ...base, crops: [{ label: "A", component: null, size: { w: 10, h: 10 }, shown: "whole" }] });
     const task = frame.split("\n")[1] ?? "";
     expect(task).toContain("framed these parts of the page");
     expect(task).not.toMatch(/quoted text|\[n\]/);
@@ -159,7 +145,7 @@ describe("crops in the bundle", () => {
       chain: ["Card"],
       where: { kind: "found" as const, source: { file: "src/Card.tsx", line: 3 } },
     };
-    const withFile = formatBundle({ ...base, crops: [{ label: "A", component, size: { w: 10, h: 10 }, offScreen: false }] });
+    const withFile = formatBundle({ ...base, crops: [{ label: "A", component, size: { w: 10, h: 10 }, shown: "whole" }] });
     expect(withFile.split("\n")[1]).toContain("a crop's file:line, when given, is where it is written");
   });
 });

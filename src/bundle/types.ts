@@ -64,13 +64,16 @@ export type DrawingSummary = {
   pasted: number;
 };
 
+/** How a crop shows in the picture: whole (Pointer scrolls one out of view into it, then back),
+ *  its top left part (larger than the screen), or not at all (gone from the page). */
+export type CropShown = "whole" | "part" | "none";
+
 /** A crop frame: a component (with its component info) or a dragged rectangle. */
 export type CropInfo = {
   label: string;
   component: ComponentInfo | null;
   size: { w: number; h: number };
-  /** Scrolled out of view at Copy: named in the text, not in the picture. */
-  offScreen: boolean;
+  shown: CropShown;
 };
 
 export type Bundle = {

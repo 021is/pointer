@@ -2,7 +2,7 @@
 // Every line earns its place: what is unknown says why, what is empty is left out.
 
 import { imageTokens } from "../shared/geometry";
-import type { Bundle, ComponentInfo, CropInfo, DrawingSummary, ElementInfo, PinInfo, ShapeNote, Source } from "./types";
+import type { Bundle, ComponentInfo, CropInfo, CropShown, DrawingSummary, ElementInfo, PinInfo, ShapeNote, Source } from "./types";
 
 /** The page's address without query or hash: a URL can carry a token, and this goes into a chat. */
 export function safeUrl(href: string): string {
@@ -94,10 +94,17 @@ function formatPin(p: PinInfo): string[] {
   return lines;
 }
 
+/** What the agent is told when a crop is not wholly in the picture. */
+const SHOWN: Record<CropShown, string> = {
+  whole: "",
+  part: " (larger than the screen: the picture shows its top left part)",
+  none: " (not on the page at Copy, not in the picture)",
+};
+
 /** "crop A · ProfileHeader ← ProfilePage · src/…/Header.tsx:42 · 320×180", or "crop B · frame 400×300". */
 export function formatCrop(c: CropInfo): string {
   const size = `${c.size.w}×${c.size.h}`;
-  const off = c.offScreen ? " (off screen, not in the picture)" : "";
+  const off = SHOWN[c.shown];
   const info = c.component;
   if (!info) return `crop ${c.label} · frame ${size}${off}`;
   const who = info.chain.length ? `${info.chain.join(" ← ")} · ` : "";

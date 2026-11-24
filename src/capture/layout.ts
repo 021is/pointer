@@ -1,9 +1,9 @@
-// Where each part of the picture goes: the regions (the crop frames on screen, or the one auto
-// crop) stacked top to bottom, each frame's letter tab above it, the text strip at the bottom,
-// all inside what Claude reads at full size. Pure.
+// Where each part of the picture goes: the regions (the crop frames, each captured in view by
+// shots.ts, or the one auto crop) stacked top to bottom, each frame's letter tab above it, the
+// text strip at the bottom, all inside what Claude reads at full size. Pure.
 
-import { FRAME_TAB, type Frame } from "../marks/svg";
-import { type Rect, type Size, intersect, outputSize } from "../shared/geometry";
+import { FRAME_TAB } from "../marks/svg";
+import { type Rect, type Size, outputSize } from "../shared/geometry";
 import { STRIP, stripHeight } from "./strip";
 
 /** A part of the screen to show: a crop frame (label "A") or the auto crop (no label). */
@@ -21,23 +21,6 @@ export const GAP = 10;
 export const BUDGET = { edge: 1568, area: 1_150_000 } as const;
 
 export type Stack = { width: number; height: number; placed: Placed[]; bottom: number };
-
-/**
- * The frames the picture can show (the part of each inside the viewport) and the labels of
- * those scrolled out of view, which the bundle marks "off screen". With frames and none on
- * screen, the reason to stop.
- */
-export function shownFrames(frames: readonly Frame[], viewport: Rect): { shown: Region[]; off: string[] } | Error {
-  const shown: Region[] = [];
-  const off: string[] = [];
-  for (const f of frames) {
-    const rect = intersect(f.rect, viewport);
-    if (rect) shown.push({ label: f.label, rect });
-    else off.push(f.label);
-  }
-  if (frames.length && !shown.length) return new Error("every crop is scrolled out of view: scroll one back in");
-  return { shown, off };
-}
 
 function place(regions: readonly Region[], scale: number): { placed: Placed[]; bottom: number; widest: number } {
   const placed: Placed[] = [];
