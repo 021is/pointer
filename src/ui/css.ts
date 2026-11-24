@@ -1,5 +1,8 @@
 // Pointer's own styles, inside its shadow root: the page's CSS never reaches them and they never
-// reach the page. Dark glass over any page, violet as the one accent.
+// reach the page. Dark glass over any page, violet as the one accent. The narrow bar's own rules
+// are in narrow-css.ts.
+
+import { NARROW_CSS } from "./narrow-css";
 
 export const CSS = `
 :host { all: initial; }
@@ -45,7 +48,9 @@ export const CSS = `
 .bar .group + .group::before, .bar .group + .switch::before {
   content: ""; position: absolute; left: -3px; top: 7px; bottom: 7px; width: 1px; background: rgba(255, 255, 255, 0.1);
 }
-.bar[data-output="text"] [data-only="picture"] { display: none; }
+/* Text hides the picture-only controls, and a wide bar's group left with none of its own. */
+.bar[data-output="text"] [data-only="picture"],
+.bar[data-output="text"] .group:not(:has(> :not([data-only="picture"]))) { display: none; }
 .bar .grip {
   position: relative; width: 30px; height: 32px; display: grid; place-items: center; cursor: grab; color: #b9a8ff;
   border-radius: 10px; transition: color .15s, background .15s;
@@ -200,44 +205,4 @@ export const CSS = `
   border: 2px solid #fff; box-shadow: 0 0 0 2px #7c5cff, 0 2px 8px rgba(0, 0, 0, 0.4); }
 .layer[data-tool="icon"] { cursor: copy; }
 
-/* A narrow viewport (a phone in DevTools' device mode, a narrow window): compact.ts. One row of
-   48 px targets docked to the bottom edge, the rest behind More, every menu as wide as the bar. */
-.bar .more-toggle { display: none; }
-@media (hover: none) { .bar [data-tip]:hover::before { display: none; } }
-@media (max-width: 767px) {
-  /* Laid out in the seen part (shared/view.ts): a page wider than the phone widens the layout. */
-  .bar { left: calc(var(--view-left, 0px) + 8px); right: auto; width: calc(var(--view-width, 100vw) - 16px);
-    top: calc(var(--view-top, 0px) + var(--view-height, 100vh) - 8px); bottom: auto; transform: translateY(-100%);
-    flex-wrap: nowrap; justify-content: space-between; gap: 0; padding: 4px; border-radius: 16px; touch-action: manipulation; }
-  .bar .grip { display: none; }
-  .bar .group, .bar .switch { padding: 0; margin: 0; gap: 0; }
-  .bar .group + .group::before, .bar .group + .switch::before { display: none; }
-  .bar button, .bar button.swatch { height: 48px; min-width: 48px; }
-  .bar .switch button { height: 44px; }
-  .bar .more-toggle { display: inline-flex; }
-  .bar:not([data-more="open"]) [data-tier="more"] { display: none !important; }
-  .bar [data-tip]:hover::before { display: none; }
-  .bar .copygroup { margin-left: 0; }
-  .bar .copygroup button.copy { padding: 0; }
-  .bar[data-more="open"] .copygroup button.copy { padding: 0 12px; }
-  .bar:not([data-more="open"]) .copygroup button.copy { border-radius: 10px; }
-  .bar .copygroup button.copy .label, .bar .copy .mode { display: none; }
-  .bar .drawgroup, .bar .copygroup { position: static; }
-  .bar .drawmenu, .bar .copygroup .menu { left: 0; right: 0; width: auto; bottom: calc(100% + 8px); }
-  .bar .menu .item { height: 44px; }
-  .bar[data-more="open"] { flex-wrap: wrap; justify-content: flex-start; row-gap: 4px; }
-  .bar[data-more="open"] button[data-name]:not(.swatch):not(:has(.label)) { flex-direction: column; gap: 4px; height: 58px; min-width: 58px; }
-  .bar[data-more="open"] button[data-name]:not(.swatch):not(:has(.label))::after {
-    content: attr(data-name); font: 600 10.5px/1 ui-sans-serif, system-ui, sans-serif; }
-  .bar[data-more="open"] .copygroup button.copy .label { display: inline; }
-  /* The icon picker: a sheet just above the bar, the spot still marked by its ring. */
-  .iconpicker { left: calc(var(--view-left, 0px) + 8px) !important; right: auto !important; bottom: auto !important;
-    top: calc(var(--view-top, 0px) + var(--view-height, 100vh) - 72px) !important; transform: translateY(-100%);
-    width: calc(var(--view-width, 100vw) - 16px); max-width: none; }
-  .iconpicker .more { width: auto; }
-  .iconpicker .grid { max-height: calc(var(--view-height, 100vh) * 0.3); }
-  .iconpicker .quick { flex-wrap: wrap; }
-  .iconpicker .icon-result, .iconpicker .more-button { width: 44px; height: 44px; }
-  .iconpicker .more-button { width: auto; }
-}
-`;
+${NARROW_CSS}`;

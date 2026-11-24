@@ -99,6 +99,8 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
 
   /** Pointer's own boxes stay in the part of the page the person sees (shared/view.ts). */
   const syncView = () => showView(host);
+  /** A pinch changes the seen width: the narrow bar fits its tools to it again (toolbar.ts). */
+  const resizeView = () => { syncView(); render(); };
   let frame = 0;
   function render() {
     if (frame) return;
@@ -275,7 +277,7 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
     [window, "keydown", onKey as EventListener, { capture: true }],
     [window, "scroll", render, { passive: true, capture: true }],
     [window, "resize", render],
-    [window.visualViewport ?? window, "resize", syncView],
+    [window.visualViewport ?? window, "resize", resizeView],
     [window.visualViewport ?? window, "scroll", syncView, { passive: true }],
   ];
 

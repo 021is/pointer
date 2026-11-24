@@ -69,7 +69,8 @@ export function createDrawMenu(parts: DrawMenuParts): DrawMenu {
     );
   }
 
-  const outside = closeOnOutside(wrap, () => close());
+  // ▾ may sit in the narrow bar's sheet, away from the menu (fit.ts): a press on it still toggles.
+  const outside = closeOnOutside([wrap, caret], () => close());
   function open() {
     fill();
     menu.hidden = false;

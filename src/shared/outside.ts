@@ -1,13 +1,16 @@
 // A press outside an open menu, picker or panel closes it, and does nothing else: the press that
 // dismisses never also comments, draws or picks on the page. One listener on the window, in the
 // capture phase, from `watch` (on open) to `unwatch` (on close). A click that follows the press
-// (on another button of the bar) still reaches its button.
+// (on another button of the bar) still reaches its button. A menu whose ▾ the narrow bar may move
+// into its sheet names the ▾ as inside too, so a press on it toggles and never closes-then-reopens.
 
 export type Outside = { watch: () => void; unwatch: () => void };
 
-export function closeOnOutside(inside: Element, close: () => void): Outside {
+export function closeOnOutside(inside: Element | readonly Element[], close: () => void): Outside {
+  const own = Array.isArray(inside) ? inside : [inside];
   const press = (e: Event) => {
-    if (e.composedPath().includes(inside)) return;
+    const path = e.composedPath();
+    if (own.some((el) => path.includes(el))) return;
     e.preventDefault();
     e.stopPropagation();
     close();

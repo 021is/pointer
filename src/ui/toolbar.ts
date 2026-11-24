@@ -4,17 +4,21 @@
 // drawing tools, icons, colours and image upload are for a picture, so Text hides them (Gap stays
 // on its key G, its text says enough); a drawing key pressed in Text switches back to Picture.
 // Copy is a split button (copy-menu.ts) whose menu also offers Picture only. On a narrow viewport
-// the bar keeps Pick, Comment, Draw, Undo and Copy and puts the rest behind More (compact.ts).
+// the bar keeps what fits (fit.ts) and puts the rest behind More (compact.ts), in the tool sheet's
+// groups (sheet.ts): the same buttons, moved between the arrangements (layout.ts).
 
 import { COLORS, type Color } from "../marks/types";
 import { IS_MAC } from "../shared/platform";
-import { behindMore, buttonName, createCompact } from "./compact";
+import { NARROW, buttonName, createCompact, staysOpen } from "./compact";
 import { type CopyMenu, createCopyMenu } from "./copy-menu";
+import { fitRow, seenPart } from "./fit";
 import { type IconName, icon } from "./icons";
 import type { Costs } from "../capture/estimate";
 import { type Output, type State, type Tool, pictureOnly } from "./state";
 import { type DrawEntry, createDrawMenu } from "./draw-menu";
 import { REDO_KEY, UNDO_KEY } from "./history";
+import { type Parts, createLayout } from "./layout";
+import { createSheet } from "./sheet";
 import type { StylesLook } from "./styles";
 
 export type BarActions = {
@@ -55,11 +59,15 @@ export const TOOLS: readonly Entry[] = [
 
 export const COLOR_KEYS: readonly Color[] = ["red", "blue", "yellow"];
 
+/** The narrow sheet shows the colours only for what they colour by hand: the draw button's tools
+ *  and Icon (Edvard, 2026-11-24). The keys 1, 2, 3 work with every tool. */
+export const colorsShown = (tool: Tool) => TOOLS.some((t) => t.tool === tool && (t.group === "draw" || t.group === "icon"));
+
 const MOD = IS_MAC ? "⌘" : "Ctrl+";
 const CLEAR_KEY = IS_MAC ? "⇧⌫" : "Shift+Delete";
 
 /** A button's hover tip and its accessible name, with its key; and its short name, shown under
- *  its icon on a narrow bar with More open. */
+ *  its icon in the narrow bar's open sheet. */
 function tip(b: HTMLElement, text: string, key: string) {
   b.dataset.tip = key ? `${text}  ${key}` : text;
   b.dataset.name = buttonName(text);
@@ -79,10 +87,11 @@ function button(name: IconName | null, text: string, key: string, onClick: () =>
   return b;
 }
 
-const group = (only?: Output) => {
-  const g = Object.assign(document.createElement("span"), { className: "group" });
-  if (only) g.dataset.only = only;
-  return g;
+const group = () => Object.assign(document.createElement("span"), { className: "group" });
+
+/** The picture-only controls: Text hides them (and a wide bar's group left with none of its own). */
+const forPicture = (...els: HTMLElement[]) => {
+  for (const el of els) el.dataset.only = "picture";
 };
 
 function grip(bar: HTMLElement): HTMLElement {
@@ -111,11 +120,29 @@ function grip(bar: HTMLElement): HTMLElement {
   return g;
 }
 
+/** The seen width, as the narrow bar's CSS reads it (--view-width, shared/view.ts). */
+const seenWidth = () => Math.round(window.visualViewport?.width ?? window.innerWidth);
+
+/** One of the bar's own elements, by its class. */
+function partOf(root: Element, selector: string): HTMLElement {
+  const el = root.querySelector<HTMLElement>(selector);
+  if (!el) throw new Error(`the bar has no ${selector}`);
+  return el;
+}
+
+/** Runs a re-arrangement and gives focus back to the button that had it: moving a node drops it. */
+function keepingFocus(bar: HTMLElement, arrange: () => void) {
+  const root = bar.getRootNode();
+  const had = root instanceof ShadowRoot ? root.activeElement : bar.ownerDocument.activeElement;
+  arrange();
+  if (had instanceof HTMLElement && bar.contains(had)) had.focus();
+}
+
 export type Toolbar = {
   el: HTMLElement;
   update: (s: State, styles: StylesLook) => void;
   flash: (message: string) => void;
-  /** A narrow bar's More, closed; true when it was open. */
+  /** A narrow bar's sheet, closed; true when it was open. */
   collapse: () => boolean;
 };
 
@@ -127,16 +154,16 @@ export function createToolbar(act: BarActions): Toolbar {
   bar.addEventListener("pointerdown", (e) => e.stopPropagation());
 
   const tools = new Map<Tool, HTMLButtonElement>();
-  const toolButton = (t: Entry) => {
+  for (const t of TOOLS.filter((e) => e.group !== "draw")) {
     const b = button(t.icon, t.title, t.key, () => act.tool(t.tool));
-    if (pictureOnly(t.tool)) b.dataset.only = "picture";
+    if (pictureOnly(t.tool)) forPicture(b);
     tools.set(t.tool, b);
+  }
+  const own = (t: Tool) => {
+    const b = tools.get(t);
+    if (!b) throw new Error(`the bar has no ${t} button`);
     return b;
   };
-  const using = group();
-  using.append(...TOOLS.filter((t) => t.group === "use").map(toolButton));
-  const marking = group();
-  marking.append(...TOOLS.filter((t) => t.group === "mark").map(toolButton));
   const draw = createDrawMenu({
     entries: TOOLS.filter((t) => t.group === "draw"),
     button: (e, onClick) => button(e.icon, e.title, e.key, onClick),
@@ -144,11 +171,10 @@ export function createToolbar(act: BarActions): Toolbar {
     tip,
     choose: act.tool,
   });
-  const drawing = group("picture");
-  drawing.append(draw.el, ...TOOLS.filter((t) => t.group === "icon").map(toolButton));
 
   const colors = new Map<Color, HTMLButtonElement>();
-  const swatches = group("picture");
+  const swatches = group();
+  swatches.classList.add("colors");
   COLOR_KEYS.forEach((c, i) => {
     const b = button(null, c[0]?.toUpperCase() + c.slice(1), String(i + 1), () => act.color(c));
     b.classList.add("swatch");
@@ -156,14 +182,13 @@ export function createToolbar(act: BarActions): Toolbar {
     colors.set(c, b);
     swatches.append(b);
   });
-  const upload = group("picture");
-  upload.append(button("upload", `Add an image (or paste: ${MOD}V)`, "", act.upload));
+  const image = button("upload", `Add an image (or paste: ${MOD}V)`, "", act.upload);
+  forPicture(draw.el, swatches, image);
 
   const styles = button("styles", "Styles of the last pick", "S", act.styles);
+  const undo = button("undo", "Undo", UNDO_KEY, act.undo);
   const redo = button("redo", "Redo", REDO_KEY, act.redo);
   const clear = button("clear", "Clear everything", CLEAR_KEY, act.clear);
-  const edit = group();
-  edit.append(styles, button("undo", "Undo", UNDO_KEY, act.undo), redo, clear);
 
   const menu: CopyMenu = createCopyMenu({
     copy: button("copy", "Copy for the agent", `${MOD}C`, act.copy, "Copy"),
@@ -180,21 +205,42 @@ export function createToolbar(act: BarActions): Toolbar {
   ]);
   const toggle = Object.assign(document.createElement("span"), { className: "switch" });
   toggle.append(...outputs.values());
-  const close = button("close", "Close", "Esc Esc", act.close);
+  const close = button("close", "Close Pointer", "Esc Esc", act.close);
   close.classList.add("close");
 
-  const compact = createCompact(bar, tip);
-  // A narrow bar keeps Pick, Comment, Draw, Undo and Copy at hand; the rest waits behind More.
-  behindMore(using, tools.get("idea"), tools.get("crop"), tools.get("icon"), draw.el.querySelector(".caret"), swatches, upload);
-  behindMore(styles, redo, clear, toggle, menu.el.querySelector(".caret"), close);
-  bar.append(grip(bar), using, marking, drawing, swatches, upload, edit, toggle, menu.el, close, compact.toggle);
+  const sheet = createSheet();
+  const compact = createCompact(bar, sheet.el, tip);
+  staysOpen(undo, redo, clear, swatches, toggle);
+
+  const tool = { page: own("page"), move: own("move"), pick: own("pick"), comment: own("comment"), idea: own("idea"), crop: own("crop"), icon: own("icon") };
+  const carets = { drawCaret: partOf(draw.el, ".caret"), copyCaret: partOf(menu.el, ".caret") };
+  const parts: Parts = { ...tool, ...carets, draw: draw.el, colors: swatches, image, undo, redo, clear, styles, output: toggle, copy: menu.el };
+  const layout = createLayout(bar, parts, { grip: grip(bar), exit: close, toggle: compact.toggle, sheet });
+  layout.wide();
+  // The narrow bar is laid out again when its width or the output changes (fit.ts), and its sheet
+  // closed when the width changes; app.ts updates the bar on every resize.
+  const narrow = window.matchMedia(NARROW);
+  let laidFor = "wide";
+  let laidAs = "";
+  function place(output: Output) {
+    const width = narrow.matches ? String(seenWidth()) : "wide";
+    if (width === laidFor && (width === "wide" || laidAs === output)) return;
+    if (width !== laidFor) compact.collapse();
+    laidFor = width;
+    laidAs = output;
+    keepingFocus(bar, () => (narrow.matches ? layout.narrow(fitRow(seenWidth(), output)) : layout.wide()));
+  }
 
   return {
     el: bar,
     flash: menu.flash,
     collapse: compact.collapse,
     update(s, look) {
+      place(s.output);
       bar.dataset.output = s.output;
+      const colorsSeen = colorsShown(s.tool);
+      bar.dataset.colors = colorsSeen ? "shown" : "hidden";
+      sheet.show((p) => seenPart(p, s.output, colorsSeen));
       styles.dataset.state = look.state;
       styles.setAttribute("aria-pressed", String(look.state === "open"));
       tip(styles, look.tip, "S");

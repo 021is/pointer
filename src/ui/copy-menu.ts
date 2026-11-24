@@ -66,7 +66,8 @@ export function createCopyMenu(parts: CopyMenuParts): CopyMenu {
   menu.addEventListener("pointerdown", (e) => e.stopPropagation());
   wrap.append(copy, caret, menu);
 
-  const outside = closeOnOutside(wrap, () => close());
+  // ▾ may sit in the narrow bar's sheet, away from the menu (fit.ts): a press on it still toggles.
+  const outside = closeOnOutside([wrap, caret], () => close());
   function close() {
     menu.hidden = true;
     caret.setAttribute("aria-expanded", "false");
