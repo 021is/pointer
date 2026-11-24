@@ -68,21 +68,32 @@ export function planSweep(frames: readonly PageFrame[], screen: Screen): Plan {
   return { stops, larger };
 }
 
+/** What became of the crops not wholly in the picture: larger than the screen (its top left part
+ *  is in), gone (its element left the page during the sweep), or unseen (it is on the page, but
+ *  its scroll did not bring it into view: hidden, in a closed panel, behind a sticky box). */
+export type Outcome = { larger: string[]; gone: string[]; unseen: string[] };
+
 const crops = (labels: readonly string[], one: string, many: string) =>
   labels.length === 1 ? `Crop ${labels[0]} ${one}` : `Crops ${labels.join(", ")} ${many}`;
+const them = (labels: readonly string[]) => (labels.length === 1 ? "it" : "them");
 
-/** What to tell a person when a crop is not wholly in the picture: plain, with the way to fix it,
- *  never as a failure (the picture and the text are there). Null when every crop is in whole. */
-export function sweepNote(larger: readonly string[], missed: readonly string[]): string | null {
+/** What to tell a person when a crop is not wholly in the picture: plain, one sentence per cause
+ *  with the way to fix it, never as a failure (the picture and the text are there). Null when every
+ *  crop is in whole. */
+export function sweepNote(o: Outcome): string | null {
   const notes: string[] = [];
-  if (larger.length) {
+  if (o.larger.length) {
     notes.push(
-      `${crops(larger, "is", "are")} larger than the screen, so the picture shows the top left part. To get all of it, crop a smaller part or zoom the page out (Ctrl − or ⌘ −) and copy again.`,
+      `${crops(o.larger, "is", "are")} larger than the screen, so the picture shows the top left part. To get all of it, crop a smaller part or zoom the page out (Ctrl − or ⌘ −) and copy again.`,
     );
   }
-  if (missed.length) {
-    const it = missed.length === 1 ? "it" : "them";
-    notes.push(`${crops(missed, "was", "were")} not found on the page when copying, so the text names ${it} without a picture. Crop ${it} again if the page changed.`);
+  if (o.gone.length) {
+    notes.push(`${crops(o.gone, "is", "are")} gone from the page: the part ${them(o.gone)} framed was removed while copying. Crop ${them(o.gone)} again.`);
+  }
+  if (o.unseen.length) {
+    notes.push(
+      `${crops(o.unseen, "is", "are")} on the page, but scrolling did not bring ${them(o.unseen)} into view (hidden, or in a closed menu or panel). Show ${them(o.unseen)}, then copy again.`,
+    );
   }
   return notes.length ? notes.join(" ") : null;
 }

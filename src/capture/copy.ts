@@ -9,6 +9,7 @@ import type { Frame } from "../marks/svg";
 import { type Crop, type Pin, cropLabel } from "../marks/types";
 import { describeElement, liveLayout } from "../pick/describe";
 import { cropFor } from "../shared/geometry";
+import { tabViewport } from "../shared/view";
 import { componentOf } from "../source/client";
 import { type State, cropsOf, laidOf, pictureBoxes, pictureScene, pinsOf, sceneFrames, shapeNotesOf, summarize, wantsImage } from "../ui/state";
 import { type Costs, costsOf } from "./estimate";
@@ -70,7 +71,8 @@ export const shownIn =
   (shots: Shots | null) =>
   (label: string): CropShown => {
     if (!shots) return "whole";
-    if (shots.missed.includes(label)) return "none";
+    if (shots.gone.includes(label)) return "gone";
+    if (shots.unseen.includes(label)) return "unseen";
     return shots.larger.includes(label) ? "part" : "whole";
   };
 
@@ -78,7 +80,7 @@ export const shownIn =
 function nowOf(ctx: CopyContext): Now {
   return () => {
     const layout = liveLayout();
-    const viewport = { x: 0, y: 0, w: innerWidth, h: innerHeight };
+    const viewport = tabViewport();
     const scene = pictureScene(ctx.state, layout);
     const laid = laidOf(ctx.state.marks, layout);
     const boxes = [...pictureBoxes(scene), ...laid.map((p) => p.rect)];
@@ -94,15 +96,15 @@ async function dataNow(ctx: CopyContext, shots: Promise<Shots> | null) {
   const [pins, crops] = await Promise.all([pinInfos(ctx), cropInfos(cropsOf(ctx.state.marks), frames, shown, componentOf)]);
   const drawings = summarize(ctx.state.marks);
   const shapeNotes = shapeNotesOf(ctx.state.marks, pins.length);
-  const viewport = { w: innerWidth, h: innerHeight };
-  return (image: CopyResult["image"]): Bundle => ({ url: safeUrl(location.href), viewport, crops, pins, shapeNotes, drawings, image });
+  const { w, h } = tabViewport();
+  return (image: CopyResult["image"]): Bundle => ({ url: safeUrl(location.href), viewport: { w, h }, crops, pins, shapeNotes, drawings, image });
 }
 
 /** What each output would cost now, for Copy's menu: every crop counts, as the shots will take it. */
 export async function estimateCosts(ctx: CopyContext): Promise<Costs> {
   const data = await dataNow(ctx, null);
   const at = nowOf(ctx)();
-  const regions = at.frames.length ? framedSizes(at.frames, { w: innerWidth, h: innerHeight }) : [{ label: null, rect: at.whole }];
+  const regions = at.frames.length ? framedSizes(at.frames, tabViewport()) : [{ label: null, rect: at.whole }];
   return costsOf(regions, formatStrip(data(null), true), formatStrip(data(null), false));
 }
 
@@ -131,7 +133,7 @@ export function buildBundle(ctx: CopyContext) {
     ? (async () => {
         const [s, d] = await Promise.all([shots, data]);
         const pic = await picture(s.cuts, output === "image" ? null : formatStrip(d(null), true));
-        return { ...pic, note: sweepNote(s.larger, s.missed) };
+        return { ...pic, note: sweepNote(s) };
       })()
     : null;
   const text =

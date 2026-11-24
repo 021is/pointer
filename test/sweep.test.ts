@@ -65,17 +65,20 @@ describe("planSweep", () => {
 
 describe("sweepNote", () => {
   it("is nothing when every crop is in whole", () => {
-    expect(sweepNote([], [])).toBeNull();
+    expect(sweepNote({ larger: [], gone: [], unseen: [] })).toBeNull();
   });
 
-  it("says plainly what to do, never that something failed", () => {
-    const one = sweepNote(["B"], []) ?? "";
+  it("says plainly what to do, one sentence per cause, never that something failed", () => {
+    const one = sweepNote({ larger: ["B"], gone: [], unseen: [] }) ?? "";
     expect(one).toBe(
       "Crop B is larger than the screen, so the picture shows the top left part. To get all of it, crop a smaller part or zoom the page out (Ctrl − or ⌘ −) and copy again.",
     );
-    const all = sweepNote(["A", "C"], ["D"]) ?? "";
+    const all = sweepNote({ larger: ["A", "C"], gone: ["D"], unseen: ["E", "F"] }) ?? "";
     expect(all).toContain("Crops A, C are larger than the screen");
-    expect(all).toContain("Crop D was not found on the page when copying, so the text names it without a picture.");
+    expect(all).toContain("Crop D is gone from the page: the part it framed was removed while copying. Crop it again.");
+    expect(all).toContain(
+      "Crops E, F are on the page, but scrolling did not bring them into view (hidden, or in a closed menu or panel). Show them, then copy again.",
+    );
     expect(`${one} ${all}`).not.toMatch(/fail/i);
   });
 });

@@ -82,9 +82,9 @@ describe("cropInfos", () => {
     ]);
   });
 
-  it("takes how each crop shows from the shots: whole, larger than the screen, or not found", () => {
-    const shown = shownIn({ cuts: [], larger: ["B"], missed: ["C"] });
-    expect(["A", "B", "C"].map(shown)).toEqual(["whole", "part", "none"]);
+  it("takes how each crop shows from the shots: whole, larger than the screen, gone, or unseen", () => {
+    const shown = shownIn({ cuts: [], larger: ["B"], gone: ["C"], unseen: ["D"] });
+    expect(["A", "B", "C", "D"].map(shown)).toEqual(["whole", "part", "gone", "unseen"]);
     expect(shownIn(null)("A")).toBe("whole");
   });
 });
@@ -107,8 +107,11 @@ describe("crops in the bundle", () => {
     expect(formatCrop({ label: "C", component: null, size: { w: 900, h: 2000 }, shown: "part" })).toBe(
       "crop C · frame 900×2000 (larger than the screen: the picture shows its top left part)",
     );
-    expect(formatCrop({ label: "D", component: null, size: { w: 9, h: 9 }, shown: "none" })).toBe(
-      "crop D · frame 9×9 (not on the page at Copy, not in the picture)",
+    expect(formatCrop({ label: "D", component: null, size: { w: 9, h: 9 }, shown: "gone" })).toBe(
+      "crop D · frame 9×9 (removed from the page while copying, not in the picture)",
+    );
+    expect(formatCrop({ label: "E", component: null, size: { w: 9, h: 9 }, shown: "unseen" })).toBe(
+      "crop E · frame 9×9 (on the page but could not be scrolled into view, not in the picture)",
     );
   });
 

@@ -59,3 +59,19 @@ export function fitRow(viewWidth: number, output: Output): ReadonlySet<Part> {
   }
   return row;
 }
+
+/** How the bar is laid out: the wide bar's groups, or the narrow row for a seen width and an output. */
+export type Laid = { kind: "wide" } | { kind: "narrow"; width: number; output: Output };
+
+/** What a new layout asks of the bar. */
+export const Relayout = { KEEP: "keep", ARRANGE: "arrange", CLOSE_AND_ARRANGE: "close and arrange" } as const;
+export type Relayout = (typeof Relayout)[keyof typeof Relayout];
+
+/** Nothing when the layout is the same; a new arrangement with the sheet closed when the width
+ *  changed (wide ↔ narrow, or another narrow width); a new arrangement with the sheet left open when
+ *  only the output changed (Picture | Text is pressed in the sheet). */
+export function relayout(was: Laid, now: Laid): Relayout {
+  if (was.kind === "wide" && now.kind === "wide") return Relayout.KEEP;
+  if (was.kind === "wide" || now.kind === "wide" || was.width !== now.width) return Relayout.CLOSE_AND_ARRANGE;
+  return was.output === now.output ? Relayout.KEEP : Relayout.ARRANGE;
+}

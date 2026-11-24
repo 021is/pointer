@@ -98,7 +98,8 @@ function formatPin(p: PinInfo): string[] {
 const SHOWN: Record<CropShown, string> = {
   whole: "",
   part: " (larger than the screen: the picture shows its top left part)",
-  none: " (not on the page at Copy, not in the picture)",
+  gone: " (removed from the page while copying, not in the picture)",
+  unseen: " (on the page but could not be scrolled into view, not in the picture)",
 };
 
 /** "crop A · ProfileHeader ← ProfilePage · src/…/Header.tsx:42 · 320×180", or "crop B · frame 400×300". */

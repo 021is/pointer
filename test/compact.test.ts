@@ -2,7 +2,8 @@
 // The bar on a narrow viewport (Edvard, 2026-11-23: "make the bar shorter but still having the
 // best UI/UX"; 2026-11-24: at ~700 px it must not stretch). Its CSS under 768 px: a centred row as
 // wide as its tools, each named under its icon, cells as wide as fit.ts counts them; the wide bar
-// hides More. The layout itself is checked in headless Chromium at phone and tablet sizes.
+// hides More. The layout itself is checked in Chromium at phone and tablet sizes by
+// scripts/narrow-check.mjs (run by hand: it needs the demo app and a Chromium).
 import { describe, expect, it } from "vitest";
 import { buttonName } from "../src/ui/compact";
 import { CSS } from "../src/ui/css";

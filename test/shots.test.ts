@@ -100,4 +100,46 @@ describe("shoot", () => {
     expect(events.at(-1)).toBe("scroll to 500");
     expect(host.style.visibility).toBe("");
   });
+
+  it("a crop that scrolling does not bring into view is named unseen, not left out silently", async () => {
+    at(0);
+    const marks: Crop[] = [{ kind: "crop", el: null, rect: { x: 20, y: 3000, w: 300, h: 100 } }];
+    // Stuck above the view whatever the scroll (a sticky box, a closed panel): never in view.
+    const now = () => ({ frames: [{ label: "A", rect: { x: 20, y: -500, w: 300, h: 100 } }], scene, laid: [], whole: { x: 0, y: 0, w: 400, h: 800 } });
+    const shots = await shoot(document.createElement("div"), marks, now);
+    expect(shots).toMatchObject({ cuts: [], larger: [], gone: [], unseen: ["A"] });
+  });
+
+  it("a crop in a scrolling box whose element leaves the page during the sweep is named gone", async () => {
+    at(0);
+    const box = document.createElement("div");
+    box.style.overflowY = "auto";
+    Object.defineProperty(box, "scrollHeight", { value: 900 });
+    Object.defineProperty(box, "clientHeight", { value: 100 });
+    const inside = document.createElement("section");
+    box.append(inside);
+    document.body.append(box);
+    const marks: Crop[] = [
+      { kind: "crop", el: null, rect: { x: 20, y: 10, w: 300, h: 100 } },
+      { kind: "crop", el: inside, rect: { x: 0, y: 0, w: 1, h: 1 } },
+    ];
+    const now = () => ({
+      frames: [
+        { label: "A", rect: { x: 20, y: 10 - scrollY, w: 300, h: 100 } },
+        { label: "B", rect: { x: 20, y: 5000, w: 300, h: 100 } },
+      ],
+      scene,
+      laid: [],
+      whole: { x: 0, y: 0, w: 400, h: 800 },
+    });
+    const { screenshot } = await import("../src/capture/picture");
+    vi.mocked(screenshot).mockImplementationOnce(async () => {
+      inside.remove(); // the page changes while A is taken
+      return document.createElement("img");
+    });
+    const shots = await shoot(document.createElement("div"), marks, now);
+    expect(shots.cuts.map((c) => c.region.label)).toEqual(["A"]);
+    expect(shots.gone).toEqual(["B"]);
+    box.remove();
+  });
 });

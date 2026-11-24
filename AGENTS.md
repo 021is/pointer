@@ -19,10 +19,10 @@ dev-build information (React fibers, Vue and Svelte metadata, source maps).
 |---|---|
 | `src/background.ts` | service worker: icon/shortcut → inject; `captureVisibleTab`; the welcome page on install (and on an update that left no shortcut); the preview tab |
 | `src/welcome.ts`, `src/shared/shortcut.ts` | the welcome page names the key Chrome really bound, or offers to set one |
-| `src/ui/` | the content script: shadow-rooted layer, toolbar, bubble, keys, state; `copy-flow.ts` (Copy, clear after copy, preview), `copy-menu.ts` (the split button), `move.ts` (the Move tool), `history.ts` (Undo, Redo, Clear everything: the one way), `styles.ts` (the Styles button: every press opens, closes or says why), `compact.ts` (the bar under 768 px, as in DevTools' device mode: five tools at hand, the rest behind More; touch works everywhere, the layer is `touch-action: none`) |
+| `src/ui/` | the content script: shadow-rooted layer, toolbar, bubble, keys, state; `copy-flow.ts` (Copy, clear after copy, preview), `copy-menu.ts` (the split button), `move.ts` (the Move tool), `history.ts` (Undo, Redo, Clear everything: the one way), `styles.ts` (the Styles button: every press opens, closes or says why), `compact.ts` (the bar under 768 px, as in DevTools' device mode: centred, as wide as its tools, each named under its icon; More, which says Close while the sheet is open; the sheet's close paths; touch works everywhere, the layer is `touch-action: none`), `fit.ts` (pure: which tools the narrow row keeps for the seen width, in priority order, and when to lay it out again), `sheet.ts` (the tool sheet: what the row has no room for, in Mark, Edit and Send, Exit by its handle, at most 45% of the height), `layout.ts` (moves the same buttons between the wide groups and the narrow row and sheet, never copies them), `narrow-css.ts` (their CSS) |
 | `src/draw/`, `src/pick/`, `src/marks/` | drawing gestures, element picking, marks → SVG |
 | `src/keep/` | marks kept through a reload: `saved.ts` (marks ↔ plain data, pure; icons by Lucide name only), `check.ts` (every kept mark checked field by field), `keep.ts` (the content script's side), `store.ts` (the worker's `chrome.storage.session`) |
-| `src/capture/` | screenshot, crop, layout within the image budget, text strip, clipboard, cost estimate |
+| `src/capture/` | screenshot, crop, layout within the image budget, text strip, clipboard, cost estimate; `sweep.ts` (pure: where to scroll for crops out of view, near ones together, far ones one at a time, and what to say when one is not wholly in), `shots.ts` (scrolls there, captures, puts every scroll back exactly); the worker paces captures within Chrome's two a second (`src/shared/pace.ts`) |
 | `src/preview.ts`, `preview.html` | the preview page: what Copy would give, from the service worker |
 | `pages.css`, `brand/` | the extension's pages in 021's look, and 021's logo, bundled (never fetched) |
 | `src/panel/` | the style panel: matched CSS, live edits on one element, their diff |
@@ -32,7 +32,7 @@ dev-build information (React fibers, Vue and Svelte metadata, source maps).
 | `src/bundle/` | the bundle's data and its text format, key styles, colours |
 | `icons/`, `store/`, `welcome.html` | the icon (SVG master + PNGs), the store listing and tile, the first-run page |
 | `test/` | vitest; pure modules, plus happy-dom for the DOM pieces |
-| `demo/`, `scripts/screenshots.mjs` | a small fictional Vite + React app to try Pointer on, and the store screenshots taken on it |
+| `demo/`, `scripts/screenshots.mjs`, `scripts/narrow-check.mjs` | a small fictional Vite + React app to try Pointer on, the store screenshots taken on it, and the narrow bar checked on it in Chromium's device mode at phone and tablet sizes (run by hand) |
 
 ## Rules
 
