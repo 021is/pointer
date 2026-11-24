@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { initialState } from "../src/ui/state";
 import type { Tool } from "../src/ui/state";
 import { NO_PICK, makeBar } from "./bar";
+import { pressEscape } from "./escape";
 
 function bar() {
   const tool = vi.fn();
@@ -75,7 +76,7 @@ describe("the draw button", () => {
     expect(tool).toHaveBeenLastCalledWith("box");
     expect(menu().hidden).toBe(true);
     caret().click();
-    menu().querySelector("button")?.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(pressEscape(menu().querySelector("button") as Element)).toBe(true);
     expect(menu().hidden).toBe(true);
     expect(menu().hasAttribute("data-own-keys")).toBe(true);
   });

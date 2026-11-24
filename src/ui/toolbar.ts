@@ -142,7 +142,7 @@ export type Toolbar = {
   el: HTMLElement;
   update: (s: State, styles: StylesLook) => void;
   flash: (message: string) => void;
-  /** A narrow bar's sheet, closed; true when it was open. */
+  /** Esc's first ways out: an open ▾ menu closed, else a narrow bar's sheet; true when one was open. */
   collapse: () => boolean;
 };
 
@@ -205,7 +205,7 @@ export function createToolbar(act: BarActions): Toolbar {
   ]);
   const toggle = Object.assign(document.createElement("span"), { className: "switch" });
   toggle.append(...outputs.values());
-  const close = button("close", "Close Pointer", "Esc Esc", act.close);
+  const close = button("close", "Close Pointer", "", act.close);
   close.classList.add("close");
 
   const sheet = createSheet();
@@ -244,7 +244,7 @@ export function createToolbar(act: BarActions): Toolbar {
   return {
     el: bar,
     flash: menu.flash,
-    collapse: compact.collapse,
+    collapse: () => menu.close() || draw.close() || compact.collapse(),
     update(s, look) {
       place(s.output);
       bar.dataset.output = s.output;

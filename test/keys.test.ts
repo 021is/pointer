@@ -35,8 +35,8 @@ describe("commandFor", () => {
     expect(commandFor(key("p", { altKey: true }), "pen")).toBeNull();
   });
 
-  it("knows Escape, I and S", () => {
-    expect(commandFor(key("Escape"), "pen")).toEqual({ type: "escape" });
+  it("knows I and S; Escape is no command here (keyboard.ts routes it first, escape.test.ts)", () => {
+    expect(commandFor(key("Escape"), "pen")).toBeNull();
     expect(commandFor(key("i"), "pen")).toEqual({ type: "image" });
     expect(commandFor(key("s"), "pick")).toEqual({ type: "panel" });
   });

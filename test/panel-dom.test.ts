@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { edit } from "../src/panel/element";
 import { knownClasses, matchedProps } from "../src/panel/rules";
 import { renderPanel } from "../src/panel/view";
+import { pressEscape } from "./escape";
 
 const card = () => {
   const el = document.querySelector<HTMLElement>(".card");
@@ -58,7 +59,7 @@ describe("the panel's value field", () => {
     const value = row?.querySelector<HTMLInputElement>(".val");
     if (!value) throw new Error("no color row");
     value.value = "red";
-    value.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    expect(pressEscape(value)).toBe(true);
     value.dispatchEvent(new Event("change"));
     expect(e.edits.props).toEqual([]);
     expect(card().style.getPropertyValue("color")).toBe("");

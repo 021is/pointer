@@ -15,7 +15,14 @@ export type CopyMenuParts = {
   estimate: () => Promise<Costs>;
 };
 
-export type CopyMenu = { el: HTMLElement; toggle: () => void; update: (s: State) => void; flash: (message: string) => void };
+export type CopyMenu = {
+  el: HTMLElement;
+  toggle: () => void;
+  /** Closes the menu; true when it was open. */
+  close: () => boolean;
+  update: (s: State) => void;
+  flash: (message: string) => void;
+};
 
 const el = <K extends keyof HTMLElementTagNameMap>(tag: K, className: string, text = "") =>
   Object.assign(document.createElement(tag), { className, textContent: text });
@@ -68,10 +75,13 @@ export function createCopyMenu(parts: CopyMenuParts): CopyMenu {
 
   // ▾ may sit in the narrow bar's sheet, away from the menu (fit.ts): a press on it still toggles.
   const outside = closeOnOutside([wrap, caret], () => close());
-  function close() {
+  /** Closes the menu; true when it was open (Esc then does nothing else). */
+  function close(): boolean {
+    if (menu.hidden) return false;
     menu.hidden = true;
     caret.setAttribute("aria-expanded", "false");
     outside.unwatch();
+    return true;
   }
   function open() {
     menu.hidden = false;
@@ -95,6 +105,7 @@ export function createCopyMenu(parts: CopyMenuParts): CopyMenu {
   const label = copy.querySelector(".label");
   return {
     el: wrap,
+    close,
     toggle: () => (menu.hidden ? open() : close()),
     update(s) {
       mode.textContent = SHORT[s.output];

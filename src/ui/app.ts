@@ -231,14 +231,14 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
   }
 
   const trail: Element[] = [];
-  const onKey = keyHandler(() => state.tool, {
+  const keys = keyHandler(() => state.tool, {
     tool: setTool,
     color: (c) => update(() => (state.color = c)),
     image: () => setOutput(otherOutput(state.output)),
     undo: hist.undo,
     redo: hist.redo,
     copy: () => flow.copy(),
-    escape: () => bar.collapse() || (state.tool === "page" ? close() : setTool("page")),
+    escape: bar.collapse,
     walk: (key) => {
       if (!state.hover) return;
       const next = walk(state.hover.el, key, trail);
@@ -274,7 +274,8 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
     [layer, "dblclick", onDouble as EventListener],
     [window, "pointermove", pasted.track as EventListener, { passive: true }],
     [window, "paste", pasted.onPaste as EventListener, { capture: true }],
-    [window, "keydown", onKey as EventListener, { capture: true }],
+    [window, "keydown", keys.keydown as EventListener, { capture: true }],
+    [window, "keyup", keys.keyup as EventListener, { capture: true }],
     [window, "scroll", render, { passive: true, capture: true }],
     [window, "resize", render],
     [window.visualViewport ?? window, "resize", resizeView],

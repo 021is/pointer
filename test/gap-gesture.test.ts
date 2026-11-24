@@ -8,6 +8,7 @@ import type { Pin } from "../src/marks/types";
 import type { Point } from "../src/shared/geometry";
 import { type GapHost, gapBadge, gapGesture } from "../src/ui/gap-gesture";
 import { initialState } from "../src/ui/state";
+import { pressEscape } from "./escape";
 
 type Box = { el: HTMLElement; x: number; y: number; w: number; h: number };
 
@@ -113,7 +114,7 @@ describe("startGap", () => {
     const g = gesture();
     g.dragFrom({ x: 150, y: 120 }, { x: 230, y: 125 });
     const input = g.root.querySelector(".bubble textarea") as HTMLTextAreaElement;
-    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    expect(pressEscape(input)).toBe(true);
     await vi.waitFor(() => expect(g.root.querySelector(".bubble")).toBeNull());
     expect(g.state.marks).toHaveLength(1);
     expect((g.state.marks[0] as Pin).note).toBe("");
