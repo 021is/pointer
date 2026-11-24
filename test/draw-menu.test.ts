@@ -3,33 +3,13 @@
 // the tool it shows; ▾ or a second press opens the other five; arrows, Enter and Esc work.
 import { describe, expect, it, vi } from "vitest";
 import { initialState } from "../src/ui/state";
-import type { StylesLook } from "../src/ui/styles";
-import { createToolbar } from "../src/ui/toolbar";
 import type { Tool } from "../src/ui/state";
-
-const EMPTY: StylesLook = { state: "empty", tip: "Styles: no pick yet" };
+import { NO_PICK, makeBar } from "./bar";
 
 function bar() {
   const tool = vi.fn();
-  const noop = () => {};
-  const tb = createToolbar({
-    tool,
-    color: noop,
-    output: noop,
-    upload: noop,
-    styles: noop,
-    undo: noop,
-    redo: noop,
-    clear: noop,
-    copy: noop,
-    copyAs: noop,
-    preview: noop,
-    clearAfterCopy: noop,
-    estimate: async () => ({ picture: 0, text: 0, image: 0 }),
-    close: noop,
-  });
-  document.body.append(tb.el);
-  const show = (t: Tool) => tb.update({ ...initialState(), tool: t }, EMPTY);
+  const tb = makeBar({ tool });
+  const show = (t: Tool) => tb.update({ ...initialState(), tool: t }, NO_PICK);
   const q = <T extends Element>(sel: string) => tb.el.querySelector(sel) as T;
   const menu = () => q<HTMLElement>(".drawmenu");
   const names = () => [...menu().querySelectorAll(".name")].map((n) => n.textContent);

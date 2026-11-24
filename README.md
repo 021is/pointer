@@ -86,7 +86,7 @@ twice, or click the ✕ at the right end of the bar.
 | No file and line in the copy | Your app is not running in development mode, or its framework gives no source information (see [below](#where-the-file-and-line-come-from)). Your agent still gets each element's text and selector, which is enough to find it. |
 | It doesn't run on a `file://` page | In `chrome://extensions`, open Pointer's **Details** and turn on **Allow access to file URLs**. |
 | Paste gives only the picture | That's expected in Claude Code: its chat keeps only the image. The picture has the file:line lines printed under it, so nothing is lost. |
-| Where are my tools on a phone-sized page? | Below 768 px wide (Chrome DevTools' device mode, a narrow window) the bar docks to the bottom: Pick, Comment, Draw, Undo and Copy, and **More** (⋯) for every other tool, each with its name. Touch works: tap to comment or pick, drag to draw or move. To scroll the page, use the Page tool or the mouse wheel. |
+| Where are my tools on a phone-sized page? | Below 768 px wide (Chrome DevTools' device mode, a narrow window) the bar docks to the bottom, each tool named under its icon: on a phone Pick, Comment, Draw, Undo and Copy; a wider screen shows more. **More** (⋯) opens a sheet with the rest in three groups, Mark, Edit and Send; while it is open More says **Close**, and a tool chosen, Esc, a tap outside or a drag down closes it too. Touch works: tap to comment or pick, drag to draw or move. To scroll the page, use the Page tool or the mouse wheel. |
 
 Still stuck? [Open an issue](https://github.com/021is/pointer/issues) and say what you pressed and what you saw.
 
