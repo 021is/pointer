@@ -11,12 +11,16 @@ import {
   isPreviewAsk,
   isPreviewRequest,
 } from "./shared/messages";
+import { CAPTURE_GAP, pacer } from "./shared/pace";
 import { shortcutOf, titleFor } from "./shared/shortcut";
 import { listenIcons } from "./icons/worker";
 import { listenKeep } from "./keep/store";
 
 listenKeep();
 listenIcons();
+
+/** Screenshots one at a time, within Chrome's two a second (shared/pace.ts). */
+const capture = pacer(CAPTURE_GAP, Date.now, (ms) => new Promise((done) => setTimeout(done, ms)));
 
 /** The last preview, held only until its page has taken it (in memory, never stored). */
 let preview: Preview | null = null;
@@ -99,7 +103,7 @@ chrome.runtime.onMessage.addListener((message: unknown, sender, reply: (r: Captu
     reply({ ok: false, error: "capture asked from outside a tab" });
     return false;
   }
-  chrome.tabs.captureVisibleTab(windowId, { format: "png" }).then(
+  capture(() => chrome.tabs.captureVisibleTab(windowId, { format: "png" })).then(
     (dataUrl) => reply({ ok: true, dataUrl }),
     (err: unknown) => reply({ ok: false, error: String(err) }),
   );

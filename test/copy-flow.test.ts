@@ -1,11 +1,12 @@
 // @vitest-environment happy-dom
 // Copy's flow on its real outputs: what buildBundle gives per output, clear after copy with
-// Undo, and the preview's payload and its failure. The screenshot and the probe are stubbed.
+// Undo, the preview's payload and its failure, and a crop larger than the screen said plainly.
+// The screenshot and the probe are stubbed.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../src/capture/picture", () => ({
   screenshot: vi.fn(async () => ({ naturalWidth: 100, naturalHeight: 100 })),
-  picture: vi.fn(async (_shot: unknown, _regions: unknown, _scene: unknown, strip: string | null) => ({
+  picture: vi.fn(async (_cuts: unknown, strip: string | null) => ({
     blob: new Blob([strip ?? "no strip"], { type: "image/png" }),
     size: { w: 10, h: 10 },
   })),
@@ -47,19 +48,19 @@ describe("buildBundle per output", () => {
     const { text, image } = buildBundle(setup("image"));
     expect(text).toBeNull();
     await image;
-    expect(vi.mocked(picture).mock.calls[0]?.[3]).toBeNull();
+    expect(vi.mocked(picture).mock.calls[0]?.[1]).toBeNull();
   });
 
   it("Picture + text: a strip under the picture and the full text beside it", async () => {
     const { text, image } = buildBundle(setup("picture"));
     await image;
-    expect(vi.mocked(picture).mock.calls[0]?.[3]).toContain("[1] comment");
+    expect(vi.mocked(picture).mock.calls[0]?.[1]).toContain("[1] comment");
     expect(await text).toContain("image: 10×10");
   });
 });
 
 describe("copyFlow", () => {
-  let said: { message: string; action?: { label: string; run: () => void } }[];
+  let said: { message: string; kind?: "ok" | "error"; action?: { label: string; run: () => void } }[];
   let flashed: string[];
 
   beforeEach(() => {
@@ -78,8 +79,8 @@ describe("copyFlow", () => {
       editsOf: () => null,
       replay: () => {},
     });
-    const say = (message: string, _kind?: "ok" | "error", action?: { label: string; run: () => void }) =>
-      said.push({ message, action });
+    const say = (message: string, kind?: "ok" | "error", action?: { label: string; run: () => void }) =>
+      said.push({ message, kind, action });
     const update = (change: () => void) => change();
     const { clear } = createHistory({ state: ctx.state, hooks, say, update });
     return copyFlow({
@@ -121,6 +122,22 @@ describe("copyFlow", () => {
     await flow(ctx).preview();
     expect(sent[0]).toMatchObject({ type: "preview", text: expect.stringContaining("[1] comment"), tokens: 1, output: "picture" });
     expect((sent[0] as { png: string }).png).toMatch(/^data:image\/png;base64,/);
-    expect(said.at(-1)?.message).toBe("Preview failed: no window");
+    expect(said.at(-1)?.message).toBe("The preview did not open: no window");
+  });
+
+  it("a crop larger than the screen opens the preview and says plainly what to do, never as a failure", async () => {
+    const ctx = setup("picture");
+    ctx.state.marks = [{ kind: "crop", el: null, rect: { x: 0, y: 0, w: 300, h: innerHeight + 400 } }];
+    const sent: unknown[] = [];
+    const sendMessage = async (m: unknown) => {
+      sent.push(m);
+      return { ok: true };
+    };
+    vi.stubGlobal("chrome", { runtime: { sendMessage } });
+    await flow(ctx).preview();
+    expect(sent).toHaveLength(1);
+    expect(said).toEqual([{ message: expect.stringMatching(/^Crop A is larger than the screen/), kind: undefined, action: undefined }]);
+    expect(said[0]?.message).not.toMatch(/fail/i);
+    expect(await buildBundle(ctx).text).toContain("crop A · frame 300×");
   });
 });

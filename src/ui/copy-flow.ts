@@ -38,9 +38,11 @@ export function copyFlow(h: CopyHost) {
     }
     const marks = h.state.marks.length;
     copyBundle(ctx()).then(
-      ({ text, image }) => {
+      ({ text, image, note }) => {
         h.flash(copiedLabel(marks, image ? imageTokens(image) : textTokens(text)));
-        if (h.state.clearAfterCopy) h.clear("Cleared for the next round.");
+        // A note (a crop only partly in the picture) is said plainly, with the clear's when both.
+        if (h.state.clearAfterCopy) h.clear(note ? `${note} Cleared for the next round.` : "Cleared for the next round.");
+        else if (note) h.say(note);
       },
       (err: unknown) => h.say(`Copy failed: ${errorText(err)}`, "error"),
     );
@@ -62,8 +64,9 @@ export function copyFlow(h: CopyHost) {
       const answer = (await chrome.runtime.sendMessage(ask)) as PreviewReply | undefined;
       if (!answer) throw new Error("the extension did not answer (reload it in chrome://extensions)");
       if (!answer.ok) throw new Error(answer.error);
+      if (pic?.note) h.say(pic.note);
     } catch (err) {
-      h.say(`Preview failed: ${errorText(err)}`, "error");
+      h.say(`The preview did not open: ${errorText(err)}`, "error");
     }
   }
 

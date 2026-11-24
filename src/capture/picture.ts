@@ -1,11 +1,12 @@
-// The picture: a screenshot of the tab (Pointer's own UI hidden), cropped to the marks, brought
-// to one pixel per CSS pixel, with the marks drawn on by the same SVG the overlay shows, and the
-// Pointer lines printed under it (strip.ts). The PNG comes from a canvas: no metadata at all.
+// The picture: screenshots of the tab (Pointer's own UI hidden, shots.ts), cropped to the marks,
+// brought to one pixel per CSS pixel, with the marks drawn on by the same SVG the overlay shows,
+// and the Pointer lines printed under it (strip.ts). The PNG comes from a canvas: no metadata.
 
-import { FRAME_TAB, type Scene, renderSvg } from "../marks/svg";
+import { FRAME_TAB, renderSvg } from "../marks/svg";
 import { type Rect, type Size, toImagePixels } from "../shared/geometry";
 import type { CaptureReply, CaptureRequest } from "../shared/messages";
-import { type Region, stackRegions } from "./layout";
+import { stackRegions } from "./layout";
+import type { Cut } from "./shots";
 import { STRIP, wrapLines } from "./strip";
 
 const nextFrame = () => new Promise<void>((r) => requestAnimationFrame(() => r()));
@@ -16,20 +17,15 @@ function load(src: string): Promise<HTMLImageElement> {
   return img.decode().then(() => img);
 }
 
-/** The visible tab as an image, with Pointer's layer hidden while it is taken. */
-export async function screenshot(host: HTMLElement): Promise<HTMLImageElement> {
-  host.style.visibility = "hidden";
-  try {
-    await nextFrame();
-    await nextFrame();
-    const ask: CaptureRequest = { type: "capture" };
-    const reply = (await chrome.runtime.sendMessage(ask)) as CaptureReply | undefined;
-    if (!reply) throw new Error("the extension did not answer (reload the extension?)");
-    if (!reply.ok) throw new Error(reply.error);
-    return await load(reply.dataUrl);
-  } finally {
-    host.style.visibility = "";
-  }
+/** The visible tab as an image, once the page has painted (the caller hides Pointer's layer). */
+export async function screenshot(): Promise<HTMLImageElement> {
+  await nextFrame();
+  await nextFrame();
+  const ask: CaptureRequest = { type: "capture" };
+  const reply = (await chrome.runtime.sendMessage(ask)) as CaptureReply | undefined;
+  if (!reply) throw new Error("the extension did not answer (reload the extension?)");
+  if (!reply.ok) throw new Error(reply.error);
+  return await load(reply.dataUrl);
 }
 
 /** A pasted image as it lies on screen now: viewport box and see-through. */
@@ -49,19 +45,30 @@ function drawPasted(ctx: CanvasRenderingContext2D, pasted: readonly Laid[], regi
   ctx.restore();
 }
 
-/**
- * The picture: each region (the crop frames A, B …, or the one auto crop) stacked, its marks on
- * it, a letter tab above each frame, and `strip` (the bundle's text) printed under it all.
- */
-export async function picture(
-  shot: HTMLImageElement,
-  regions: readonly Region[],
-  scene: Scene,
-  strip: string | null,
-  pasted: readonly Laid[] = [],
-): Promise<{ blob: Blob; size: Size }> {
+/** One cut drawn at its place: its part of its screenshot, its pasted images, its marks. */
+async function drawCut(ctx: CanvasRenderingContext2D, cut: Cut, size: Size, top: number, tab: number) {
+  const { shot, region, scene, pasted } = cut;
   const ratio = shot.naturalWidth / window.innerWidth;
-  const image = { w: shot.naturalWidth, h: shot.naturalHeight };
+  const src = toImagePixels(region.rect, ratio, { w: shot.naturalWidth, h: shot.naturalHeight });
+  ctx.drawImage(shot, src.x, src.y, src.w, src.h, 0, top, size.w, size.h);
+  drawPasted(ctx, pasted, region.rect, { x: 0, y: top, ...size });
+  // One renderer: the marks and, for a frame, its outline and letter tab come from svg.ts, the
+  // view reaching FRAME_TAB above the region so the tab lands in its band.
+  const r = region.rect;
+  const band = region.label ? FRAME_TAB : 0;
+  const view = { x: r.x, y: r.y - band, w: r.w, h: r.h + band };
+  const frames = region.label ? [{ label: region.label, rect: r }] : [];
+  const svg = renderSvg({ ...scene, frames }, view);
+  const marks = await load(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`);
+  ctx.drawImage(marks, 0, top - tab, size.w, size.h + tab);
+}
+
+/**
+ * The picture: each cut (the crop frames A, B …, or the one auto crop) stacked, each from its own
+ * screenshot with its marks on it as they lay there, a letter tab above each frame, and `strip`
+ * (the bundle's text) printed under it all.
+ */
+export async function picture(cuts: readonly Cut[], strip: string | null): Promise<{ blob: Blob; size: Size }> {
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("no 2D canvas in this tab");
@@ -69,7 +76,10 @@ export async function picture(
   ctx.font = STRIP.font;
   const charWidth = ctx.measureText("M").width;
   const wrap = (width: number) => (strip ? wrapLines(strip, Math.floor((width - 2 * STRIP.pad) / charWidth)) : []);
-  const stack = stackRegions(regions, strip === null ? null : (width) => wrap(width).length);
+  const stack = stackRegions(
+    cuts.map((c) => c.region),
+    strip === null ? null : (width) => wrap(width).length,
+  );
   const lines = wrap(stack.width);
   canvas.width = stack.width;
   canvas.height = stack.height;
@@ -77,19 +87,10 @@ export async function picture(
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   ctx.imageSmoothingQuality = "high";
-  for (const { region, size, top, tab } of stack.placed) {
-    const src = toImagePixels(region.rect, ratio, image);
-    ctx.drawImage(shot, src.x, src.y, src.w, src.h, 0, top, size.w, size.h);
-    drawPasted(ctx, pasted, region.rect, { x: 0, y: top, ...size });
-    // One renderer: the marks and, for a frame, its outline and letter tab come from svg.ts,
-    // the view reaching FRAME_TAB above the region so the tab lands in its band.
-    const r = region.rect;
-    const band = region.label ? FRAME_TAB : 0;
-    const view = { x: r.x, y: r.y - band, w: r.w, h: r.h + band };
-    const frames = region.label ? [{ label: region.label, rect: r }] : [];
-    const svg = renderSvg({ ...scene, frames }, view);
-    const marks = await load(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`);
-    ctx.drawImage(marks, 0, top - tab, size.w, size.h + tab);
+  // stackRegions places one region per cut, in their order.
+  for (const [i, cut] of cuts.entries()) {
+    const placed = stack.placed[i];
+    if (placed) await drawCut(ctx, cut, placed.size, placed.top, placed.tab);
   }
 
   // Setting the canvas size reset the context: font and colour again, then the lines.
