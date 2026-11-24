@@ -232,6 +232,24 @@ for (const [w, h] of SIZES) {
       .join(" | ");
     say(size, "a step threw", log);
     await page.screenshot({ path: `${out}/${w}-threw.png` }).catch((shot) => say(size, "no screenshot of the throw", String(shot)));
+    // What moves when a tap finds its element "not stable": More's box, the bar's and the seen part, 10 frames.
+    const moves = await page.evaluate(
+      () =>
+        new Promise((done) => {
+          const seen = new Set();
+          const bar = document.querySelector("pointer-overlay").shadowRoot.querySelector(".bar");
+          let frames = 0;
+          const step = () => {
+            const m = bar.querySelector("button.more-toggle")?.getBoundingClientRect();
+            const v = window.visualViewport;
+            seen.add(`more ${m?.x.toFixed(1)},${m?.y.toFixed(1)} bar ${bar.getBoundingClientRect().width.toFixed(1)} seen ${v?.offsetLeft.toFixed(1)},${v?.offsetTop.toFixed(1)} ${v?.width.toFixed(1)}×${v?.height.toFixed(1)} @${v?.scale.toFixed(3)}`);
+            if (++frames < 10) requestAnimationFrame(step);
+            else done([...seen]);
+          };
+          requestAnimationFrame(step);
+        }),
+    );
+    console.log(`${size} after the throw, 10 frames: ${moves.join(" / ")}`);
   });
   await context.close();
 }
