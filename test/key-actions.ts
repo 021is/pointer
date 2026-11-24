@@ -11,6 +11,7 @@ export const actions = (overPasted: boolean, open = false): KeyActions => ({
   redo: vi.fn(),
   copy: vi.fn(),
   escape: vi.fn(() => open),
+  close: vi.fn(),
   walk: vi.fn(),
   take: vi.fn(),
   panel: vi.fn(),

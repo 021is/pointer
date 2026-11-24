@@ -1,9 +1,9 @@
 // The bar on a narrow viewport (Edvard, 2026-11-23: "change the bar to become shorter in mobile
 // screen when inspect is open"): below 768 px (a phone or a small tablet in Chrome DevTools'
 // device mode, a narrow window) it docks to the bottom edge, centred and as wide as its tools,
-// each named under its icon: as many as the width has room for (fit.ts), and More. More opens the
-// tool sheet (sheet.ts, Edvard 2026-11-24) with the rest, just above the bar, the page still seen
-// above it. While it is open More says Close; choosing a tool closes it, and so do Esc, a press
+// icons only, each named in its aria-label and tip: as many as the width has room for (fit.ts),
+// and More. More opens the tool sheet (sheet.ts, Edvard 2026-11-24) with the rest, just above the
+// bar, the page still seen above it. While it is open More says Close; choosing a tool closes it, and so do Esc, a press
 // outside the bar (that press does nothing else) and a drag down. Undo, Redo, Clear, the colours
 // and Picture | Text keep it open: their effect shows on the page above. On a wide viewport the
 // More button is hidden and the bar is as it always was. The layout is CSS (narrow-css.ts).
@@ -14,7 +14,7 @@ import { icon } from "./icons";
 /** Where the bar turns narrow: the CSS (narrow-css.ts) and the bar's arrangement (toolbar.ts). */
 export const NARROW = "(max-width: 767px)";
 
-/** A button's short name, shown under its icon on the narrow bar and in the draw menu: its tip's
+/** A button's short name, shown under its icon in the narrow bar's sheet and in the draw menu: its tip's
  *  first word ("Gap: drag from…" → "Gap"), or the word a person would look for where that word
  *  says little. */
 const NAMES: readonly [prefix: string, name: string][] = [

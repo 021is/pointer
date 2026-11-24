@@ -239,6 +239,7 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
     redo: hist.redo,
     copy: () => flow.copy(),
     escape: bar.collapse,
+    close,
     walk: (key) => {
       if (!state.hover) return;
       const next = walk(state.hover.el, key, trail);
@@ -267,7 +268,7 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
     },
     clear,
   });
-
+  window.addEventListener("keyup", keys.keyup, true); // for the page's life: the keyup of the Esc that closed Pointer (keyboard.ts)
   const listeners: [EventTarget, string, EventListener, AddEventListenerOptions?][] = [
     [layer, "pointerdown", onDown as EventListener],
     [layer, "pointermove", onHoverMove as EventListener],
@@ -275,7 +276,6 @@ export function createApp(ext: (root: ShadowRoot, host: ExtensionHost) => Extens
     [window, "pointermove", pasted.track as EventListener, { passive: true }],
     [window, "paste", pasted.onPaste as EventListener, { capture: true }],
     [window, "keydown", keys.keydown as EventListener, { capture: true }],
-    [window, "keyup", keys.keyup as EventListener, { capture: true }],
     [window, "scroll", render, { passive: true, capture: true }],
     [window, "resize", render],
     [window.visualViewport ?? window, "resize", resizeView],

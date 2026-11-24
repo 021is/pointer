@@ -204,22 +204,25 @@ async function expectOpen(page, want, size, step) {
   return ok;
 }
 
+/** A line of the run's account, printed as it is made, so a run that stops shows how far it got. */
+const print = (line) => console.log(line);
+
 /** Every step at one size, in order; false at the first step that went wrong (its problem said). */
-async function walk(context, page, size, w, h, lines) {
+async function walk(context, page, size, w, h) {
   const more = async (step) => {
     await tap(page, "button.more-toggle");
     return expectOpen(page, true, size, step);
   };
-  lines.push(check(size, "closed", await measure(page), w, h));
+  print(check(size, "closed", await measure(page), w, h));
   await page.screenshot({ path: `${out}/${w}-0-bar.png` });
   if (!(await more("More"))) return false;
-  lines.push(check(size, "open", await measure(page), w, h));
+  print(check(size, "open", await measure(page), w, h));
   await page.screenshot({ path: `${out}/${w}-1-sheet.png` });
   await tap(page, ".bar > .drawgroup button.draw");
   if (!(await expectOpen(page, false, size, "choosing Pen")) || !(await more("More with Pen"))) return false;
   const pen = await measure(page);
   if (!pen.buttons.some((b) => b.name === "Red")) say(size, "Pen", "no colours with Pen");
-  lines.push(check(size, "open with Pen", pen, w, h));
+  print(check(size, "open with Pen", pen, w, h));
   await tap(page, 'button[aria-label^="Undo"]');
   if (!(await measure(page)).open) {
     say(size, "Undo", "Undo closed the sheet");
@@ -238,18 +241,21 @@ async function walk(context, page, size, w, h, lines) {
   if (!(await more("More after a drag down"))) return false;
   await tap(page, 'button[aria-label^="Copy gives the text only"]');
   await page.waitForTimeout(250);
-  lines.push(check(size, "open in Text", await measure(page), w, h));
+  print(check(size, "open in Text", await measure(page), w, h));
+  // Esc closes the sheet, then Pointer itself (Edvard, 2026-11-24: "Esc closes Pointer").
+  await page.keyboard.press("Escape");
+  if (!(await expectOpen(page, false, size, "Esc on the open sheet"))) return false;
+  await page.keyboard.press("Escape");
+  if (await page.evaluate(() => document.querySelector("pointer-overlay") !== null)) say(size, "Esc", "a second Esc left Pointer open");
   return true;
 }
 
-/** Each line is printed as it is made, so a run that stops shows how far it got. */
-const lines = { push: (line) => console.log(line) };
 for (const [w, h] of SIZES) {
   const size = `${w}×${h}`;
   const { context, page } = await open(w, h);
   // A step that throws (a tap that times out) is a problem of its size, never a silent stop: said
   // with Playwright's reason (its call log), and the page as it was saved beside the screenshots.
-  await walk(context, page, size, w, h, lines).catch(async (err) => {
+  await walk(context, page, size, w, h).catch(async (err) => {
     const log = String(err?.message ?? err)
       .split("\n")
       .filter((l) => l.trim() && !/^\s*- (waiting \d+|retrying)/.test(l))

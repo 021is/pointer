@@ -27,6 +27,20 @@ function contrast(a: string, b: string): number {
   return ((hi ?? 0) + 0.05) / ((lo ?? 0) + 0.05);
 }
 
+/** The hue of a #rrggbb colour, in degrees. */
+function hue(hex: string): number {
+  const [r = 0, g = 0, b = 0] = [1, 3, 5].map((i) => Number.parseInt(hex.slice(i, i + 2), 16) / 255);
+  const max = Math.max(r, g, b);
+  const d = max - Math.min(r, g, b);
+  if (d === 0) return 0;
+  const h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return (h * 60 + 360) % 360;
+}
+const hueDistance = (a: string, b: string) => {
+  const d = Math.abs(hue(a) - hue(b));
+  return Math.min(d, 360 - d);
+};
+
 describe("the narrow bar's CSS", () => {
   it("is a centred row as wide as its tools, never stretched across the screen", () => {
     expect(narrow).toContain("width: max-content;");
@@ -57,7 +71,9 @@ describe("the narrow bar's CSS", () => {
     expect(contrast("#ffffff", COPY_HOVER)).toBeGreaterThanOrEqual(3);
     // The bar's glass is the same dark on a light or a dark page; its darkest stop is #12101c.
     expect(contrast(COPY_FILL, "#12101c")).toBeGreaterThanOrEqual(3);
-    for (const violet of ["#8a6dff", "#6a4cf0"]) expect(COPY_FILL).not.toBe(violet);
+    // Never read as the selected tool: its hue at least 60° from the selected look's violet stops
+    // (teal ≈ 173°, violet ≈ 252°: 79° today).
+    for (const violet of ["#8a6dff", "#6a4cf0"]) expect(hueDistance(COPY_FILL, violet)).toBeGreaterThanOrEqual(60);
   });
 
   it("keeps one even gap between cells", () => {

@@ -16,7 +16,8 @@ export const CELL = 44;
 /** A split button's ▾: narrower than its tool, as tall as it. */
 export const CARET = 24;
 /** Copy's pill and its hover: teal, apart from the selected tool's violet; the white icon on it is
- *  4.2:1 (hover 3.3:1), and the pill on the bar's dark glass 4.2:1 (test/compact.test.ts). */
+ *  4.2:1 (on the hover 3.3:1), and the pill on the bar's darkest glass (#12101c) about 4.5:1
+ *  (test/compact.test.ts computes all three). */
 export const COPY_FILL = "#0f8b7d";
 export const COPY_HOVER = "#12a090";
 /** A sheet cell's least width. */

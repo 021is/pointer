@@ -74,8 +74,9 @@ Then do steps 3 to 5 above, and choose the `dist` folder inside `pointer`. After
    terminal (on a Mac too), ⌘V or Ctrl+V in Cursor and VS Code.
 
 **Is it on?** A dark bar sits at the bottom centre of the page, with Comment selected, and the
-mouse is a crosshair. **To turn it off,** press the shortcut again, click the icon again, or click
-the ✕ at the right end of the bar (Exit, in the sheet on a narrow page).
+mouse is a crosshair. **To turn it off,** press Esc (with any tool but Page), press the shortcut
+again, click the icon again, or click the ✕ at the right end of the bar (Exit, in the sheet on a
+narrow page).
 
 ## Nothing happens?
 
@@ -112,7 +113,7 @@ Still stuck? [Open an issue](https://github.com/021is/pointer/issues) and say wh
 | ⌘Z / Ctrl+Z | **Undo** | Takes back the last mark, or the last Clear everything. |
 | ⌘⇧Z / Ctrl+Shift+Z or Ctrl+Y | **Redo** | Puts back what Undo took, style edits too. A new mark after an Undo starts afresh. |
 | ⇧⌫ / Shift+Delete | **Clear everything** | Clears all marks and style edits. **Undo** in the message (or ⌘Z) brings them back. |
-| Esc | | Pointer's while it is open: it closes Pointer's open menu, sheet, note box or picker, else goes back to the Page tool. With the Page tool, Esc is the page's own again (its menus and dialogs close as usual). |
+| Esc | | Pointer's while it is open, and the page never sees it: it closes Pointer's open menu, sheet, note box or picker, else Pointer itself. With the Page tool, Esc is the page's own (its menus and dialogs close as usual). |
 
 ### The style box
 
