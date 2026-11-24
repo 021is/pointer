@@ -14,14 +14,16 @@
 // an out dir is given).
 import { mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 
 const [pw, ...flags] = process.argv.slice(2);
 if (!pw) throw new Error("usage: node scripts/narrow-check.mjs <playwright-core/index.mjs> [--chromium=<path>] [--out=<dir>]");
 const flag = (name) => flags.find((f) => f.startsWith(`--${name}=`))?.slice(name.length + 3);
 const executablePath = flag("chromium");
 const out = flag("out") ?? join(tmpdir(), "pointer-narrow-check");
-const { chromium } = await import(pw);
+// A path, absolute or relative to here, never a package name ("node_modules/…" would be one).
+const { chromium } = await import(pathToFileURL(resolve(pw)).href);
 const URL = "http://localhost:5173/";
 const SIZES = [
   [320, 568],
@@ -203,9 +205,10 @@ async function walk(context, page, size, w, h, lines) {
   if (!(await expectOpen(page, false, size, "a tap outside")) || !(await more("More after a tap outside"))) return false;
   await dragDown(context, page, (await measure(page)).sheet);
   if (!(await expectOpen(page, false, size, "a drag down"))) return false;
-  // A person lifts the finger before tapping again; Chrome makes no click of a tap that comes
-  // within ~50 ms of a drag's end, so the robot waits as long as a fast person would.
-  await page.waitForTimeout(300);
+  // A person lifts the finger before tapping again. Chrome made no click of a tap ~50 ms after a
+  // drag's end, and at 300 ms (its double-tap timeout) did so 1 run in ~10: the robot waits
+  // 500 ms, clear of that timeout and still quicker than a person taps again.
+  await page.waitForTimeout(500);
   if (!(await more("More after a drag down"))) return false;
   await tap(page, 'button[aria-label^="Copy gives the text only"]');
   await page.waitForTimeout(250);
