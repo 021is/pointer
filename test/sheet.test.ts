@@ -84,8 +84,8 @@ describe("the row and the sheet", () => {
   it("on a small tablet: more tools in the row, in the wide bar's order, fewer in the sheet", () => {
     at(700);
     const tb = makeBar();
-    expect(inRow(tb)).toEqual(["Move", "Pick", "Comment", "Idea", "Crop", "Pen", "Shapes", "Icon", "Image", "Undo", "Redo", "Copy", "Options", "More"]);
-    expect(inSheet(tb, "edit")).toEqual(["Page", "Clear", "Styles"]);
+    expect(inRow(tb)).toEqual(["Page", "Move", "Pick", "Comment", "Idea", "Crop", "Pen", "Shapes", "Icon", "Image", "Undo", "Redo", "Copy", "Options", "More"]);
+    expect(inSheet(tb, "edit")).toEqual(["Clear", "Styles"]);
     expect(q(tb, '.sheet [data-group="mark"]').hidden).toBe(true);
     show(tb, "pen");
     expect(q(tb, '.sheet [data-group="mark"]').hidden).toBe(false);

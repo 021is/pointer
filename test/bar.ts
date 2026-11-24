@@ -4,6 +4,7 @@ import { vi } from "vitest";
 import { initialState } from "../src/ui/state";
 import type { StylesLook } from "../src/ui/styles";
 import { type BarActions, type Toolbar, createToolbar } from "../src/ui/toolbar";
+import { RECORDED } from "./recorded-widths";
 
 export const NO_PICK: StylesLook = { state: "empty", tip: "Styles: no pick yet" };
 
@@ -31,12 +32,11 @@ export function makeBar(spies: Partial<BarActions> = {}): Toolbar {
   return tb;
 }
 
-/** A row cell's width as a browser lays it out, for happy-dom (which lays nothing out): a ▾ 30,
- *  "Comment" 56 (its name is the longest), Copy 48 (the strong button's padding), any other 44. */
+/** A row cell's width as Chromium laid it out (recorded-widths.ts), for happy-dom, which lays
+ *  nothing out; an element that is no named row cell is 0 wide there too. */
 export function cellWidth(el: Element): number {
-  if (el.classList.contains("caret")) return 30;
-  if (el.classList.contains("copy")) return 48;
-  return el instanceof HTMLElement && el.dataset.name === "Comment" ? 56 : 44;
+  const name = el instanceof HTMLElement ? el.dataset.name : undefined;
+  return (name && RECORDED[name]) || 0;
 }
 
 /** Makes every element report its cellWidth, so the bar's fit (fit.ts) measures as in a browser. */

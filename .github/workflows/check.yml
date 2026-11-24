@@ -18,7 +18,7 @@ jobs:
     # Private: 021's own runners (no billed minutes). Public: GitHub's runners, never 021's: a
     # public repo's pull requests must not run strangers' code on 021's machines.
     runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted","021"]') || 'ubuntu-latest' }}
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       # The whole history: gitleaks reads every commit.
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
@@ -71,6 +71,30 @@ jobs:
           name: pointer-store-zip
           path: ${{ steps.zip.outputs.file }}
           retention-days: 30
+
+      # The narrow bar laid out in a real Chromium at 8 phone and tablet sizes, with touch, on the
+      # demo app (scripts/narrow-check.mjs): what a unit test cannot lay out. Playwright's own
+      # headless shell, the one its pinned playwright-core (package-lock.json) names.
+      - name: Chromium for the narrow bar check
+        id: chromium
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: npx playwright-core install --with-deps --only-shell chromium
+      - name: Narrow bar in Chromium (8 sizes)
+        id: narrow
+        if: ${{ !cancelled() && steps.chromium.outcome == 'success' }}
+        run: |
+          set -euo pipefail
+          (cd demo && npx -y npm@11.21.1 ci --prefer-offline --no-audit --no-fund)
+          (cd demo && npx vite --port 5173 --strictPort > "$RUNNER_TEMP/vite.log" 2>&1 &)
+          for _ in $(seq 1 60); do curl -sf http://localhost:5173/ > /dev/null && break; sleep 1; done
+          node scripts/narrow-check.mjs node_modules/playwright-core/index.mjs --out="$RUNNER_TEMP/narrow-check"
+      - name: Upload the narrow bar's screenshots
+        if: ${{ !cancelled() && (steps.narrow.outcome == 'success' || steps.narrow.outcome == 'failure') }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: narrow-check
+          path: ${{ runner.temp }}/narrow-check
+          retention-days: 14
 
       - name: Fetch gitleaks
         id: gitleaks

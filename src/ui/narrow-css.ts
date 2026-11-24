@@ -1,24 +1,28 @@
 // The bar on a narrow viewport (a phone or a small tablet in DevTools' device mode, a narrow
 // window): compact.ts, fit.ts, sheet.ts. A row docked to the bottom edge, centred and as wide as
-// its tools, each named under its icon; above it, while More is open, the tool sheet: at most 45%
-// of the seen height, three named groups of 48 px cells. One "selected" look, the current tool's
-// violet; Picture | Text and Styles show their state quietly; Copy is the one strong button.
-// Edvard, 2026-11-24, in Chrome on a Mac: each row cell is as wide as its name needs, so the
-// selected look covers it with room either side; the cells keep one even gap; a split button (Pen
-// ▾, Copy ▾) reads as one control: its ▾ a narrow segment against its tool, a hairline between.
+// its tools; above it, while More is open, the tool sheet: at most 45% of the seen height, three
+// named groups of 48 px cells, each named under its icon (the sheet has the room). One "selected"
+// look, the current tool's violet; Picture | Text and Styles show their state quietly.
+// Edvard, 2026-11-24, in Chrome on a Mac, last round: the row is icons only, every cell a 44 px
+// square with one even gap, each name in its aria-label and, for a mouse, in a tooltip; a split
+// button (Pen ▾, Copy ▾) is one control, its ▾ a narrow segment behind a hairline; Copy is the one
+// strong action: a calm teal pill the shape of the other cells, never the tool's violet.
 
 import { NARROW } from "./compact";
 import { BAR_MARGIN, BAR_PAD, GAP } from "./fit";
 
-/** A row cell's least width (a 44 px target) and its padding either side of its name. */
-export const CELL_MIN = 44;
-export const CELL_PAD = 6;
-/** A split button's ▾: narrower than any tool, as tall as it (56 px). */
-export const CARET = 30;
+/** A row cell: a square icon button, a 44 px target. */
+export const CELL = 44;
+/** A split button's ▾: narrower than its tool, as tall as it. */
+export const CARET = 24;
+/** Copy's pill and its hover: teal, apart from the selected tool's violet; the white icon on it is
+ *  4.2:1 (hover 3.3:1), and the pill on the bar's dark glass 4.2:1 (test/compact.test.ts). */
+export const COPY_FILL = "#0f8b7d";
+export const COPY_HOVER = "#12a090";
 /** A sheet cell's least width. */
 const SHEET_CELL = 48;
 
-/** A cell's name under its icon; no extra letter spacing. */
+/** A sheet cell's name under its icon; no extra letter spacing. */
 const LABEL = "content: attr(data-name); font: 600 10.5px/1 ui-sans-serif, system-ui, sans-serif; letter-spacing: 0;";
 
 export const NARROW_CSS = `
@@ -33,24 +37,36 @@ export const NARROW_CSS = `
   /* Each cell keeps its own width: fit.ts measures them and lets only what fits into the row (the
      buttons' own rules set it again below: their all: unset outranks this one). */
   .bar > * { flex: none; }
-  .bar [data-tip]:hover::before { display: none; }
   .bar .group, .bar .switch { padding: 0; margin: 0; gap: 0; }
   .bar .group + .group::before, .bar .group + .switch::before { display: none; }
   .bar .more-toggle { display: inline-flex; }
-  /* A cell: the icon, its name under it, as wide as the name needs and never under a 44 px target. */
+  /* A cell: its icon only, centred in a 44 px square. */
   .bar > button, .bar > .drawgroup > button.draw, .bar > .copygroup > button.copy {
-    box-sizing: border-box; width: auto; min-width: ${CELL_MIN}px; height: 56px; padding: 0 ${CELL_PAD}px; flex-direction: column; gap: 4px; flex: none; }
-  .bar > button::after, .bar > .drawgroup > button.draw::after { ${LABEL} }
-  /* A split button: the ▾ a narrow segment against its tool, as tall, a hairline between. */
+    box-sizing: border-box; width: ${CELL}px; min-width: ${CELL}px; height: ${CELL}px; padding: 0; gap: 0; flex: none; }
+  .bar > button .icon, .bar > .drawgroup > button .icon, .bar > .copygroup > button .icon { width: 20px; height: 20px; }
+  .bar > .copygroup > button.copy .label, .bar .copy .mode { display: none; }
+  /* A name for a mouse: the tooltip above its cell, kept on the screen at the row's ends. */
+  .bar .sheet [data-tip]:hover::before { display: none; }
+  .bar [data-tip]:hover::before { max-width: 220px; white-space: normal; text-align: center; line-height: 1.3; }
+  .bar > :first-child[data-tip]:hover::before, .bar > :first-child [data-tip]:hover::before { left: 0; transform: none; }
+  .bar > .more-toggle[data-tip]:hover::before, .bar > .copygroup [data-tip]:hover::before { left: auto; right: 0; transform: none; }
+  /* A split button: one control, its ▾ a narrow segment as tall as its tool, a hairline between. */
   .bar > .drawgroup > button.caret, .bar > .copygroup > button.caret {
-    box-sizing: border-box; width: ${CARET}px; min-width: ${CARET}px; height: 56px; padding: 0; flex: none; }
-  .bar > .drawgroup:has(> .caret) { border-radius: 10px; background: rgba(255, 255, 255, 0.05); }
-  .bar > .drawgroup > button.caret { border-left: 1px solid rgba(255, 255, 255, 0.12); }
+    box-sizing: border-box; width: ${CARET}px; min-width: ${CARET}px; height: ${CELL}px; padding: 0; flex: none; font-size: 10px; }
+  .bar > .drawgroup:has(> .caret), .bar > .copygroup:has(> .caret) { border-radius: 10px; }
+  .bar > .drawgroup:has(> .caret) > button.draw, .bar > .copygroup:has(> .caret) > button.copy { border-radius: 10px 0 0 10px; }
+  .bar > .drawgroup > button.caret, .bar > .copygroup > button.caret { border-radius: 0 10px 10px 0; }
+  .bar > .drawgroup:not(:has(> .caret)) > button.draw, .bar > .copygroup:not(:has(> .caret)) > button.copy { border-radius: 10px; }
+  /* Pen ▾: quiet, one faint shape. */
+  .bar > .drawgroup:has(> .caret) { background: rgba(255, 255, 255, 0.05); }
+  .bar > .drawgroup > button.caret { border-left: 1px solid rgba(255, 255, 255, 0.12); color: #9d95c4; }
+  /* Copy ▾: the one strong action, one teal pill, a white icon, its ▾ behind a white hairline. */
   .bar .copygroup { margin-left: 0; }
-  .bar .copygroup button.copy .label { font: 700 10.5px/1 ui-sans-serif, system-ui, sans-serif; }
-  .bar > .copygroup:not(:has(> .caret)) > button.copy { border-radius: 10px; }
-  .bar .copy .mode { display: none; }
-  .bar .drawgroup:not(:has(> .caret)) > button.draw { border-radius: 10px; }
+  .bar > .copygroup > button.copy, .bar > .copygroup > button.caret {
+    color: #fff; background: ${COPY_FILL}; box-shadow: none; font-weight: 700; }
+  .bar > .copygroup > button.caret { border-left: 1px solid rgba(255, 255, 255, 0.35); }
+  .bar > .copygroup > button.copy:hover, .bar > .copygroup > button.caret:hover { color: #fff; background: ${COPY_HOVER}; }
+  .bar > .copygroup > button.copy.flash { color: #0b3d22; background: #c9f5dc; }
   .bar .drawgroup, .bar .copygroup { position: static; }
   .bar .drawmenu, .bar .copygroup .menu { left: 0; right: 0; width: auto; max-width: 360px; margin: 0 auto; bottom: calc(100% + 8px); }
   .bar .menu .item { height: 44px; }
@@ -102,7 +118,7 @@ export const NARROW_CSS = `
 
   /* The icon picker: a sheet just above the bar, the spot still marked by its ring. */
   .iconpicker { left: calc(var(--view-left, 0px) + 8px) !important; right: auto !important; bottom: auto !important;
-    top: calc(var(--view-top, 0px) + var(--view-height, 100vh) - 80px) !important; transform: translateY(-100%);
+    top: calc(var(--view-top, 0px) + var(--view-height, 100vh) - 68px) !important; transform: translateY(-100%);
     width: calc(var(--view-width, 100vw) - 16px); max-width: none; }
   .iconpicker .more { width: auto; }
   .iconpicker .grid { max-height: calc(var(--view-height, 100vh) * 0.3); }

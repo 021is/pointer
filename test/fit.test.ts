@@ -1,16 +1,20 @@
 // What the narrow bar keeps at hand for the seen width (Edvard, 2026-11-24: at a mini tablet's
-// ~700 px the full-width bar with five far-apart icons read as broken; in Chrome on a Mac at
-// ~530 px, cells must be as wide as their names): Copy and More always, then as many tools as the
-// measured widths fit, in priority order, the first that does not fit ending the row; one gap per
-// cell, none before a ▾; Text frees the picture tools' room.
+// ~700 px the full-width bar with five far-apart icons read as broken; in Chrome on a Mac the
+// widths are measured, never assumed): Copy and More always, then as many tools as the measured
+// widths fit, in priority order, the first that does not fit ending the row; one gap per cell,
+// none before a ▾; Text frees the picture tools' room.
 import { describe, expect, it } from "vitest";
 import { GAP, type Laid, PRIORITY, ROW_FRAME, Relayout, type Sizes, fitRow, relayout, seenPart } from "../src/ui/fit";
-import type { Part } from "../src/ui/sheet";
-import { SHEET } from "../src/ui/sheet";
+import { type Part, SHEET, isCaret } from "../src/ui/sheet";
+import { NAME_OF, RECORDED } from "./recorded-widths";
 
-/** Widths as Chromium lays the row out on Linux: a ▾ 30, "Comment" 56, Copy 48, the rest 44. */
-const of = (p: Part) => (p.endsWith("Caret") ? 30 : p === "comment" ? 56 : p === "copy" ? 48 : 44);
-const sizes: Sizes = { of, more: 44 };
+/** Each part's width as a recorded narrow-check.mjs run measured it (recorded-widths.ts). */
+function of(p: Part): number {
+  const w = RECORDED[NAME_OF[p] ?? ""];
+  if (w === undefined) throw new Error(`no recorded width for ${p}`);
+  return w;
+}
+const sizes: Sizes = { of, more: RECORDED.More ?? 0 };
 const row = (width: number, output: "picture" | "text" = "picture") => {
   const kept = fitRow(width, output, sizes);
   return PRIORITY.filter((p) => kept.has(p));
@@ -39,17 +43,19 @@ describe("relayout", () => {
 
 describe("the narrow bar's row", () => {
   it("keeps the five quick tools on a phone and adds more as the width grows", () => {
+    // The same rows scripts/narrow-check.mjs printed in the recorded run.
     expect(row(320)).toEqual(["pick", "comment", "draw", "undo", "copy"]);
     expect(row(390)).toEqual(["pick", "comment", "draw", "undo", "copy", "copyCaret", "drawCaret"]);
-    expect(row(530)).toEqual([...row(390), "move", "icon", "crop"]);
-    expect(row(600)).toEqual([...row(530), "idea"]);
-    expect(row(700)).toEqual([...row(600), "image", "redo"]);
-    expect(row(767)).toEqual([...row(700), "page", "clear"]);
+    expect(row(430)).toEqual([...row(390), "move"]);
+    expect(row(530)).toEqual([...row(430), "icon", "crop"]);
+    expect(row(600)).toEqual([...row(530), "idea", "image"]);
+    expect(row(700)).toEqual([...row(600), "redo", "page"]);
+    expect(row(767)).toEqual([...row(700), "clear"]);
   });
 
   it("never passes the seen width: its cells, one gap between cells, none before a ▾, and More", () => {
     for (const w of [320, 360, 390, 430, 530, 600, 700, 767]) {
-      const cells = row(w).reduce((sum, p) => sum + of(p) + (p.endsWith("Caret") ? 0 : GAP), 0);
+      const cells = row(w).reduce((sum, p) => sum + of(p) + (isCaret(p) ? 0 : GAP), 0);
       expect(ROW_FRAME + cells + sizes.more, `${w}`).toBeLessThanOrEqual(w);
     }
   });
