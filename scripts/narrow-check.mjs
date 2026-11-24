@@ -63,7 +63,13 @@ async function open(w, h) {
 const measure = (page) =>
   page.evaluate(() => {
     const bar = document.querySelector("pointer-overlay").shadowRoot.querySelector(".bar");
-    const r = (el) => el.getBoundingClientRect().toJSON();
+    // Boxes in the seen part (the visual viewport), where a person sees them on the screen.
+    const v = window.visualViewport;
+    const r = (el) => {
+      const b = el.getBoundingClientRect();
+      const [x, y] = [v?.offsetLeft ?? 0, v?.offsetTop ?? 0];
+      return { left: b.left - x, right: b.right - x, top: b.top - y, bottom: b.bottom - y, width: b.width, height: b.height };
+    };
     const buttons = [...bar.querySelectorAll("button")]
       .filter((b) => b.getClientRects().length > 0 && !b.closest(".menu"))
       .map((b) => ({
@@ -156,16 +162,35 @@ function check(size, state, m, w, h) {
 }
 
 /** A finger dragging the sheet down from its handle, by touch events as device mode sends them. */
-async function dragDown(context, page, sheet) {
+async function dragDown(context, page) {
+  const head = await centre(page, ".sheet-head");
+  if (!head) throw new Error("no sheet to drag");
   const cdp = await context.newCDPSession(page);
-  const at = (y) => [{ x: sheet.left + sheet.width / 2, y }];
-  await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: at(sheet.top + 10) });
-  for (let i = 1; i <= 8; i++) await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: at(sheet.top + 10 + i * 12) });
+  const at = (y) => [{ x: head.x, y }];
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: at(head.y) });
+  for (let i = 1; i <= 8; i++) await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: at(head.y + i * 12) });
   await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
 }
 
-/** A tap on Pointer's element; one that cannot happen in 5 s throws with Playwright's reason. */
-const tap = (page, sel) => page.locator(`pointer-overlay ${sel}`).first().tap({ timeout: 5000 });
+/** Where an element of Pointer's is, as a finger sees it: its centre in the seen part (the visual
+ *  viewport). A page wider than the phone pans the seen part, and Pointer's bar follows it. */
+const centre = (page, sel) =>
+  page.evaluate((s) => {
+    const el = document.querySelector("pointer-overlay").shadowRoot.querySelector(s);
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    const v = window.visualViewport;
+    return { x: r.left + r.width / 2 - (v?.offsetLeft ?? 0), y: r.top + r.height / 2 - (v?.offsetTop ?? 0) };
+  }, sel);
+
+/** A finger's tap on Pointer's element. Never Playwright's locator.tap: it scrolls its target into
+ *  view first, which pans the seen part of a page wider than the phone, and the bar, following that
+ *  part, never holds still for it (CI, 2026-11-24: "element is not stable" at 320–430 px). */
+async function tap(page, sel) {
+  const at = await centre(page, sel);
+  if (!at) throw new Error(`nothing to tap at ${sel}`);
+  await page.touchscreen.tap(at.x, at.y);
+}
 
 /** Waits for the sheet to be open or closed (2 s at most); one that never gets there is a problem
  *  named with its step, and the false tells the caller to stop this size. */
@@ -204,7 +229,7 @@ async function walk(context, page, size, w, h, lines) {
   if (!(await expectOpen(page, false, size, "Esc")) || !(await more("More after Esc"))) return false;
   await page.touchscreen.tap(w / 2, 40);
   if (!(await expectOpen(page, false, size, "a tap outside")) || !(await more("More after a tap outside"))) return false;
-  await dragDown(context, page, (await measure(page)).sheet);
+  await dragDown(context, page);
   if (!(await expectOpen(page, false, size, "a drag down"))) return false;
   // A person lifts the finger before tapping again. Chrome made no click of a tap ~50 ms after a
   // drag's end, and at 300 ms (its double-tap timeout) did so 1 run in ~10: the robot waits
