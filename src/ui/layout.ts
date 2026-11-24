@@ -4,7 +4,7 @@
 // each has one state and a keyboard walks them in the order seen.
 
 import type { Sizes } from "./fit";
-import type { Part, Sheet } from "./sheet";
+import { type Part, SPLITS, type Sheet } from "./sheet";
 
 export type Parts = Readonly<Record<Part, HTMLElement>>;
 
@@ -13,19 +13,14 @@ export type Frame = { grip: HTMLElement; exit: HTMLElement; toggle: HTMLElement;
 export type Layout = {
   wide: () => void;
   narrow: (row: ReadonlySet<Part>) => void;
-  /** Each part's width as the narrow row lays it out now (fit.ts measures with every candidate in the row). */
+  /** Each part's width as the narrow row lays it out now, measured here with every candidate in
+   *  the row (toolbar.ts), for fit.ts to choose from. */
   sizes: () => Sizes;
 };
 
 /** The narrow row keeps the wide bar's order, so a tool keeps its neighbours as the width changes.
  *  A ▾ sits inside its button's group, the colours and Picture | Text only ever in the sheet. */
 const ROW: readonly Part[] = ["page", "move", "pick", "comment", "idea", "crop", "draw", "icon", "image", "styles", "undo", "redo", "clear", "copy"];
-
-/** Each menu's ▾ and the group it belongs in beside its button. */
-const CARETS = [
-  ["draw", "drawCaret"],
-  ["copy", "copyCaret"],
-] as const;
 
 /** Where the grip left the wide bar: the narrow bar docks by its own CSS, so these go. */
 const DRAGGED = ["transform", "bottom", "left", "top"] as const;
@@ -50,7 +45,7 @@ export function createLayout(bar: HTMLElement, p: Parts, frame: Frame): Layout {
   const [using, marking, drawing, upload, edit] = [span(), span(), span(), span(), span()];
   return {
     wide() {
-      for (const [main, caret] of CARETS) home(p[main], p[caret]);
+      for (const [main, caret] of SPLITS) home(p[main], p[caret]);
       using.replaceChildren(p.page, p.move);
       marking.replaceChildren(p.pick, p.comment, p.idea, p.crop);
       drawing.replaceChildren(p.draw, p.icon);
@@ -61,16 +56,23 @@ export function createLayout(bar: HTMLElement, p: Parts, frame: Frame): Layout {
     narrow(row) {
       for (const prop of DRAGGED) bar.style.removeProperty(prop);
       frame.sheet.arrange(p, (part) => !row.has(part), frame.exit);
-      for (const [main, caret] of CARETS) if (row.has(caret)) home(p[main], p[caret]);
+      for (const [main, caret] of SPLITS) if (row.has(caret)) home(p[main], p[caret]);
       bar.replaceChildren(...ROW.filter((part) => row.has(part)).map((part) => p[part]), frame.toggle, frame.sheet.el);
     },
     sizes() {
-      // Read now, while every candidate is in the row: a part the row may hold has its width.
+      // Read now, while every candidate is in the row: each part the row may hold, a split
+      // button's tool without its ▾.
       const width = new Map<Part, number>();
-      for (const part of [...ROW, ...CARETS.map(([, caret]) => caret)]) {
-        width.set(part, widthOf(part === "draw" || part === "copy" ? tool(p[part]) : p[part]));
+      for (const part of [...ROW, ...SPLITS.map(([, caret]) => caret)]) {
+        const split = SPLITS.some(([main]) => main === part);
+        width.set(part, widthOf(split ? tool(p[part]) : p[part]));
       }
-      return { of: (part) => width.get(part) ?? 0, more: widthOf(frame.toggle) };
+      const of = (part: Part) => {
+        const w = width.get(part);
+        if (w === undefined) throw new Error(`the narrow row has no width for ${part}: it is not a row part`);
+        return w;
+      };
+      return { of, more: widthOf(frame.toggle) };
     },
   };
 }

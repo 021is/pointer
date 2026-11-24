@@ -27,6 +27,15 @@ export type Part =
   | "copy"
   | "copyCaret";
 
+/** The split buttons: each tool and its menu's ▾ (the one list: fit.ts, layout.ts, the tests). */
+export const SPLITS = [
+  ["draw", "drawCaret"],
+  ["copy", "copyCaret"],
+] as const satisfies readonly (readonly [Part, Part])[];
+
+/** Whether a part is a split button's ▾: it sits against its tool, with no gap of its own. */
+export const isCaret = (p: Part) => SPLITS.some(([, caret]) => caret === p);
+
 export type SheetGroup = { name: "Mark" | "Edit" | "Send"; parts: readonly Part[] };
 
 /** Where each part goes when the bar keeps it in the sheet, top to bottom. */

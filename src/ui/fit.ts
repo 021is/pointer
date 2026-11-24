@@ -4,11 +4,11 @@
 // order of PRIORITY; the sheet lists the rest (sheet.ts). A phone keeps Pick, Comment, Draw, Undo
 // and Copy; a wider screen adds Copy's and Draw's menus, then Move, Icon, Crop, Idea, Image, ...
 // Each cell is as wide as its name needs (Edvard, 2026-11-24, in Chrome on a Mac: "Comment" ran
-// past its cell), so the widths are measured, never assumed: the bar (toolbar.ts) measures every
-// cell and the seen width, and lays out what this returns. Pure.
+// past its cell), so the widths are measured, never assumed: layout.ts measures each cell as laid
+// out, toolbar.ts reads the seen width, and this only takes both and says what fits. Pure.
 
 import type { Output } from "./state";
-import type { Part } from "./sheet";
+import { type Part, isCaret } from "./sheet";
 
 /** The space between two cells of the row; a menu's ▾ sits against its tool, with no gap. */
 export const GAP = 4;
@@ -21,8 +21,6 @@ export const ROW_FRAME = 2 * BAR_MARGIN + 2 * BAR_PAD + 2 * 1;
 
 /** Each part's width as laid out (a split button's tool without its ▾), and More's. */
 export type Sizes = { of: (p: Part) => number; more: number };
-
-const CARETS: ReadonlySet<Part> = new Set<Part>(["drawCaret", "copyCaret"]);
 
 /** What the bar keeps first. The colours and Picture | Text stay in the sheet: they change with the
  *  tool, and Copy's menu names the output too. */
@@ -61,7 +59,7 @@ export const rowCandidates = (output: Output): Part[] => PRIORITY.filter((p) => 
  *  in its order (the first that does not fit ends the row, so a later small one never jumps ahead).
  *  A cell takes its width and one gap; a ▾ only its width, against its tool. */
 export function fitRow(viewWidth: number, output: Output, size: Sizes): ReadonlySet<Part> {
-  const take = (p: Part) => size.of(p) + (CARETS.has(p) ? 0 : GAP);
+  const take = (p: Part) => size.of(p) + (isCaret(p) ? 0 : GAP);
   let room = viewWidth - ROW_FRAME - size.more - size.of("copy") - GAP;
   const row = new Set<Part>(["copy"]);
   for (const p of rowCandidates(output).filter((part) => part !== "copy")) {

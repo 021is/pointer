@@ -3,18 +3,24 @@
 // build). It checks what a unit test cannot lay out: nothing off-screen, every target at least
 // 44 px (a split button's ▾: 44 tall, 24 wide), the sheet at most 45% of the height, no tool both
 // in the row and the sheet, every way to close the sheet (Esc, a tap outside, a finger dragging it
-// down, a tool chosen), and the row's rhythm (Edvard, 2026-11-24, in Chrome on a Mac): each ▾
-// narrower than its tool and against it, each cell wider than its name by its padding (so the
-// selected look covers it), one even gap between cells. It prints one line per size and state,
-// saves screenshots, and exits 1 on any problem.
-// Usage: node scripts/narrow-check.mjs <playwright-core/index.mjs> <chromium> [out dir]
-// (the screenshots go to the system's temp folder unless an out dir is given).
+// down, a tool chosen), and the row's rhythm (Edvard, 2026-11-24, in Chrome on a Mac): icons only,
+// every tool cell a 44 px square with its icon centred, each ▾ narrower than its tool and against
+// it, one even gap between cells, Copy's icon at least 3:1 on its teal. It prints one line per size and state as
+// it goes, each problem the moment it is found (with the size and the step), the widest row's
+// cell widths it saw (the record test/recorded-widths.ts copies), and exits 1 on any problem; on
+// GitHub Actions each problem is also an error annotation. CI runs it (.github/workflows/check.yml).
+// Usage: node scripts/narrow-check.mjs <playwright-core/index.mjs> [--chromium=<path>] [--out=<dir>]
+// (Playwright's own Chromium unless a path is given; screenshots in the system's temp folder unless
+// an out dir is given).
 import { mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-const [pw, executablePath, out = join(tmpdir(), "pointer-narrow-check")] = process.argv.slice(2);
-if (!pw || !executablePath) throw new Error("usage: node scripts/narrow-check.mjs <playwright-core/index.mjs> <chromium> [out dir]");
+const [pw, ...flags] = process.argv.slice(2);
+if (!pw) throw new Error("usage: node scripts/narrow-check.mjs <playwright-core/index.mjs> [--chromium=<path>] [--out=<dir>]");
+const flag = (name) => flags.find((f) => f.startsWith(`--${name}=`))?.slice(name.length + 3);
+const executablePath = flag("chromium");
+const out = flag("out") ?? join(tmpdir(), "pointer-narrow-check");
 const { chromium } = await import(pw);
 const URL = "http://localhost:5173/";
 const SIZES = [
@@ -28,9 +34,14 @@ const SIZES = [
   [767, 1024],
 ];
 mkdirSync(out, { recursive: true });
-const browser = await chromium.launch({ executablePath });
+const browser = await chromium.launch(executablePath ? { executablePath } : {});
 const problems = [];
-const say = (size, state, msg) => problems.push(`${size} ${state}: ${msg}`);
+/** A problem, said at once (so a run that stops later still shows it) and kept for the summary. */
+const say = (size, state, msg) => {
+  const line = `${size} ${state}: ${msg}`;
+  problems.push(line);
+  console.log(`PROBLEM ${line}`);
+};
 
 async function open(w, h) {
   const context = await browser.newContext({ viewport: { width: w, height: h }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
@@ -60,48 +71,64 @@ const measure = (page) =>
         inSheet: !!b.closest(".sheet"),
         box: r(b),
       }));
-    // The row's rhythm: its cells (a split button is one), each split button's tool and ▾, and each
-    // named cell's width beside its name's (the name drawn with the cell's own font) and padding.
+    // The row's rhythm: its cells (a split button is one), each split button's tool and ▾, each
+    // tool cell with its icon, and Copy's colours as drawn.
     const cells = [...bar.children].filter((c) => !c.classList.contains("sheet")).map(r);
     const groups = [...bar.children].filter((c) => c.matches(".drawgroup, .copygroup"));
     const pairs = groups
       .filter((g) => g.querySelector(":scope > .caret"))
       .map((g) => ({ name: g.firstElementChild.dataset.name, tool: r(g.firstElementChild), caret: r(g.querySelector(":scope > .caret")) }));
-    const pen = document.createElement("canvas").getContext("2d");
-    const named = [...bar.children]
+    const tools = [...bar.children]
       .flatMap((c) => (c.matches("button") ? [c] : groups.includes(c) ? [c.firstElementChild] : []))
-      .map((b) => {
-        const label = b.querySelector(".label");
-        const style = label ? getComputedStyle(label) : getComputedStyle(b, "::after");
-        pen.font = style.font;
-        const text = pen.measureText(label ? label.textContent : b.dataset.name).width;
-        const { paddingLeft, paddingRight } = getComputedStyle(b);
-        return { name: b.dataset.name, width: r(b).width, text, padding: [parseFloat(paddingLeft), parseFloat(paddingRight)] };
-      });
+      .map((b) => ({ name: b.dataset.name, box: r(b), icon: r(b.querySelector(".icon")), label: getComputedStyle(b, "::after").content }));
+    const copy = bar.querySelector(":scope > .copygroup > button.copy");
+    const copyLook = copy ? { color: getComputedStyle(copy).color, fill: getComputedStyle(copy).backgroundColor } : null;
     const open = bar.dataset.more === "open";
     const sheet = bar.querySelector(".sheet");
     const body = bar.querySelector(".sheet-body");
     const scrolls = open && body ? body.scrollHeight > body.clientHeight + 1 : false;
-    return { bar: r(bar), sheet: open && sheet ? r(sheet) : null, buttons, cells, pairs, named, scrolls, open };
+    const widths = Object.fromEntries(buttons.filter((b) => !b.inSheet).map((b) => [b.name, b.box.width]));
+    return { bar: r(bar), sheet: open && sheet ? r(sheet) : null, buttons, cells, pairs, tools, copyLook, scrolls, open, widths };
   });
 
-/** The row's rhythm: each ▾ narrower than its tool and against it, each name covered with padding
- *  either side, one even gap between cells. */
+/** "rgb(r, g, b)" → its WCAG relative luminance. */
+function luminance(css) {
+  const [r, g, b] = (css.match(/[\d.]+/g) ?? []).slice(0, 3).map((v) => {
+    const c = Number(v) / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+const contrast = (a, b) => {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+};
+
+/** The row's rhythm (Edvard's last round: icons only): every tool cell a square of at least
+ *  44 px with no name under it and its icon centred; each ▾ narrower than its tool, against it, as
+ *  tall; one even gap between cells; Copy's white icon at least 3:1 on its fill. */
 function rhythm(size, state, m) {
+  for (const t of m.tools) {
+    if (Math.abs(t.box.width - t.box.height) > 0.5 || t.box.width < 44 - 0.01) say(size, state, `${t.name} is ${t.box.width}×${t.box.height}, not a 44 px square`);
+    if (t.label !== "none" && t.label !== "normal") say(size, state, `${t.name} shows a name under its icon (${t.label})`);
+    const dx = t.icon.left + t.icon.width / 2 - (t.box.left + t.box.width / 2);
+    const dy = t.icon.top + t.icon.height / 2 - (t.box.top + t.box.height / 2);
+    if (Math.abs(dx) > 1 || Math.abs(dy) > 1) say(size, state, `${t.name}'s icon is ${dx.toFixed(1)}, ${dy.toFixed(1)} px off its centre`);
+  }
   for (const p of m.pairs) {
     if (p.caret.width >= p.tool.width) say(size, state, `${p.name}'s ▾ (${p.caret.width}) not narrower than its tool (${p.tool.width})`);
     if (Math.abs(p.caret.left - p.tool.right) > 1) say(size, state, `${p.name}'s ▾ is ${(p.caret.left - p.tool.right).toFixed(1)} px from its tool`);
     if (Math.abs(p.caret.height - p.tool.height) > 0.5) say(size, state, `${p.name}'s ▾ is not as tall as its tool`);
   }
-  for (const n of m.named) {
-    const [left, right] = n.padding;
-    if (left < 4 || right < 4) say(size, state, `${n.name}'s cell has ${left}/${right} px padding`);
-    // 1 px for the canvas's text measure against the laid-out glyphs (subpixel rounding).
-    if (n.width + 1 < n.text + left + right) say(size, state, `${n.name}'s name (${n.text.toFixed(1)}) runs past its cell (${n.width})`);
-  }
   const gaps = m.cells.slice(1).map((c, i) => c.left - (m.cells[i]?.right ?? c.left));
   if (gaps.some((g) => Math.abs(g - (gaps[0] ?? g)) > 0.6)) say(size, state, `uneven gaps between cells: ${gaps.map((g) => g.toFixed(1)).join(" ")}`);
+  if (m.copyLook && !m.copyLook.fill.startsWith("rgb(")) say(size, state, `Copy's fill is not solid: ${m.copyLook.fill}`);
+  else if (m.copyLook && contrast(m.copyLook.color, m.copyLook.fill) < 3) say(size, state, `Copy's icon is ${contrast(m.copyLook.color, m.copyLook.fill).toFixed(2)}:1 on its fill`);
 }
+
+/** Every row cell's width as laid out, by its name, across all sizes and states (a cell's width
+ *  is its own, whatever the size): printed at the end for test/recorded-widths.ts. */
+const recorded = {};
 
 const inside = (box, w, h) => box.left >= -0.5 && box.top >= -0.5 && box.right <= w + 0.5 && box.bottom <= h + 0.5;
 
@@ -110,6 +137,7 @@ function check(size, state, m, w, h) {
   if (m.sheet && !inside(m.sheet, w, h)) say(size, state, "the sheet is off-screen");
   if (m.sheet && m.sheet.height > 0.45 * h + 0.5) say(size, state, `sheet ${m.sheet.height.toFixed(0)} px > 45% of ${h}`);
   const row = m.buttons.filter((b) => !b.inSheet);
+  Object.assign(recorded, m.widths);
   rhythm(size, state, m);
   for (const b of m.buttons) {
     const { box } = b;
@@ -185,13 +213,17 @@ async function walk(context, page, size, w, h, lines) {
   return true;
 }
 
-const lines = [];
+/** Each line is printed as it is made, so a run that stops shows how far it got. */
+const lines = { push: (line) => console.log(line) };
 for (const [w, h] of SIZES) {
+  const size = `${w}×${h}`;
   const { context, page } = await open(w, h);
-  await walk(context, page, `${w}×${h}`, w, h, lines);
+  // A step that throws (a tap that times out) is a problem of its size, never a silent stop.
+  await walk(context, page, size, w, h, lines).catch((err) => say(size, "a step threw", String(err?.message ?? err).split("\n")[0]));
   await context.close();
 }
 await browser.close();
-console.log(lines.join("\n"));
+console.log(`row cell widths seen (data-name: px): ${JSON.stringify(recorded)}`);
+if (process.env.GITHUB_ACTIONS) for (const p of problems) console.log(`::error title=narrow bar::${p}`);
 console.log(problems.length ? `PROBLEMS (${problems.length}):\n${problems.join("\n")}` : "all checks passed");
 if (problems.length) process.exit(1);
