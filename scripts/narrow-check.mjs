@@ -1,9 +1,12 @@
 // The narrow bar and its tool sheet in Chromium's device mode with touch, at phone and small
 // tablet sizes, on the demo app (demo/: npm i && npm run dev) with the built extension (npm run
 // build). It checks what a unit test cannot lay out: nothing off-screen, every target at least
-// 44 px, the sheet at most 45% of the height, no tool both in the row and the sheet, and every way
-// to close the sheet (Esc, a tap outside, a finger dragging it down, a tool chosen). It prints one
-// line per size and state, saves screenshots, and exits 1 on any problem.
+// 44 px (a split button's ▾: 44 tall, 24 wide), the sheet at most 45% of the height, no tool both
+// in the row and the sheet, every way to close the sheet (Esc, a tap outside, a finger dragging it
+// down, a tool chosen), and the row's rhythm (Edvard, 2026-11-24, in Chrome on a Mac): each ▾
+// narrower than its tool and against it, each cell wider than its name by its padding (so the
+// selected look covers it), one even gap between cells. It prints one line per size and state,
+// saves screenshots, and exits 1 on any problem.
 // Usage: node scripts/narrow-check.mjs <playwright-core/index.mjs> <chromium> [out dir]
 // (the screenshots go to the system's temp folder unless an out dir is given).
 import { mkdirSync } from "node:fs";
@@ -19,6 +22,7 @@ const SIZES = [
   [375, 667],
   [390, 844],
   [430, 932],
+  [530, 860],
   [600, 960],
   [700, 1000],
   [767, 1024],
@@ -49,12 +53,55 @@ const measure = (page) =>
     const r = (el) => el.getBoundingClientRect().toJSON();
     const buttons = [...bar.querySelectorAll("button")]
       .filter((b) => b.getClientRects().length > 0 && !b.closest(".menu"))
-      .map((b) => ({ name: b.dataset.name, label: b.getAttribute("aria-label"), inSheet: !!b.closest(".sheet"), box: r(b) }));
+      .map((b) => ({
+        name: b.dataset.name,
+        label: b.getAttribute("aria-label"),
+        caret: b.classList.contains("caret"),
+        inSheet: !!b.closest(".sheet"),
+        box: r(b),
+      }));
+    // The row's rhythm: its cells (a split button is one), each split button's tool and ▾, and each
+    // named cell's width beside its name's (the name drawn with the cell's own font) and padding.
+    const cells = [...bar.children].filter((c) => !c.classList.contains("sheet")).map(r);
+    const groups = [...bar.children].filter((c) => c.matches(".drawgroup, .copygroup"));
+    const pairs = groups
+      .filter((g) => g.querySelector(":scope > .caret"))
+      .map((g) => ({ name: g.firstElementChild.dataset.name, tool: r(g.firstElementChild), caret: r(g.querySelector(":scope > .caret")) }));
+    const pen = document.createElement("canvas").getContext("2d");
+    const named = [...bar.children]
+      .flatMap((c) => (c.matches("button") ? [c] : groups.includes(c) ? [c.firstElementChild] : []))
+      .map((b) => {
+        const label = b.querySelector(".label");
+        const style = label ? getComputedStyle(label) : getComputedStyle(b, "::after");
+        pen.font = style.font;
+        const text = pen.measureText(label ? label.textContent : b.dataset.name).width;
+        const { paddingLeft, paddingRight } = getComputedStyle(b);
+        return { name: b.dataset.name, width: r(b).width, text, padding: [parseFloat(paddingLeft), parseFloat(paddingRight)] };
+      });
     const open = bar.dataset.more === "open";
     const sheet = bar.querySelector(".sheet");
     const body = bar.querySelector(".sheet-body");
-    return { bar: r(bar), sheet: open && sheet ? r(sheet) : null, buttons, scrolls: open && body ? body.scrollHeight > body.clientHeight + 1 : false, open };
+    const scrolls = open && body ? body.scrollHeight > body.clientHeight + 1 : false;
+    return { bar: r(bar), sheet: open && sheet ? r(sheet) : null, buttons, cells, pairs, named, scrolls, open };
   });
+
+/** The row's rhythm: each ▾ narrower than its tool and against it, each name covered with padding
+ *  either side, one even gap between cells. */
+function rhythm(size, state, m) {
+  for (const p of m.pairs) {
+    if (p.caret.width >= p.tool.width) say(size, state, `${p.name}'s ▾ (${p.caret.width}) not narrower than its tool (${p.tool.width})`);
+    if (Math.abs(p.caret.left - p.tool.right) > 1) say(size, state, `${p.name}'s ▾ is ${(p.caret.left - p.tool.right).toFixed(1)} px from its tool`);
+    if (Math.abs(p.caret.height - p.tool.height) > 0.5) say(size, state, `${p.name}'s ▾ is not as tall as its tool`);
+  }
+  for (const n of m.named) {
+    const [left, right] = n.padding;
+    if (left < 4 || right < 4) say(size, state, `${n.name}'s cell has ${left}/${right} px padding`);
+    // 1 px for the canvas's text measure against the laid-out glyphs (subpixel rounding).
+    if (n.width + 1 < n.text + left + right) say(size, state, `${n.name}'s name (${n.text.toFixed(1)}) runs past its cell (${n.width})`);
+  }
+  const gaps = m.cells.slice(1).map((c, i) => c.left - (m.cells[i]?.right ?? c.left));
+  if (gaps.some((g) => Math.abs(g - (gaps[0] ?? g)) > 0.6)) say(size, state, `uneven gaps between cells: ${gaps.map((g) => g.toFixed(1)).join(" ")}`);
+}
 
 const inside = (box, w, h) => box.left >= -0.5 && box.top >= -0.5 && box.right <= w + 0.5 && box.bottom <= h + 0.5;
 
@@ -63,9 +110,11 @@ function check(size, state, m, w, h) {
   if (m.sheet && !inside(m.sheet, w, h)) say(size, state, "the sheet is off-screen");
   if (m.sheet && m.sheet.height > 0.45 * h + 0.5) say(size, state, `sheet ${m.sheet.height.toFixed(0)} px > 45% of ${h}`);
   const row = m.buttons.filter((b) => !b.inSheet);
+  rhythm(size, state, m);
   for (const b of m.buttons) {
     const { box } = b;
-    if (Math.min(box.width, box.height) < 44 - 0.01) say(size, state, `${b.name} target ${box.width.toFixed(1)}×${box.height.toFixed(1)}`);
+    const small = b.caret && !b.inSheet ? box.height < 44 - 0.01 || box.width < 24 - 0.01 : Math.min(box.width, box.height) < 44 - 0.01;
+    if (small) say(size, state, `${b.name} target ${box.width.toFixed(1)}×${box.height.toFixed(1)}`);
     const frame = b.inSheet ? m.sheet : m.bar;
     const off = box.left < frame.left - 0.5 || box.right > frame.right + 0.5 || (!m.scrolls && (box.top < frame.top - 0.5 || box.bottom > frame.bottom + 0.5));
     if (off) say(size, state, `${b.name} outside its ${b.inSheet ? "sheet" : "row"}`);
