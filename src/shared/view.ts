@@ -6,10 +6,16 @@
 
 import type { Rect } from "./geometry";
 
+/** The layout viewport in its own coordinates: what a screenshot of the tab shows, and where the
+ *  marks' on-screen boxes are measured (capture/). */
+export function tabViewport(): Rect {
+  return { x: 0, y: 0, w: innerWidth, h: innerHeight };
+}
+
 /** The seen part, in the layout viewport's coordinates (where fixed boxes are placed). */
 export function visibleView(): Rect {
   const v = window.visualViewport;
-  return v ? { x: v.offsetLeft, y: v.offsetTop, w: v.width, h: v.height } : { x: 0, y: 0, w: innerWidth, h: innerHeight };
+  return v ? { x: v.offsetLeft, y: v.offsetTop, w: v.width, h: v.height } : tabViewport();
 }
 
 /** Writes the seen part on `host` as --view-left, --view-top, --view-width and --view-height.

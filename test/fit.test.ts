@@ -2,10 +2,31 @@
 // ~700 px the full-width bar with five far-apart icons read as broken): as many tools as fit, in
 // priority order, the first that does not fit ends the row; Text frees the picture tools' room.
 import { describe, expect, it } from "vitest";
-import { CARET, CELL, PRIORITY, ROW_FRAME, fitRow, seenPart } from "../src/ui/fit";
+import { CARET, CELL, type Laid, PRIORITY, ROW_FRAME, Relayout, fitRow, relayout, seenPart } from "../src/ui/fit";
 import { SHEET } from "../src/ui/sheet";
 
 const row = (width: number, output: "picture" | "text" = "picture") => [...fitRow(width, output)];
+
+describe("relayout", () => {
+  const wide: Laid = { kind: "wide" };
+  const phone: Laid = { kind: "narrow", width: 390, output: "picture" };
+
+  it("keeps a layout that is the same as a whole", () => {
+    expect(relayout(wide, wide)).toBe(Relayout.KEEP);
+    expect(relayout(phone, { ...phone })).toBe(Relayout.KEEP);
+  });
+
+  it("closes the sheet and lays out again when the width changes", () => {
+    expect(relayout(wide, phone)).toBe(Relayout.CLOSE_AND_ARRANGE);
+    expect(relayout(phone, wide)).toBe(Relayout.CLOSE_AND_ARRANGE);
+    expect(relayout(phone, { ...phone, width: 700 })).toBe(Relayout.CLOSE_AND_ARRANGE);
+    expect(relayout(phone, { ...phone, width: 700, output: "text" })).toBe(Relayout.CLOSE_AND_ARRANGE);
+  });
+
+  it("lays out again with the sheet open when only the output changes", () => {
+    expect(relayout(phone, { ...phone, output: "text" })).toBe(Relayout.ARRANGE);
+  });
+});
 
 describe("the narrow bar's row", () => {
   it("keeps the five quick tools on a phone and adds more as the width grows", () => {

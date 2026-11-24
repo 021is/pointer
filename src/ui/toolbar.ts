@@ -11,7 +11,7 @@ import { COLORS, type Color } from "../marks/types";
 import { IS_MAC } from "../shared/platform";
 import { NARROW, buttonName, createCompact, staysOpen } from "./compact";
 import { type CopyMenu, createCopyMenu } from "./copy-menu";
-import { fitRow, seenPart } from "./fit";
+import { type Laid, Relayout, fitRow, relayout, seenPart } from "./fit";
 import { type IconName, icon } from "./icons";
 import type { Costs } from "../capture/estimate";
 import { type Output, type State, type Tool, pictureOnly } from "./state";
@@ -220,15 +220,14 @@ export function createToolbar(act: BarActions): Toolbar {
   // The narrow bar is laid out again when its width or the output changes (fit.ts), and its sheet
   // closed when the width changes; app.ts updates the bar on every resize.
   const narrow = window.matchMedia(NARROW);
-  let laidFor = "wide";
-  let laidAs = "";
+  let laid: Laid = { kind: "wide" };
   function place(output: Output) {
-    const width = narrow.matches ? String(seenWidth()) : "wide";
-    if (width === laidFor && (width === "wide" || laidAs === output)) return;
-    if (width !== laidFor) compact.collapse();
-    laidFor = width;
-    laidAs = output;
-    keepingFocus(bar, () => (narrow.matches ? layout.narrow(fitRow(seenWidth(), output)) : layout.wide()));
+    const now: Laid = narrow.matches ? { kind: "narrow", width: seenWidth(), output } : { kind: "wide" };
+    const change = relayout(laid, now);
+    if (change === Relayout.KEEP) return;
+    if (change === Relayout.CLOSE_AND_ARRANGE) compact.collapse();
+    laid = now;
+    keepingFocus(bar, () => (now.kind === "narrow" ? layout.narrow(fitRow(now.width, now.output)) : layout.wide()));
   }
 
   return {

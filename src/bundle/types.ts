@@ -65,8 +65,9 @@ export type DrawingSummary = {
 };
 
 /** How a crop shows in the picture: whole (Pointer scrolls one out of view into it, then back),
- *  its top left part (larger than the screen), or not at all (gone from the page). */
-export type CropShown = "whole" | "part" | "none";
+ *  its top left part (larger than the screen), or not at all: gone (its element left the page while
+ *  copying) or unseen (on the page, but its scroll did not bring it into view). */
+export type CropShown = "whole" | "part" | "gone" | "unseen";
 
 /** A crop frame: a component (with its component info) or a dragged rectangle. */
 export type CropInfo = {

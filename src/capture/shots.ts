@@ -6,9 +6,10 @@
 import type { Scene } from "../marks/svg";
 import type { Crop } from "../marks/types";
 import { type Rect, intersect } from "../shared/geometry";
+import { tabViewport } from "../shared/view";
 import type { Region } from "./layout";
 import { type Laid, screenshot } from "./picture";
-import { type Stop, planSweep } from "./sweep";
+import { type Outcome, type Stop, planSweep } from "./sweep";
 
 /** A part of one screenshot to show, with the marks and pasted images as they lay at that stop. */
 export type Cut = { shot: HTMLImageElement; region: Region; scene: Scene; pasted: readonly Laid[] };
@@ -17,10 +18,8 @@ export type Cut = { shot: HTMLImageElement; region: Region; scene: Scene; pasted
  *  region to show when there is no crop (one crop around every mark). */
 export type Now = () => { frames: readonly { label: string; rect: Rect }[]; scene: Scene; laid: readonly Laid[]; whole: Rect };
 
-/** The cuts in label order; the crops only partly in them, and those not in them at all. */
-export type Shots = { cuts: Cut[]; larger: string[]; missed: string[] };
-
-const viewport = (): Rect => ({ x: 0, y: 0, w: innerWidth, h: innerHeight });
+/** The cuts in the crops' order, and what became of the crops not wholly in them. */
+export type Shots = Outcome & { cuts: Cut[] };
 
 /** The boxes around an element that scroll on their own (a list, a panel), nearest first. */
 export function scrollingBoxes(el: Element): Element[] {
@@ -54,14 +53,19 @@ export function keepScrolls(els: readonly Element[]): () => void {
   };
 }
 
-/** Scrolls to a stop; the page as it is (the first stop, in the normal case the only one) stays. */
-function goTo(stop: Stop, elOf: (label: string) => Element | null) {
+/** Scrolls to a stop; the page as it is (the first stop, in the normal case the only one) stays.
+ *  False when a nested crop's element has left the page since the plan: nothing to scroll to. */
+function goTo(stop: Stop, elOf: (label: string) => Element | null): boolean {
   if (stop.kind === "page") {
-    if (stop.scroll.x === Math.round(scrollX) && stop.scroll.y === Math.round(scrollY)) return;
-    return window.scrollTo({ left: stop.scroll.x, top: stop.scroll.y, behavior: "instant" });
+    const here = stop.scroll.x === Math.round(scrollX) && stop.scroll.y === Math.round(scrollY);
+    if (!here) window.scrollTo({ left: stop.scroll.x, top: stop.scroll.y, behavior: "instant" });
+    return true;
   }
+  const el = elOf(stop.label);
+  if (!el?.isConnected) return false;
   const block = stop.whole ? "center" : "start";
-  elOf(stop.label)?.scrollIntoView({ block, inline: block, behavior: "instant" });
+  el.scrollIntoView({ block, inline: block, behavior: "instant" });
+  return true;
 }
 
 const labelsOf = (stop: Stop) => (stop.kind === "page" ? stop.labels : [stop.label]);
@@ -72,33 +76,40 @@ export async function shoot(host: HTMLElement, crops: readonly Crop[], now: Now)
   const els = crops.map((c) => (c.el?.isConnected ? c.el : null));
   const frames = first.frames.map((f, i) => {
     const el = els[i];
-    return { label: f.label, rect: { ...f.rect, x: f.rect.x + scrollX, y: f.rect.y + scrollY }, nested: !!el && scrollingBoxes(el).length > 0, clipped: !!el && clipped(el) };
+    const rect = { ...f.rect, x: f.rect.x + scrollX, y: f.rect.y + scrollY };
+    return { label: f.label, rect, nested: !!el && scrollingBoxes(el).length > 0, clipped: !!el && clipped(el) };
   });
   const root = document.scrollingElement ?? document.documentElement;
-  const size = { w: innerWidth, h: innerHeight };
+  const size = tabViewport();
   const plan = planSweep(frames, { size, scroll: { x: scrollX, y: scrollY }, max: { x: root.scrollWidth - size.w, y: root.scrollHeight - size.h } });
-  const elOf = (label: string) => els[first.frames.findIndex((f) => f.label === label)] ?? null;
+  const order = (label: string | null) => first.frames.findIndex((f) => f.label === label);
+  const elOf = (label: string) => els[order(label)] ?? null;
   const restore = keepScrolls(els.filter((el): el is Element => el !== null));
   host.style.visibility = "hidden";
   try {
     if (!frames.length) {
       const shot = await screenshot();
-      return { cuts: [{ shot, region: { label: null, rect: first.whole }, scene: first.scene, pasted: first.laid }], larger: [], missed: [] };
+      return { cuts: [{ shot, region: { label: null, rect: first.whole }, scene: first.scene, pasted: first.laid }], larger: [], gone: [], unseen: [] };
     }
     const cuts: Cut[] = [];
+    const gone: string[] = [];
+    const unseen: string[] = [];
     for (const stop of plan.stops) {
-      goTo(stop, elOf);
+      if (!goTo(stop, elOf)) {
+        gone.push(...labelsOf(stop));
+        continue;
+      }
       const shot = await screenshot();
       const at = now();
       for (const label of labelsOf(stop)) {
         const frame = at.frames.find((f) => f.label === label);
-        const rect = frame ? intersect(frame.rect, viewport()) : null;
+        const rect = frame ? intersect(frame.rect, tabViewport()) : null;
         if (rect) cuts.push({ shot, region: { label, rect }, scene: at.scene, pasted: at.laid });
+        else unseen.push(label);
       }
     }
-    cuts.sort((a, b) => (a.region.label ?? "").localeCompare(b.region.label ?? ""));
-    const missed = frames.map((f) => f.label).filter((l) => !cuts.some((c) => c.region.label === l));
-    return { cuts, larger: plan.larger.filter((l) => !missed.includes(l)), missed };
+    cuts.sort((a, b) => order(a.region.label) - order(b.region.label));
+    return { cuts, larger: plan.larger.filter((l) => cuts.some((c) => c.region.label === l)), gone, unseen };
   } finally {
     restore();
     host.style.visibility = "";
