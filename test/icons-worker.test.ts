@@ -8,17 +8,19 @@ type Sender = { tab?: { id?: number }; frameId?: number };
 type Listener = (message: unknown, sender: Sender, reply: (r: unknown) => void) => boolean;
 
 function worker(inject: (details: unknown) => Promise<unknown>) {
-  let listener: Listener | null = null;
+  const added: Listener[] = [];
   const executeScript = vi.fn(inject);
   vi.stubGlobal("chrome", {
-    runtime: { onMessage: { addListener: (fn: Listener) => (listener = fn) } },
+    runtime: { onMessage: { addListener: (fn: Listener) => added.push(fn) } },
     scripting: { executeScript },
   });
   listenIcons();
-  if (!listener) throw new Error("listenIcons added no listener");
+  const [first] = added;
+  if (added.length !== 1 || !first) throw new Error(`listenIcons added ${added.length} listeners, not one`);
+  const listener: Listener = first;
   const ask = (message: unknown, sender: Sender) => {
     const reply = vi.fn();
-    const keepsChannel = (listener as Listener)(message, sender, reply);
+    const keepsChannel = listener(message, sender, reply);
     return { keepsChannel, reply };
   };
   return { ask, executeScript };

@@ -6,7 +6,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Pin } from "../src/marks/types";
 import type { Point } from "../src/shared/geometry";
-import { gapBadge, gapGesture } from "../src/ui/gap-gesture";
+import { type GapHost, gapBadge, gapGesture } from "../src/ui/gap-gesture";
 import { initialState } from "../src/ui/state";
 
 type Box = { el: HTMLElement; x: number; y: number; w: number; h: number };
@@ -27,26 +27,28 @@ function page(boxes: Omit<Box, "el">[]): HTMLElement[] {
   return laid.map((b) => b.el);
 }
 
-/** The gesture on a host whose drag the test drives: move to points, then let go. */
-function gesture() {
+type Drag = GapHost["drag"];
+
+/** The gesture on a host whose drag the test drives (or a drag of the test's own): move, let go. */
+function gesture(ownDrag?: Drag) {
   const state = initialState();
   const host = document.createElement("div");
   document.body.append(host);
   const root = host.attachShadow({ mode: "open" });
   const say = vi.fn();
-  let move: ((p: Point, shift: boolean) => void) | null = null;
-  let end: (() => void) | null = null;
-  const drag = (_down: PointerEvent, m: typeof move, e: typeof end) => {
+  let move: Parameters<Drag>[1] | null = null;
+  let end: Parameters<Drag>[2] | null = null;
+  const recorded: Drag = (_down, m, e) => {
     move = m;
     end = e;
   };
-  const { startGap } = gapGesture({ state, root, host, say, drag: drag as never, update: (change) => change() });
+  const { startGap } = gapGesture({ state, root, host, say, drag: ownDrag ?? recorded, update: (change) => change() });
   const dragFrom = (from: Point, to: Point) => {
     startGap(new PointerEvent("pointerdown"), from);
     move?.(to, false);
     end?.();
   };
-  return { state, root, say, dragFrom, moveTo: (p: Point) => move?.(p, false) };
+  return { state, root, say, startGap, dragFrom };
 }
 
 const scrolled = (x: number, y: number) => {
@@ -63,16 +65,8 @@ afterEach(() => {
 describe("startGap", () => {
   it("shows the drag as an arrow from where it started to where the pointer is", () => {
     page([{ x: 100, y: 100, w: 80, h: 40 }]);
-    const g = gesture();
-    const { startGap } = gapGesture({
-      state: g.state,
-      root: g.root,
-      host: document.createElement("div"),
-      say: g.say,
-      update: (change) => change(),
-      drag: (_down, move) => move({ x: 150, y: 130 }, false),
-    });
-    startGap(new PointerEvent("pointerdown"), { x: 120, y: 110 });
+    const g = gesture((_down, move) => move({ x: 150, y: 130 }, false));
+    g.startGap(new PointerEvent("pointerdown"), { x: 120, y: 110 });
     expect(g.state.draft).toMatchObject({ kind: "arrow", from: { x: 120, y: 110 }, to: { x: 150, y: 130 } });
   });
 
