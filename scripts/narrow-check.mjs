@@ -164,7 +164,8 @@ async function dragDown(context, page, sheet) {
   await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
 }
 
-const tap = (page, sel) => page.locator(`pointer-overlay ${sel}`).first().tap();
+/** A tap on Pointer's element; one that cannot happen in 5 s throws with Playwright's reason. */
+const tap = (page, sel) => page.locator(`pointer-overlay ${sel}`).first().tap({ timeout: 5000 });
 
 /** Waits for the sheet to be open or closed (2 s at most); one that never gets there is a problem
  *  named with its step, and the false tells the caller to stop this size. */
@@ -221,8 +222,17 @@ const lines = { push: (line) => console.log(line) };
 for (const [w, h] of SIZES) {
   const size = `${w}×${h}`;
   const { context, page } = await open(w, h);
-  // A step that throws (a tap that times out) is a problem of its size, never a silent stop.
-  await walk(context, page, size, w, h, lines).catch((err) => say(size, "a step threw", String(err?.message ?? err).split("\n")[0]));
+  // A step that throws (a tap that times out) is a problem of its size, never a silent stop: said
+  // with Playwright's reason (its call log), and the page as it was saved beside the screenshots.
+  await walk(context, page, size, w, h, lines).catch(async (err) => {
+    const log = String(err?.message ?? err)
+      .split("\n")
+      .filter((l) => l.trim() && !/^\s*- (waiting \d+|retrying)/.test(l))
+      .slice(0, 8)
+      .join(" | ");
+    say(size, "a step threw", log);
+    await page.screenshot({ path: `${out}/${w}-threw.png` }).catch((shot) => say(size, "no screenshot of the throw", String(shot)));
+  });
   await context.close();
 }
 await browser.close();
