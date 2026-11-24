@@ -18,8 +18,12 @@ async function open() {
   await page.goto(URL, { waitUntil: "networkidle" });
   await page.exposeFunction("__shot", async () => `data:image/png;base64,${(await page.screenshot()).toString("base64")}`);
   await page.addScriptTag({ path: "dist/probe.js" });
+  // The worker, stubbed: a capture is the page's own screenshot; the kept-marks store has nothing
+  // (without `saved: null` Pointer says the kept marks are unreadable, in red, on every shot).
   await page.evaluate(() => {
-    window.chrome = { runtime: { sendMessage: async () => ({ ok: true, dataUrl: await window.__shot() }) } };
+    window.chrome = {
+      runtime: { sendMessage: async (m) => (m.type === "capture" ? { ok: true, dataUrl: await window.__shot() } : { ok: true, saved: null }) },
+    };
   });
   await page.addScriptTag({ path: "dist/content.js" });
   return page;
