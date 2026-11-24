@@ -14,7 +14,6 @@ export type Command =
   /** ⌘⇧Z on a Mac, Ctrl+Shift+Z and Ctrl+Y elsewhere (Edvard, 2026-11-19). */
   | { type: "redo" }
   | { type: "copy" }
-  | { type: "escape" }
   | { type: "walk"; key: WalkKey }
   | { type: "pick-hover" }
   | { type: "panel" }
@@ -40,8 +39,8 @@ export function commandFor(e: KeyInput, tool: Tool): Command | null {
     if (k === "c") return { type: "copy" };
     return null;
   }
-  if (mod || e.altKey) return null;
-  if (e.key === "Escape") return { type: "escape" };
+  // Esc is no command here: keyboard.ts routes it first, in fields too (Pointer's own or the page's).
+  if (mod || e.altKey || e.key === "Escape") return null;
   if (e.key === "[") return { type: "see", direction: -1 };
   if (e.key === "]") return { type: "see", direction: 1 };
   if (e.key === "Delete" || e.key === "Backspace") return { type: e.shiftKey ? "clear" : "remove" };

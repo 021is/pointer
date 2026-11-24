@@ -9,6 +9,7 @@ import { createIconPicker, pickerSpot } from "../src/icons/picker";
 import { QUICK } from "../src/icons/search";
 import type { Mark } from "../src/marks/types";
 import { initialState } from "../src/ui/state";
+import { pressEscape } from "./escape";
 
 afterEach(() => {
   globalThis.__pointerLucide = undefined;
@@ -74,7 +75,7 @@ describe("the picker at the spot", () => {
 
   it("Esc and a press elsewhere close it, placing nothing", async () => {
     const { p, place, buttons, open } = await picker();
-    buttons()[0]?.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(pressEscape(buttons()[0] as Element)).toBe(true);
     expect(open()).toBe(false);
     p.open({ x: 10, y: 10 }, { x: 10, y: 10 });
     await tick();

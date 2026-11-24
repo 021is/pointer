@@ -7,6 +7,7 @@
 // time the picker opens: nothing loads before, nothing is fetched from the network.
 
 import { lucideSvg } from "../marks/svg";
+import { closesOnEscape } from "../shared/escape";
 import type { Point, Size } from "../shared/geometry";
 import { closeOnOutside } from "../shared/outside";
 import { loadLucide } from "./data";
@@ -106,12 +107,10 @@ export function createIconPicker(h: PickerHost): IconPicker {
     if (!names.length) grid.textContent = `No icon for "${input.value}".`;
   }
 
-  panel.addEventListener("keydown", (e) => {
-    e.stopPropagation();
-    if (e.key !== "Escape") return;
-    e.preventDefault();
-    close();
-  });
+  // Keys typed in the picker stay in it; Esc closes it (the window's look at Esc runs this,
+  // shared/escape.ts, and the page never sees that Esc).
+  panel.addEventListener("keydown", (e) => e.stopPropagation());
+  closesOnEscape(panel, () => close());
 
   function open(at: Point, page: Point) {
     const pick: Pick = (name, svg) => {

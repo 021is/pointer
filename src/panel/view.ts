@@ -4,6 +4,7 @@
 import { formatSource } from "../bundle/format";
 import type { ComponentInfo } from "../bundle/types";
 import { shortName, viewRect } from "../pick/describe";
+import { closesOnEscape } from "../shared/escape";
 import { editPlaceholder } from "../shared/placeholder";
 import type { Edited } from "./element";
 import { groupProps, nudge, parseDeclaration, removedProps } from "./edits";
@@ -126,13 +127,15 @@ export function renderPanel(panel: HTMLElement, n: number, edited: Edited, info:
             if (moved === null) return;
             e.preventDefault();
             value.value = moved;
-          } else if (e.key === "Escape") {
-            // Cancel: back to what the row showed, and the blur's change event writes nothing.
-            value.value = shown;
-            cancelled = true;
-            return value.blur();
           } else if (e.key !== "Enter") return;
           apply();
+        });
+        // Esc cancels: back to what the row showed, and the blur's change event writes nothing (the
+        // window's look at Esc runs this, shared/escape.ts, and the page never sees that Esc).
+        closesOnEscape(value, () => {
+          value.value = shown;
+          cancelled = true;
+          value.blur();
         });
         let cancelled = false;
         const apply = () => {

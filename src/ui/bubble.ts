@@ -1,6 +1,7 @@
 // The small text box for a note, a comment or drawn text. Enter saves, Shift+Enter is a new line,
 // Esc cancels. Resolves with the text, or null when cancelled.
 
+import { closesOnEscape } from "../shared/escape";
 import type { Point } from "../shared/geometry";
 import { isTouch } from "../shared/platform";
 import { visibleView } from "../shared/view";
@@ -47,12 +48,11 @@ export function openBubble(root: ShadowRoot, options: BubbleOptions): Promise<st
     };
     const cancel = () => finish(null);
     cancelOpen = cancel;
+    // Esc cancels the note: the window's look at Esc runs it, and the page never sees that Esc.
+    closesOnEscape(box, cancel);
     input.addEventListener("keydown", (e) => {
       e.stopPropagation();
-      if (e.key === "Escape") {
-        e.preventDefault();
-        finish(null);
-      } else if (e.key === "Enter" && !e.shiftKey) {
+      if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         finish(input.value.trim());
       }

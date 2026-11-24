@@ -1,8 +1,13 @@
-// The keydown edge: never while typing (the page's fields or Pointer's own), never over a text
-// selection for Ctrl+C; every key Pointer takes is kept from the page.
+// The keyboard edge: never while typing (the page's fields or Pointer's own), never over a text
+// selection for Ctrl+C; every key Pointer takes is kept from the page, its keyup too for Esc.
+// Esc is Pointer's while it is open (Edvard, 2026-11-24: Esc sometimes closed his app's own sheet):
+// it closes Pointer's own control that has focus (shared/escape.ts), else an open menu or the
+// sheet, else it leaves the current tool for Page; only with the Page tool and nothing of Pointer's
+// open does Esc pass to the page, untouched, for the page's own Esc.
 
 import type { Color } from "../marks/types";
 import type { WalkKey } from "../pick/walk";
+import { escapeFor } from "../shared/escape";
 import { commandFor } from "./keys";
 import type { Tool } from "./state";
 
@@ -13,7 +18,8 @@ export type KeyActions = {
   undo: () => void;
   redo: () => void;
   copy: () => void;
-  escape: () => void;
+  /** Closes Pointer's open menu or sheet; false when none was open. */
+  escape: () => boolean;
   walk: (key: WalkKey) => void;
   take: () => void;
   panel: () => void;
@@ -28,14 +34,49 @@ export type KeyActions = {
   clear: () => void;
 };
 
+export type KeyHandler = { keydown: (e: KeyboardEvent) => void; keyup: (e: KeyboardEvent) => void };
+
 export const isEditable = (t: EventTarget | null | undefined) =>
   t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || (t instanceof HTMLElement && t.isContentEditable);
 
-/** A part of Pointer's own UI that handles its keys itself (the draw menu: arrows, Enter, Esc). */
+/** A part of Pointer's own UI that handles its keys itself (the draw menu: arrows, Enter). */
 const ownsKeys = (e: KeyboardEvent) => e.composedPath().some((n) => n instanceof HTMLElement && n.hasAttribute("data-own-keys"));
 
-export function keyHandler(tool: () => Tool, run: KeyActions): (e: KeyboardEvent) => void {
-  return (e) => {
+/** A key Pointer takes: the page's listeners after Pointer's never see it, nor does the browser act. */
+function take(e: KeyboardEvent) {
+  e.preventDefault();
+  e.stopImmediatePropagation();
+}
+
+const isEscape = (e: KeyboardEvent) => e.key === "Escape" && !e.ctrlKey && !e.metaKey && !e.altKey;
+
+export function keyHandler(tool: () => Tool, run: KeyActions): KeyHandler {
+  /** Whether Pointer took the Esc now down, so its keyup is Pointer's too. */
+  let tookEscape = false;
+
+  /** Esc, Pointer's in order; false only with the Page tool and nothing of Pointer's open. */
+  function routeEscape(e: KeyboardEvent): boolean {
+    const own = escapeFor(e.composedPath());
+    if (own) {
+      take(e);
+      own();
+      return true;
+    }
+    if (run.escape()) {
+      take(e);
+      return true;
+    }
+    if (tool() === "page") return false;
+    take(e);
+    run.tool("page");
+    return true;
+  }
+
+  function keydown(e: KeyboardEvent) {
+    if (isEscape(e)) {
+      tookEscape = routeEscape(e);
+      return;
+    }
     if (isEditable(e.composedPath()[0]) || ownsKeys(e)) return;
     if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === "v") return run.beforePaste();
     const cmd = commandFor(e, tool());
@@ -43,8 +84,7 @@ export function keyHandler(tool: () => Tool, run: KeyActions): (e: KeyboardEvent
     if (cmd.type === "copy" && !getSelection()?.isCollapsed) return;
     if (cmd.type === "see" && !run.overPasted()) return;
     if (cmd.type === "remove" && !run.canRemove()) return;
-    e.preventDefault();
-    e.stopImmediatePropagation();
+    take(e);
     switch (cmd.type) {
       case "tool":
         return run.tool(cmd.tool);
@@ -58,8 +98,6 @@ export function keyHandler(tool: () => Tool, run: KeyActions): (e: KeyboardEvent
         return run.redo();
       case "copy":
         return run.copy();
-      case "escape":
-        return run.escape();
       case "walk":
         return run.walk(cmd.key);
       case "pick-hover":
@@ -73,5 +111,14 @@ export function keyHandler(tool: () => Tool, run: KeyActions): (e: KeyboardEvent
       case "clear":
         return run.clear();
     }
-  };
+  }
+
+  /** Some pages close on Esc's keyup: the keyup of an Esc Pointer took is Pointer's too. */
+  function keyup(e: KeyboardEvent) {
+    if (!isEscape(e) || !tookEscape) return;
+    tookEscape = false;
+    take(e);
+  }
+
+  return { keydown, keyup };
 }

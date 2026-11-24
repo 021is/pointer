@@ -4,6 +4,7 @@
 // Their keys still pick them directly and the button follows. The menu works by keyboard: the
 // arrows move, Enter takes, Esc closes; Pointer's own keys leave it alone (data-own-keys).
 
+import { closesOnEscape } from "../shared/escape";
 import { closeOnOutside } from "../shared/outside";
 import { buttonName } from "./compact";
 import { type IconName, icon } from "./icons";
@@ -20,7 +21,12 @@ export type DrawMenuParts = {
   choose: (tool: Tool) => void;
 };
 
-export type DrawMenu = { el: HTMLElement; update: (tool: Tool) => void };
+export type DrawMenu = {
+  el: HTMLElement;
+  update: (tool: Tool) => void;
+  /** Closes the menu; true when it was open (Esc then does nothing else). */
+  close: () => boolean;
+};
 
 
 /** The draw tool the button shows: the one in use, else the last one used. */
@@ -78,11 +84,13 @@ export function createDrawMenu(parts: DrawMenuParts): DrawMenu {
     outside.watch();
     items()[0]?.focus();
   }
-  function close() {
-    if (menu.hidden) return;
+  /** Closes the menu; true when it was open. */
+  function close(): boolean {
+    if (menu.hidden) return false;
     menu.hidden = true;
     caret.setAttribute("aria-expanded", "false");
     outside.unwatch();
+    return true;
   }
   function toggle() {
     if (menu.hidden) open();
@@ -99,15 +107,18 @@ export function createDrawMenu(parts: DrawMenuParts): DrawMenu {
     if (step) {
       e.preventDefault();
       list[(at + step + list.length) % list.length]?.focus();
-    } else if (e.key === "Escape") {
-      e.preventDefault();
-      close();
-      main.focus();
     }
+  });
+  // Esc in the menu closes it and gives focus back to its button (the window's look at Esc runs
+  // this, shared/escape.ts, and the page never sees that Esc).
+  closesOnEscape(menu, () => {
+    close();
+    main.focus();
   });
 
   return {
     el: wrap,
+    close,
     update(tool) {
       current = tool;
       const next = shownTool(parts.entries, tool, shown);
